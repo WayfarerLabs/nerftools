@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# nerf-find -- Search for files and directories. Exec-like actions are denied -- use this for discovery only, not for running commands on results.
+# Generated from stdutils manifest. Do not edit directly.
+# nerf:threat:read=machine
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-find [tokens...]
+
+Maps to: find "$@"
+
+Denied patterns: -exec, -execdir, -ok, -okdir, -delete
+
+Search for files and directories. Exec-like actions are denied -- use this for discovery only, not for running commands on results..
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+_NERF_DENY_PATTERNS=('-exec' '-execdir' '-ok' '-okdir' '-delete')
+
+for _tok in "$@"; do
+  for _pat in "${_NERF_DENY_PATTERNS[@]}"; do
+    case "$_tok" in
+      $_pat)
+        echo "error: nerf-find: token '$_tok' is not allowed (matched deny pattern '$_pat')" >&2
+        echo "  denied patterns: ${_NERF_DENY_PATTERNS[*]}" >&2
+        echo "  hint: remove '$_tok' and retry" >&2
+        exit 1
+        ;;
+    esac
+  done
+done
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: find "$@""
+  exit 0
+fi
+
+exec find "$@"

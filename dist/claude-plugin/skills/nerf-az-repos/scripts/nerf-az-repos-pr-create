@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# nerf-az-repos-pr-create -- Create a pull request from the current branch to the default target branch. Source branch is auto-detected from HEAD. Cannot be run from detached HEAD or from main.
+# Generated from az-repos manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=remote
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-repos-pr-create [--draft] <title> <description>
+
+Switches:
+  --draft
+      Create the PR as a draft
+
+Arguments:
+  <title> (required)
+      PR title
+  <description> (required)
+      PR description (body text)
+
+Maps to: az repos pr create --title <title> --description <description> <draft> --output json
+
+Create a pull request from the current branch to the default target branch. Source branch is auto-detected from HEAD. Cannot be run from detached HEAD or from main..
+EOF
+  exit 1
+}
+
+DRAFT=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --draft) if [[ -n "${DRAFT}" ]]; then echo "error: --draft can only be specified once" >&2; exit 1; fi; DRAFT="true"; shift 1 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+TITLE="${1:-}"
+shift 2>/dev/null || true
+DESCRIPTION="${1:-}"
+shift 2>/dev/null || true
+
+if [[ -n "${TITLE}" ]] && [[ "${TITLE}" == -* ]]; then
+  echo "error: nerf-az-repos-pr-create: <title> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${TITLE}" ]]; then
+  echo "error: nerf-az-repos-pr-create: missing required argument <title>" >&2
+  echo "  hint: provide a value for <title>" >&2
+  usage
+fi
+
+if [[ -n "${DESCRIPTION}" ]] && [[ "${DESCRIPTION}" == -* ]]; then
+  echo "error: nerf-az-repos-pr-create: <description> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${DESCRIPTION}" ]]; then
+  echo "error: nerf-az-repos-pr-create: missing required argument <description>" >&2
+  echo "  hint: provide a value for <description>" >&2
+  usage
+fi
+
+git symbolic-ref --quiet HEAD > /dev/null 2>&1 || { echo 'error: nerf-az-repos-pr-create: Cannot create a PR from detached HEAD state. Check out a feature branch first.' >&2; exit 1; }
+( [ "$(git symbolic-ref --short HEAD 2>/dev/null)" != "main" ] ) || { echo 'error: nerf-az-repos-pr-create: Cannot create a PR from main. Check out a feature branch first.' >&2; exit 1; }
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: az repos pr create --title "${TITLE}" --description "${DESCRIPTION}" ${DRAFT:+"--draft"} --output json"
+  exit 0
+fi
+
+exec az repos pr create --title "${TITLE}" --description "${DESCRIPTION}" ${DRAFT:+"--draft"} --output json

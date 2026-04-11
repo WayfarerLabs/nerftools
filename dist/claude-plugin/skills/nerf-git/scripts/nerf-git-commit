@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# nerf-git-commit -- Create a git commit with a Conventional Commits message (changes must already be staged). Format: type[(scope)][!]: description. Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert. Must not contain Co-Authored-By trailers.
+# Generated from git manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=workspace
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-git-commit <message>
+
+Arguments:
+  <message> (required)
+      Commit message: type[(scope)][!]: description
+      Must match: ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+
+
+Maps to: git commit -m <message>
+
+Create a git commit with a Conventional Commits message (changes must already be staged). Format: type[(scope)][!]: description. Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert. Must not contain Co-Authored-By trailers..
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+MESSAGE="${1:-}"
+shift 2>/dev/null || true
+
+if [[ -n "${MESSAGE}" ]] && [[ "${MESSAGE}" == -* ]]; then
+  echo "error: nerf-git-commit: <message> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${MESSAGE}" ]]; then
+  echo "error: nerf-git-commit: missing required argument <message>" >&2
+  echo "  hint: provide a value for <message>" >&2
+  usage
+fi
+
+_NERF_PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+$'
+if [[ -n "${MESSAGE}" ]] && ! [[ "${MESSAGE}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-git-commit: argument <message> does not match required pattern" >&2
+  echo "  value:   \"${MESSAGE}\"" >&2
+  echo "  pattern: ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+" >&2
+  echo "  hint: value must match ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+" >&2
+  exit 1
+fi
+
+( ! git diff --cached --quiet ) || { echo 'error: nerf-git-commit: No staged changes. Use git-add to stage changes first.' >&2; exit 1; }
+( ! echo "${MESSAGE}" | grep -qi 'co-authored-by:' ) || { echo 'error: nerf-git-commit: Commit message must not contain Co-Authored-By trailers.' >&2; exit 1; }
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: git commit -m "${MESSAGE}""
+  exit 0
+fi
+
+exec git commit -m "${MESSAGE}"

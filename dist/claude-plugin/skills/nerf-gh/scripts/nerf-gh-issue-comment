@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# nerf-gh-issue-comment -- Add a comment to an issue
+# Generated from gh manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=remote
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-gh-issue-comment <issue> <body>
+
+Arguments:
+  <issue> (required)
+      Issue number or URL
+  <body> (required)
+      Comment text
+
+Maps to: gh issue comment <issue> --body <body>
+
+Add a comment to an issue.
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+ISSUE="${1:-}"
+shift 2>/dev/null || true
+BODY="${1:-}"
+shift 2>/dev/null || true
+
+if [[ -n "${ISSUE}" ]] && [[ "${ISSUE}" == -* ]]; then
+  echo "error: nerf-gh-issue-comment: <issue> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${ISSUE}" ]]; then
+  echo "error: nerf-gh-issue-comment: missing required argument <issue>" >&2
+  echo "  hint: provide a value for <issue>" >&2
+  usage
+fi
+
+if [[ -n "${BODY}" ]] && [[ "${BODY}" == -* ]]; then
+  echo "error: nerf-gh-issue-comment: <body> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${BODY}" ]]; then
+  echo "error: nerf-gh-issue-comment: missing required argument <body>" >&2
+  echo "  hint: provide a value for <body>" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: gh issue comment "${ISSUE}" --body "${BODY}""
+  exit 0
+fi
+
+exec gh issue comment "${ISSUE}" --body "${BODY}"

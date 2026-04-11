@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# nerf-az-pipelines-runs -- List the 20 most recent pipeline runs across all pipelines
+# Generated from az-pipelines manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-pipelines-runs
+
+Maps to: az pipelines runs list --top 20 --output json
+
+List the 20 most recent pipeline runs across all pipelines.
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: az pipelines runs list --top 20 --output json"
+  exit 0
+fi
+
+exec az pipelines runs list --top 20 --output json

@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# nerf-nx-affected -- List Nx projects affected by current changes compared to main
+# Generated from nx manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-nx-affected
+
+Maps to: npx nx show projects --affected
+
+List Nx projects affected by current changes compared to main.
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+test -f nx.json > /dev/null 2>&1 || { echo 'error: nerf-nx-affected: Not in an Nx workspace root (nx.json not found). Run from the repo root.' >&2; exit 1; }
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: npx nx show projects --affected"
+  exit 0
+fi
+
+exec npx nx show projects --affected

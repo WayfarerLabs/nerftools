@@ -1,0 +1,13 @@
+{
+  "metadata": {
+    "name": "Nerftools",
+    "owner": "WayfarerLabs"
+  },
+  "plugins": [
+    {
+      "name": "nerftools",
+      "description": "Scoped, safety-constrained CLI wrappers for AI agents",
+      "source": "./dist/claude-plugin"
+    }
+  ]
+}

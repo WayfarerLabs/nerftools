@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# nerf-git-commit-amend -- Amend the most recent commit with a new message. Fails if the commit has already been pushed to any remote. Use only to fix the last local commit.
+# Generated from git manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=workspace
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-git-commit-amend <message>
+
+Arguments:
+  <message> (required)
+      Commit message: type[(scope)][!]: description
+      Must match: ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+
+
+Maps to: git commit --amend -m <message>
+
+Amend the most recent commit with a new message. Fails if the commit has already been pushed to any remote. Use only to fix the last local commit..
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+MESSAGE="${1:-}"
+shift 2>/dev/null || true
+
+if [[ -n "${MESSAGE}" ]] && [[ "${MESSAGE}" == -* ]]; then
+  echo "error: nerf-git-commit-amend: <message> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${MESSAGE}" ]]; then
+  echo "error: nerf-git-commit-amend: missing required argument <message>" >&2
+  echo "  hint: provide a value for <message>" >&2
+  usage
+fi
+
+_NERF_PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+$'
+if [[ -n "${MESSAGE}" ]] && ! [[ "${MESSAGE}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-git-commit-amend: argument <message> does not match required pattern" >&2
+  echo "  value:   \"${MESSAGE}\"" >&2
+  echo "  pattern: ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+" >&2
+  echo "  hint: value must match ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+" >&2
+  exit 1
+fi
+
+_nerf_pre() {
+  if ! git rev-parse HEAD > /dev/null 2>&1; then
+    echo "error: no commits to amend" >&2
+    return 1
+  fi
+  REMOTE_BRANCHES=$(git branch -r --contains HEAD 2>/dev/null)
+  if [ -n "$REMOTE_BRANCHES" ]; then
+    echo "error: HEAD exists on remote branches -- amending would require a force push" >&2
+    echo "  remote branches: $(echo "$REMOTE_BRANCHES" | tr -s ' \n' ', ' | sed 's/,$//')" >&2
+    return 1
+  fi
+}
+
+_nerf_pre_rc=0
+_nerf_pre || _nerf_pre_rc=$?
+if [ $_nerf_pre_rc -ne 0 ]; then
+  echo "error: nerf-git-commit-amend: pre-hook failed (exit code $_nerf_pre_rc)" >&2
+  exit $_nerf_pre_rc
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: git commit --amend -m "${MESSAGE}""
+  exit 0
+fi
+
+exec git commit --amend -m "${MESSAGE}"

@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# nerf-uv-mypy -- Run mypy type checker with the given arguments
+# Generated from uv manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-uv-mypy [<args...>]
+
+Arguments:
+  <args...>
+      Arguments to pass to mypy (e.g. src/ or --strict)
+
+Maps to: uv run mypy <args>
+
+Run mypy type checker with the given arguments.
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+ARGS=("$@")
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: uv run mypy ${ARGS[@]+"${ARGS[@]}"}"
+  exit 0
+fi
+
+exec uv run mypy ${ARGS[@]+"${ARGS[@]}"}

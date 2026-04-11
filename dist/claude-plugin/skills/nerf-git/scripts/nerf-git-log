@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# nerf-git-log -- Show a short one-line log of recent commits
+# Generated from git manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-git-log
+
+Maps to: git log --oneline --no-decorate -20
+
+Show a short one-line log of recent commits.
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: git log --oneline --no-decorate -20"
+  exit 0
+fi
+
+exec git log --oneline --no-decorate -20

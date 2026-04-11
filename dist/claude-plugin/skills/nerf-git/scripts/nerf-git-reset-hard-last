@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# nerf-git-reset-hard-last -- Drop the most recent commit entirely, discarding its changes. Fails if the commit has already been pushed to any remote.
+# Generated from git manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=workspace
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-git-reset-hard-last
+
+Maps to: git reset --hard HEAD~1
+
+Drop the most recent commit entirely, discarding its changes. Fails if the commit has already been pushed to any remote..
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+_nerf_pre() {
+  if ! git rev-parse HEAD > /dev/null 2>&1; then
+    echo "error: no commits to reset" >&2
+    return 1
+  fi
+  REMOTE_BRANCHES=$(git branch -r --contains HEAD 2>/dev/null)
+  if [ -n "$REMOTE_BRANCHES" ]; then
+    echo "error: HEAD exists on remote branches -- resetting would require a force push" >&2
+    echo "  remote branches: $(echo "$REMOTE_BRANCHES" | tr -s ' \n' ', ' | sed 's/,$//')" >&2
+    return 1
+  fi
+}
+
+_nerf_pre_rc=0
+_nerf_pre || _nerf_pre_rc=$?
+if [ $_nerf_pre_rc -ne 0 ]; then
+  echo "error: nerf-git-reset-hard-last: pre-hook failed (exit code $_nerf_pre_rc)" >&2
+  exit $_nerf_pre_rc
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: git reset --hard HEAD~1"
+  exit 0
+fi
+
+exec git reset --hard HEAD~1

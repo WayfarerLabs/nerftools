@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "nerftools",
+  "description": "Nerf tools: scoped, safety-constrained CLI wrappers for AI agents",
+  "owner": {
+    "name": "WayfarerLabs"
+  },
+  "plugins": [
+    {
+      "name": "nerftools",
+      "description": "Nerf tools: scoped, safety-constrained CLI wrappers for AI agents",
+      "author": {
+        "name": "WayfarerLabs"
+      },
+      "source": "./",
+      "category": "development"
+    }
+  ]
+}

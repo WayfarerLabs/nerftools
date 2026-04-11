@@ -1,0 +1,6 @@
+{
+  "name": "nerftools",
+  "version": "1.0.0",
+  "description": "Nerf tools: scoped, safety-constrained CLI wrappers for AI agents",
+  "skills": "./skills/"
+}

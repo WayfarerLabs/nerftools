@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# nerf-az-boards-wi-update -- Update fields on a work item. Supports state, title, assigned-to, area, iteration, and adding a discussion comment. Returns the updated work item as JSON.
+# Generated from az-boards manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=remote
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-boards-wi-update [--state <state>] [--title <title>] [--assigned-to <assigned_to>] [--area <area>] [--iteration <iteration>] [--discussion <discussion>] [--fields|-f <fields>] <wi_id>
+
+Options:
+  --state <state>
+      New state (e.g. Active, Resolved, Closed)
+  --title <title>
+      New title
+  --assigned-to <assigned_to>
+      Person to assign to (e.g. user@example.com)
+  --area <area>
+      Area path (e.g. MyProject\MyArea)
+  --iteration <iteration>
+      Iteration path (e.g. MyProject\Sprint 1)
+  --discussion <discussion>
+      Comment to add to the work item discussion
+  --fields, -f <fields>
+      Custom field assignment (e.g. "System.Tags=Rock")
+
+Arguments:
+  <wi_id> (required)
+      Work item ID (numeric)
+      Must match: ^[0-9]+$
+
+Maps to: az boards work-item update --id <wi_id> <state> <title> <assigned_to> <area> <iteration> <discussion> <fields> --output json
+
+Update fields on a work item. Supports state, title, assigned-to, area, iteration, and adding a discussion comment. Returns the updated work item as JSON..
+EOF
+  exit 1
+}
+
+STATE=""
+TITLE=""
+ASSIGNED_TO=""
+AREA=""
+ITERATION=""
+DISCUSSION=""
+FIELDS=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --state) if [[ -n "${STATE}" ]]; then echo "error: --state can only be specified once" >&2; exit 1; fi; STATE="$2"; shift 2 ;;
+    --title) if [[ -n "${TITLE}" ]]; then echo "error: --title can only be specified once" >&2; exit 1; fi; TITLE="$2"; shift 2 ;;
+    --assigned-to) if [[ -n "${ASSIGNED_TO}" ]]; then echo "error: --assigned-to can only be specified once" >&2; exit 1; fi; ASSIGNED_TO="$2"; shift 2 ;;
+    --area) if [[ -n "${AREA}" ]]; then echo "error: --area can only be specified once" >&2; exit 1; fi; AREA="$2"; shift 2 ;;
+    --iteration) if [[ -n "${ITERATION}" ]]; then echo "error: --iteration can only be specified once" >&2; exit 1; fi; ITERATION="$2"; shift 2 ;;
+    --discussion) if [[ -n "${DISCUSSION}" ]]; then echo "error: --discussion can only be specified once" >&2; exit 1; fi; DISCUSSION="$2"; shift 2 ;;
+    --fields|-f) if [[ -n "${FIELDS}" ]]; then echo "error: --fields can only be specified once" >&2; exit 1; fi; FIELDS="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+WI_ID="${1:-}"
+shift 2>/dev/null || true
+
+if [[ -n "${WI_ID}" ]] && [[ "${WI_ID}" == -* ]]; then
+  echo "error: nerf-az-boards-wi-update: <wi_id> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${WI_ID}" ]]; then
+  echo "error: nerf-az-boards-wi-update: missing required argument <wi_id>" >&2
+  echo "  hint: provide a value for <wi_id>" >&2
+  usage
+fi
+
+_NERF_PATTERN='^[0-9]+$'
+if [[ -n "${WI_ID}" ]] && ! [[ "${WI_ID}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-az-boards-wi-update: argument <wi_id> does not match required pattern" >&2
+  echo "  value:   \"${WI_ID}\"" >&2
+  echo "  pattern: ^[0-9]+$" >&2
+  echo "  hint: value must match ^[0-9]+$" >&2
+  exit 1
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: az boards work-item update --id "${WI_ID}" ${STATE:+"--state"} ${STATE:+"$STATE"} ${TITLE:+"--title"} ${TITLE:+"$TITLE"} ${ASSIGNED_TO:+"--assigned-to"} ${ASSIGNED_TO:+"$ASSIGNED_TO"} ${AREA:+"--area"} ${AREA:+"$AREA"} ${ITERATION:+"--iteration"} ${ITERATION:+"$ITERATION"} ${DISCUSSION:+"--discussion"} ${DISCUSSION:+"$DISCUSSION"} ${FIELDS:+"--fields"} ${FIELDS:+"$FIELDS"} --output json"
+  exit 0
+fi
+
+exec az boards work-item update --id "${WI_ID}" ${STATE:+"--state"} ${STATE:+"$STATE"} ${TITLE:+"--title"} ${TITLE:+"$TITLE"} ${ASSIGNED_TO:+"--assigned-to"} ${ASSIGNED_TO:+"$ASSIGNED_TO"} ${AREA:+"--area"} ${AREA:+"$AREA"} ${ITERATION:+"--iteration"} ${ITERATION:+"$ITERATION"} ${DISCUSSION:+"--discussion"} ${DISCUSSION:+"$DISCUSSION"} ${FIELDS:+"--fields"} ${FIELDS:+"$FIELDS"} --output json

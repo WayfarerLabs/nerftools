@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# nerf-git-tag -- Create a new annotated git tag at HEAD. Fails if the tag already exists. No force, delete, or other destructive operations.
+# Generated from git manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=workspace
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-git-tag <tag>
+
+Arguments:
+  <tag> (required)
+      Tag name to create (e.g. v1.2.3)
+      Must match: ^[a-zA-Z0-9._/-]+$
+
+Maps to: git tag -a <tag> -m <tag>
+
+Create a new annotated git tag at HEAD. Fails if the tag already exists. No force, delete, or other destructive operations..
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+TAG="${1:-}"
+shift 2>/dev/null || true
+
+if [[ -n "${TAG}" ]] && [[ "${TAG}" == -* ]]; then
+  echo "error: nerf-git-tag: <tag> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${TAG}" ]]; then
+  echo "error: nerf-git-tag: missing required argument <tag>" >&2
+  echo "  hint: provide a value for <tag>" >&2
+  usage
+fi
+
+_NERF_PATTERN='^[a-zA-Z0-9._/-]+$'
+if [[ -n "${TAG}" ]] && ! [[ "${TAG}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-git-tag: argument <tag> does not match required pattern" >&2
+  echo "  value:   \"${TAG}\"" >&2
+  echo "  pattern: ^[a-zA-Z0-9._/-]+$" >&2
+  echo "  hint: value must match ^[a-zA-Z0-9._/-]+$" >&2
+  exit 1
+fi
+
+( ! git rev-parse "refs/tags/${TAG}" > /dev/null 2>&1 ) || { echo 'error: nerf-git-tag: Tag already exists. Use a different version.' >&2; exit 1; }
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: git tag -a "${TAG}" -m "${TAG}""
+  exit 0
+fi
+
+exec git tag -a "${TAG}" -m "${TAG}"

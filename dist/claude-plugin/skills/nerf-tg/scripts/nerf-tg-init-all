@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# nerf-tg-init-all -- Run terragrunt init across all units under the current directory
+# Generated from tg manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=workspace
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-tg-init-all [-upgrade]
+
+Switches:
+  -upgrade
+      Upgrade modules and plugins to latest versions
+
+Maps to: terragrunt run --all init --non-interactive -input=false <upgrade>
+
+Run terragrunt init across all units under the current directory.
+EOF
+  exit 1
+}
+
+UPGRADE=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -upgrade) if [[ -n "${UPGRADE}" ]]; then echo "error: -upgrade can only be specified once" >&2; exit 1; fi; UPGRADE="true"; shift 1 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: terragrunt run --all init --non-interactive -input=false ${UPGRADE:+"-upgrade"}"
+  exit 0
+fi
+
+exec terragrunt run --all init --non-interactive -input=false ${UPGRADE:+"-upgrade"}

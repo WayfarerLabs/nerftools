@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# nerf-pkgrun-markdownlint -- Run markdownlint-cli2 v0.21.0 with the given arguments (e.g. '**/*.md')
+# Generated from pkgrun manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-pkgrun-markdownlint <args...>
+
+Arguments:
+  <args...> (required)
+      Arguments to pass to markdownlint-cli2 (e.g. '**/*.md')
+
+Maps to: <runner> markdownlint-cli2@0.21.0 <args>
+
+Run markdownlint-cli2 v0.21.0 with the given arguments (e.g. '**/*.md').
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+ARGS=("$@")
+
+if [[ ${#ARGS[@]} -eq 0 ]]; then
+  echo "error: nerf-pkgrun-markdownlint: missing required argument <args>" >&2
+  echo "  hint: provide at least one value" >&2
+  usage
+fi
+
+# Resolve npm package runner
+_PKGRUN=""
+for _candidate in bunx pnpx npx; do
+  if command -v "$_candidate" > /dev/null 2>&1; then
+    _PKGRUN="$_candidate"
+    break
+  fi
+done
+if [[ -z "$_PKGRUN" ]]; then
+  echo "error: no npm package runner found (tried bunx, pnpx, npx)" >&2
+  exit 1
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: $_PKGRUN markdownlint-cli2@0.21.0 "${ARGS[@]}""
+  exit 0
+fi
+
+exec "$_PKGRUN" markdownlint-cli2@0.21.0 "${ARGS[@]}"

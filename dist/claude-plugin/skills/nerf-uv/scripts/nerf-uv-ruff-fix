@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# nerf-uv-ruff-fix -- Run ruff check with --fix to auto-fix lint issues
+# Generated from uv manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=workspace
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-uv-ruff-fix [<args...>]
+
+Arguments:
+  <args...>
+      Arguments to pass to ruff check --fix (e.g. src/)
+
+Maps to: uv run ruff check --fix <args>
+
+Run ruff check with --fix to auto-fix lint issues.
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+ARGS=("$@")
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: uv run ruff check --fix ${ARGS[@]+"${ARGS[@]}"}"
+  exit 0
+fi
+
+exec uv run ruff check --fix ${ARGS[@]+"${ARGS[@]}"}

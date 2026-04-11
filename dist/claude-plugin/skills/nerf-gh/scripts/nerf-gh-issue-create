@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# nerf-gh-issue-create -- Create a new issue
+# Generated from gh manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=remote
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-gh-issue-create [--body|-b <body>] [--label|-l <label>] [--assignee|-a <assignee>] <title>
+
+Options:
+  --body, -b <body>
+      Issue body/description
+  --label, -l <label>
+      Label to add
+  --assignee, -a <assignee>
+      User to assign
+
+Arguments:
+  <title> (required)
+      Issue title
+
+Maps to: gh issue create --title <title> <body> <label> <assignee>
+
+Create a new issue.
+EOF
+  exit 1
+}
+
+BODY=""
+LABEL=""
+ASSIGNEE=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --body|-b) if [[ -n "${BODY}" ]]; then echo "error: --body can only be specified once" >&2; exit 1; fi; BODY="$2"; shift 2 ;;
+    --label|-l) if [[ -n "${LABEL}" ]]; then echo "error: --label can only be specified once" >&2; exit 1; fi; LABEL="$2"; shift 2 ;;
+    --assignee|-a) if [[ -n "${ASSIGNEE}" ]]; then echo "error: --assignee can only be specified once" >&2; exit 1; fi; ASSIGNEE="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+TITLE="${1:-}"
+shift 2>/dev/null || true
+
+if [[ -n "${TITLE}" ]] && [[ "${TITLE}" == -* ]]; then
+  echo "error: nerf-gh-issue-create: <title> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${TITLE}" ]]; then
+  echo "error: nerf-gh-issue-create: missing required argument <title>" >&2
+  echo "  hint: provide a value for <title>" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: gh issue create --title "${TITLE}" ${BODY:+"--body"} ${BODY:+"$BODY"} ${LABEL:+"--label"} ${LABEL:+"$LABEL"} ${ASSIGNEE:+"--assignee"} ${ASSIGNEE:+"$ASSIGNEE"}"
+  exit 0
+fi
+
+exec gh issue create --title "${TITLE}" ${BODY:+"--body"} ${BODY:+"$BODY"} ${LABEL:+"--label"} ${LABEL:+"$LABEL"} ${ASSIGNEE:+"--assignee"} ${ASSIGNEE:+"$ASSIGNEE"}

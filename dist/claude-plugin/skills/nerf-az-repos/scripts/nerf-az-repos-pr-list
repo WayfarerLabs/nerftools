@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# nerf-az-repos-pr-list -- List pull requests in the project as JSON
+# Generated from az-repos manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-repos-pr-list [--status <status>] [--top <top>] [--creator <creator>] [--reviewer <reviewer>]
+
+Options:
+  --status <status>
+      Filter by status (default: active)
+      Allowed values: active, abandoned, completed, all
+  --top <top>
+      Maximum number of PRs to return (default 10)
+      Must match: ^[0-9]+$
+  --creator <creator>
+      Filter by PR creator
+  --reviewer <reviewer>
+      Filter by reviewer
+
+Maps to: az repos pr list <status> <top> <creator> <reviewer> --output json
+
+List pull requests in the project as JSON.
+EOF
+  exit 1
+}
+
+STATUS=""
+TOP=""
+CREATOR=""
+REVIEWER=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --status) if [[ -n "${STATUS}" ]]; then echo "error: --status can only be specified once" >&2; exit 1; fi; STATUS="$2"; shift 2 ;;
+    --top) if [[ -n "${TOP}" ]]; then echo "error: --top can only be specified once" >&2; exit 1; fi; TOP="$2"; shift 2 ;;
+    --creator) if [[ -n "${CREATOR}" ]]; then echo "error: --creator can only be specified once" >&2; exit 1; fi; CREATOR="$2"; shift 2 ;;
+    --reviewer) if [[ -n "${REVIEWER}" ]]; then echo "error: --reviewer can only be specified once" >&2; exit 1; fi; REVIEWER="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+if [[ -n "${STATUS}" ]] && [[ "${STATUS}" != "active" && "${STATUS}" != "abandoned" && "${STATUS}" != "completed" && "${STATUS}" != "all" ]]; then
+  echo "error: nerf-az-repos-pr-list: option --status is not an allowed value" >&2
+  echo "  value:   \"${STATUS}\"" >&2
+  echo "  allowed: active, abandoned, completed, all" >&2
+  echo "  hint: use one of the allowed values" >&2
+  exit 1
+fi
+
+_NERF_PATTERN='^[0-9]+$'
+if [[ -n "${TOP}" ]] && ! [[ "${TOP}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-az-repos-pr-list: option --top does not match required pattern" >&2
+  echo "  value:   \"${TOP}\"" >&2
+  echo "  pattern: ^[0-9]+$" >&2
+  echo "  hint: value must match ^[0-9]+$" >&2
+  exit 1
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: az repos pr list ${STATUS:+"--status"} ${STATUS:+"$STATUS"} ${TOP:+"--top"} ${TOP:+"$TOP"} ${CREATOR:+"--creator"} ${CREATOR:+"$CREATOR"} ${REVIEWER:+"--reviewer"} ${REVIEWER:+"$REVIEWER"} --output json"
+  exit 0
+fi
+
+exec az repos pr list ${STATUS:+"--status"} ${STATUS:+"$STATUS"} ${TOP:+"--top"} ${TOP:+"$TOP"} ${CREATOR:+"--creator"} ${CREATOR:+"$CREATOR"} ${REVIEWER:+"--reviewer"} ${REVIEWER:+"$REVIEWER"} --output json

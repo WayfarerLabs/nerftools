@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# nerf-nx-reset -- Clear the Nx cache and reset the Nx daemon
+# Generated from nx manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=workspace
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-nx-reset
+
+Maps to: npx nx reset
+
+Clear the Nx cache and reset the Nx daemon.
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+test -f nx.json > /dev/null 2>&1 || { echo 'error: nerf-nx-reset: Not in an Nx workspace root (nx.json not found). Run from the repo root.' >&2; exit 1; }
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: npx nx reset"
+  exit 0
+fi
+
+exec npx nx reset

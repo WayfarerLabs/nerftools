@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# nerf-gh-pr-create -- Create a pull request from the current branch. Pushes the branch if needed.
+# Generated from gh manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=remote
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-gh-pr-create [--draft|-d] [--body|-b <body>] [--base|-B <base>] [--reviewer|-r <reviewer>] <title>
+
+Switches:
+  --draft, -d
+      Create as a draft PR
+
+Options:
+  --body, -b <body>
+      PR body/description
+  --base, -B <base>
+      Base branch (default is the repo default branch)
+  --reviewer, -r <reviewer>
+      Request review from this user
+
+Arguments:
+  <title> (required)
+      PR title
+
+Maps to: gh pr create <draft> --title <title> <body> <base> <reviewer>
+
+Create a pull request from the current branch. Pushes the branch if needed..
+EOF
+  exit 1
+}
+
+DRAFT=""
+BODY=""
+BASE=""
+REVIEWER=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --draft|-d) if [[ -n "${DRAFT}" ]]; then echo "error: --draft can only be specified once" >&2; exit 1; fi; DRAFT="true"; shift 1 ;;
+    --body|-b) if [[ -n "${BODY}" ]]; then echo "error: --body can only be specified once" >&2; exit 1; fi; BODY="$2"; shift 2 ;;
+    --base|-B) if [[ -n "${BASE}" ]]; then echo "error: --base can only be specified once" >&2; exit 1; fi; BASE="$2"; shift 2 ;;
+    --reviewer|-r) if [[ -n "${REVIEWER}" ]]; then echo "error: --reviewer can only be specified once" >&2; exit 1; fi; REVIEWER="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+TITLE="${1:-}"
+shift 2>/dev/null || true
+
+if [[ -n "${TITLE}" ]] && [[ "${TITLE}" == -* ]]; then
+  echo "error: nerf-gh-pr-create: <title> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${TITLE}" ]]; then
+  echo "error: nerf-gh-pr-create: missing required argument <title>" >&2
+  echo "  hint: provide a value for <title>" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: gh pr create ${DRAFT:+"--draft"} --title "${TITLE}" ${BODY:+"--body"} ${BODY:+"$BODY"} ${BASE:+"--base"} ${BASE:+"$BASE"} ${REVIEWER:+"--reviewer"} ${REVIEWER:+"$REVIEWER"}"
+  exit 0
+fi
+
+exec gh pr create ${DRAFT:+"--draft"} --title "${TITLE}" ${BODY:+"--body"} ${BODY:+"$BODY"} ${BASE:+"--base"} ${BASE:+"$BASE"} ${REVIEWER:+"--reviewer"} ${REVIEWER:+"$REVIEWER"}

@@ -1,0 +1,52 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "bunx",
+    "dataclass",
+    "dataclasses",
+    "defanged",
+    "elif",
+    "esac",
+    "execdir",
+    "exitcode",
+    "frontmatter",
+    "gwat",
+    "invokable",
+    "metacharacter",
+    "metacharacters",
+    "myapp",
+    "mypy",
+    "mywi",
+    "nerfctl",
+    "nerfed",
+    "nerftools",
+    "norc",
+    "noprofile",
+    "okdir",
+    "oneline",
+    "pipefail",
+    "pkgrun",
+    "pnpx",
+    "pyproject",
+    "pytest",
+    "pytestmark",
+    "rulesync",
+    "Rulesync",
+    "stdutils",
+    "subshell",
+    "tmpl",
+    "upgen",
+    "uppercased",
+    "variadics",
+    "wiql",
+    "WIQL"
+  ],
+  "ignoreRegExpList": [
+    "`[^`\\r\\n]+`"
+  ],
+  "ignorePaths": [
+    "node_modules",
+    "dist/"
+  ]
+}

@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# nerf-tg-output-all -- Run terragrunt output across all units under the current directory
+# Generated from tg manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-tg-output-all
+
+Maps to: terragrunt run --all output --non-interactive
+
+Run terragrunt output across all units under the current directory.
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: terragrunt run --all output --non-interactive"
+  exit 0
+fi
+
+exec terragrunt run --all output --non-interactive

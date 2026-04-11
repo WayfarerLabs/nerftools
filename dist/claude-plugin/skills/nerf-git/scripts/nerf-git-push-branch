@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# nerf-git-push-branch -- Push the current branch to a remote including annotated tags (no force push). Fails if in detached HEAD state or on main. Do not use on main -- use git-push-main instead.
+# Generated from git manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=remote
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-git-push-branch <remote>
+
+Arguments:
+  <remote> (required)
+      Remote name (e.g. origin)
+      Must match: ^[a-z0-9_-]+$
+
+Maps to: git push --follow-tags <remote> HEAD
+
+Push the current branch to a remote including annotated tags (no force push). Fails if in detached HEAD state or on main. Do not use on main -- use git-push-main instead..
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+REMOTE="${1:-}"
+shift 2>/dev/null || true
+
+if [[ -n "${REMOTE}" ]] && [[ "${REMOTE}" == -* ]]; then
+  echo "error: nerf-git-push-branch: <remote> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${REMOTE}" ]]; then
+  echo "error: nerf-git-push-branch: missing required argument <remote>" >&2
+  echo "  hint: provide a value for <remote>" >&2
+  usage
+fi
+
+_NERF_PATTERN='^[a-z0-9_-]+$'
+if [[ -n "${REMOTE}" ]] && ! [[ "${REMOTE}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-git-push-branch: argument <remote> does not match required pattern" >&2
+  echo "  value:   \"${REMOTE}\"" >&2
+  echo "  pattern: ^[a-z0-9_-]+$" >&2
+  echo "  hint: value must match ^[a-z0-9_-]+$" >&2
+  exit 1
+fi
+
+_nerf_pre() {
+  BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+  if [ -z "$BRANCH" ]; then
+    echo "error: cannot push from detached HEAD state" >&2
+    return 1
+  fi
+  if [ "$BRANCH" = "main" ]; then
+    echo "error: use git-push-main for the main branch" >&2
+    return 1
+  fi
+}
+
+_nerf_pre_rc=0
+_nerf_pre || _nerf_pre_rc=$?
+if [ $_nerf_pre_rc -ne 0 ]; then
+  echo "error: nerf-git-push-branch: pre-hook failed (exit code $_nerf_pre_rc)" >&2
+  exit $_nerf_pre_rc
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: git push --follow-tags "${REMOTE}" HEAD"
+  exit 0
+fi
+
+exec git push --follow-tags "${REMOTE}" HEAD

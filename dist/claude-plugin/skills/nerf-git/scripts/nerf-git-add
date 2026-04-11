@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# nerf-git-add -- Stage files or directories for commit
+# Generated from git manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=workspace
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-git-add <files...>
+
+Arguments:
+  <files...> (required)
+      Files or directories to stage
+
+Maps to: git add <files>
+
+Stage files or directories for commit.
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+FILES=("$@")
+
+for _v in "${FILES[@]}"; do
+  if [[ "$_v" == -* ]]; then
+    echo "error: nerf-git-add: <files> values cannot start with '-'" >&2
+    echo "  hint: use -- before positional arguments if needed" >&2
+    exit 1
+  fi
+done
+
+if [[ ${#FILES[@]} -eq 0 ]]; then
+  echo "error: nerf-git-add: missing required argument <files>" >&2
+  echo "  hint: provide at least one value" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: git add "${FILES[@]}""
+  exit 0
+fi
+
+exec git add "${FILES[@]}"

@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# nerf-grep-recursive-cwd -- Search for a pattern recursively in the current directory. Prints matching lines with filenames and line numbers.
+# Generated from stdutils manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-grep-recursive-cwd [--ignore-case|-i] [--line-regexp|-x] [--word-regexp|-w] [--count|-c] [--files-with-matches|-l] [--include <include>] [--exclude <exclude>] <pattern>
+
+Switches:
+  --ignore-case, -i
+      Case-insensitive matching
+  --line-regexp, -x
+      Match whole lines only
+  --word-regexp, -w
+      Match whole words only
+  --count, -c
+      Print only a count of matching lines per file
+  --files-with-matches, -l
+      Print only filenames containing matches
+
+Options:
+  --include <include>
+      Search only files matching this glob (e.g. '*.py')
+  --exclude <exclude>
+      Skip files matching this glob (e.g. '*.log')
+
+Arguments:
+  <pattern> (required)
+      Regular expression pattern to search for
+
+Maps to: grep -r -n <ignore_case> <line_regexp> <word_regexp> <count> <files_with_matches> <include> <exclude> -- <pattern> .
+
+Search for a pattern recursively in the current directory. Prints matching lines with filenames and line numbers..
+EOF
+  exit 1
+}
+
+IGNORE_CASE=""
+LINE_REGEXP=""
+WORD_REGEXP=""
+COUNT=""
+FILES_WITH_MATCHES=""
+INCLUDE=()
+EXCLUDE=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --ignore-case|-i) if [[ -n "${IGNORE_CASE}" ]]; then echo "error: --ignore-case can only be specified once" >&2; exit 1; fi; IGNORE_CASE="true"; shift 1 ;;
+    --line-regexp|-x) if [[ -n "${LINE_REGEXP}" ]]; then echo "error: --line-regexp can only be specified once" >&2; exit 1; fi; LINE_REGEXP="true"; shift 1 ;;
+    --word-regexp|-w) if [[ -n "${WORD_REGEXP}" ]]; then echo "error: --word-regexp can only be specified once" >&2; exit 1; fi; WORD_REGEXP="true"; shift 1 ;;
+    --count|-c) if [[ -n "${COUNT}" ]]; then echo "error: --count can only be specified once" >&2; exit 1; fi; COUNT="true"; shift 1 ;;
+    --files-with-matches|-l) if [[ -n "${FILES_WITH_MATCHES}" ]]; then echo "error: --files-with-matches can only be specified once" >&2; exit 1; fi; FILES_WITH_MATCHES="true"; shift 1 ;;
+    --include) INCLUDE+=("--include" "$2"); shift 2 ;;
+    --exclude) EXCLUDE+=("--exclude" "$2"); shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+PATTERN="${1:-}"
+shift 2>/dev/null || true
+
+if [[ -n "${PATTERN}" ]] && [[ "${PATTERN}" == -* ]]; then
+  echo "error: nerf-grep-recursive-cwd: <pattern> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${PATTERN}" ]]; then
+  echo "error: nerf-grep-recursive-cwd: missing required argument <pattern>" >&2
+  echo "  hint: provide a value for <pattern>" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: grep -r -n ${IGNORE_CASE:+"--ignore-case"} ${LINE_REGEXP:+"--line-regexp"} ${WORD_REGEXP:+"--word-regexp"} ${COUNT:+"--count"} ${FILES_WITH_MATCHES:+"--files-with-matches"} ${INCLUDE[@]+"${INCLUDE[@]}"} ${EXCLUDE[@]+"${EXCLUDE[@]}"} -- "${PATTERN}" ."
+  exit 0
+fi
+
+exec grep -r -n ${IGNORE_CASE:+"--ignore-case"} ${LINE_REGEXP:+"--line-regexp"} ${WORD_REGEXP:+"--word-regexp"} ${COUNT:+"--count"} ${FILES_WITH_MATCHES:+"--files-with-matches"} ${INCLUDE[@]+"${INCLUDE[@]}"} ${EXCLUDE[@]+"${EXCLUDE[@]}"} -- "${PATTERN}" .
