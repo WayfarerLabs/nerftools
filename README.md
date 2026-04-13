@@ -17,7 +17,7 @@ said, it should work in any environment where a permission layer can allow calli
 ### Packages and Tools
 
 A **tool** is a single executable script that wraps one or more underlying CLI utilities in a
-limited-scope interface. Tools can support arguments (options as well as positional parameters) as
+limited-scope interface. Tools can support parameters (options as well as positional arguments) as
 needed to satisfy their purpose.
 
 To help keep things tidy, tools are grouped into **packages**. This organization is completely
@@ -28,20 +28,23 @@ etc.
 
 ### Manifests
 
-**Manifests** are the way that nerf tools are defined. The nerf tool system supports several
-different types of tool that have different semantics, capabilities, and relationships to the
-underlying CLI utilities they wrap.
+**Manifests** are the way that nerf tools are defined. The mechanism is designed to make it very
+easy and fast to define new tools. The nerf tool system supports several different types of tool
+that have different semantics, capabilities, and relationships to the underlying CLI utilities they
+wrap. A `generate` process then takes the manifests and generates the corresponding executable nerf
+tools.
 
 An individual manifest can contain any number of tool definitions for a single package. Any number
 of manifest files can be used to generate tools and multiple manifests can contribute to the same
 package, with tools merged using last-wins semantics.
 
-For more detail on the manifest format and tool types/capabilities, see the detailed documentation at `docs/nerf-manifests.md`.
+For more detail on the manifest format and tool types/capabilities, see the detailed documentation
+at `docs/nerf-manifests.md`.
 
-This repo includes a set of **default manifests** in the `nerftools/default_manifests/` directory
-that define a baseline set of nerf tools for common CLI utilities. Users are free to build upon
-these with their own custom manifests or exclude them entirely by passing the `--no-default` flag to
-the CLI when generating tools.
+This repo includes a set of [default manifests](nerftools/default_manifests/) that define a baseline
+set of nerf tools for common CLI utilities. Users are free to build upon these with their own custom
+manifests or exclude them entirely by passing the `--no-default` flag to the CLI when generating
+tools.
 
 ### Targets
 
@@ -57,15 +60,16 @@ within that package along with the package-level information.
 
 ## How to Use Nerf Tools
 
-This repo offers several ways to use the nerf tools. Choose the one best for your usecases:
+This repo offers several ways to use the nerf tools. Choose the best one for your specific needs:
 
-- The repo exposes a Claude Code plugin with the default tools that can be installed into a Claude
-  Code environment directly from this repository.
+- The repo exposes a fully-generated Claude Code plugin with the default tools that can be installed
+  into a Claude Code environment directly from this repository. This is super easy but does not
+  allow for customization of the tools or other changes to the plugin.
 - Alternatively, users can install the Python package and generate their own targets locally using
   the CLI.
 - Additionally, platforms like [Agentworks](https://github.com/WayfarerLabs/agentworks) integrate
-  with nerf tools to allow for automated generation of targets from manifests as part of broader
-  agent workflows.
+  with nerf tools to allow for automated generation and consumption of targets from manifests as
+  part of broader agentic tooling platforms.
 
 ## Security Model
 
