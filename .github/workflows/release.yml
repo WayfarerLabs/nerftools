@@ -9,7 +9,23 @@ permissions:
   id-token: write  # Required for trusted publishing via OIDC
 
 jobs:
+  verify-tag-on-main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag is reachable from main
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor "${{ github.sha }}" origin/main; then
+            echo "Error: tag ${{ github.ref_name }} is not an ancestor of main"
+            exit 1
+          fi
+
   test:
+    needs: verify-tag-on-main
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
