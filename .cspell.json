@@ -2,6 +2,7 @@
   "version": "0.2",
   "language": "en",
   "words": [
+    "Agentworks",
     "bunx",
     "dataclass",
     "dataclasses",
@@ -28,6 +29,7 @@
     "pipefail",
     "pkgrun",
     "pnpx",
+    "permissioning",
     "pyproject",
     "pytest",
     "pytestmark",
@@ -37,6 +39,7 @@
     "subshell",
     "tmpl",
     "upgen",
+    "usecases",
     "uppercased",
     "variadics",
     "wiql",
