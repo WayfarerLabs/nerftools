@@ -58,12 +58,19 @@ def test_claude_plugin_creates_plugin_json(tmp_path: Path) -> None:
     assert data["skills"] == "./skills/"
 
 
-def test_claude_plugin_creates_marketplace_json(tmp_path: Path) -> None:
+def test_claude_plugin_does_not_create_marketplace_json_by_default(tmp_path: Path) -> None:
+    # marketplace.json is a marketplace-level file, not a plugin-level file
     build_claude_plugin([_manifest()], tmp_path)
+    assert not (tmp_path / ".claude-plugin" / "marketplace.json").exists()
+
+
+def test_claude_plugin_embeds_marketplace_when_requested(tmp_path: Path) -> None:
+    build_claude_plugin([_manifest()], tmp_path, embed_marketplace=True)
     mp = tmp_path / ".claude-plugin" / "marketplace.json"
     assert mp.exists()
     data = json.loads(mp.read_text())
     assert data["name"] == "nerftools"
+    assert data["plugins"][0]["source"] == "./"
 
 
 def test_claude_plugin_creates_skills_with_scripts(tmp_path: Path) -> None:

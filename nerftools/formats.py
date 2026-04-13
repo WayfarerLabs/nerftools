@@ -141,6 +141,7 @@ def build_claude_plugin(
     output_dir: Path,
     *,
     prefix: str = "nerf-",
+    embed_marketplace: bool = False,
 ) -> list[Path]:
     """Build a self-contained Claude Code plugin.
 
@@ -148,13 +149,19 @@ def build_claude_plugin(
         output_dir/
         ├── .claude-plugin/
         │   ├── plugin.json
-        │   └── marketplace.json
+        │   └── marketplace.json    (only if embed_marketplace=True)
         └── skills/
             ├── nerftools/SKILL.md           (overview)
             ├── <prefix><group>/
             │   ├── SKILL.md
             │   └── scripts/<prefix><tool>   (executable scripts)
             └── ...
+
+    Set embed_marketplace=True when the output is intended to be added
+    directly as a standalone marketplace (e.g. deployed to a VM and
+    registered via `claude plugin marketplace add <dir>`). Leave it False
+    when distributing via a repo-level marketplace that points at the
+    plugin directory as a source.
     """
     import json
     import shutil
@@ -186,24 +193,25 @@ def build_claude_plugin(
     p.write_text(json.dumps(plugin_json, indent=2) + "\n")
     written.append(p)
 
-    marketplace_json = {
-        "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-        "name": "nerftools",
-        "description": "Nerf tools: scoped, safety-constrained CLI wrappers for AI agents",
-        "owner": {"name": "WayfarerLabs"},
-        "plugins": [
-            {
-                "name": "nerftools",
-                "description": "Nerf tools: scoped, safety-constrained CLI wrappers for AI agents",
-                "author": {"name": "WayfarerLabs"},
-                "source": "./",
-                "category": "development",
-            }
-        ],
-    }
-    p = plugin_dir / "marketplace.json"
-    p.write_text(json.dumps(marketplace_json, indent=2) + "\n")
-    written.append(p)
+    if embed_marketplace:
+        marketplace_json = {
+            "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+            "name": "nerftools",
+            "description": "Nerf tools: scoped, safety-constrained CLI wrappers for AI agents",
+            "owner": {"name": "WayfarerLabs"},
+            "plugins": [
+                {
+                    "name": "nerftools",
+                    "description": "Nerf tools: scoped, safety-constrained CLI wrappers for AI agents",
+                    "author": {"name": "WayfarerLabs"},
+                    "source": "./",
+                    "category": "development",
+                }
+            ],
+        }
+        p = plugin_dir / "marketplace.json"
+        p.write_text(json.dumps(marketplace_json, indent=2) + "\n")
+        written.append(p)
 
     skills_dir = output_dir / "skills"
     skills_dir.mkdir(exist_ok=True)
