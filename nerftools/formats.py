@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from nerftools.manifest import NerfManifest, ToolSpec
+    from nerftools.plugin_meta import MarketplaceMetadata, PluginMetadata
 
 _NERFCTL_SKILLS = [
     {
@@ -139,8 +140,10 @@ Report the output to the user.
 def build_claude_plugin(
     manifests: list[NerfManifest],
     output_dir: Path,
+    plugin_meta: PluginMetadata,
     *,
     prefix: str = "nerf-",
+    marketplace_meta: MarketplaceMetadata | None = None,
 ) -> list[Path]:
     """Build a self-contained Claude Code plugin.
 
@@ -148,13 +151,19 @@ def build_claude_plugin(
         output_dir/
         ├── .claude-plugin/
         │   ├── plugin.json
-        │   └── marketplace.json
+        │   └── marketplace.json    (only if marketplace_meta is provided)
         └── skills/
-            ├── nerftools/SKILL.md           (overview)
+            ├── <plugin-name>/SKILL.md       (overview)
             ├── <prefix><group>/
             │   ├── SKILL.md
             │   └── scripts/<prefix><tool>   (executable scripts)
             └── ...
+
+    Pass marketplace_meta when the output is intended to be added directly
+    as a standalone marketplace (e.g. deployed to a VM and registered via
+    `claude plugin marketplace add <dir>`). Leave it None when distributing
+    via a repo-level marketplace that points at the plugin directory as a
+    source.
     """
     import json
     import shutil
@@ -176,34 +185,14 @@ def build_claude_plugin(
     plugin_dir = output_dir / ".claude-plugin"
     plugin_dir.mkdir(exist_ok=True)
 
-    plugin_json = {
-        "name": "nerftools",
-        "version": "1.0.0",
-        "description": "Nerf tools: scoped, safety-constrained CLI wrappers for AI agents",
-        "skills": "./skills/",
-    }
     p = plugin_dir / "plugin.json"
-    p.write_text(json.dumps(plugin_json, indent=2) + "\n")
+    p.write_text(json.dumps(plugin_meta.to_json(), indent=2) + "\n")
     written.append(p)
 
-    marketplace_json = {
-        "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-        "name": "nerftools",
-        "description": "Nerf tools: scoped, safety-constrained CLI wrappers for AI agents",
-        "owner": {"name": "WayfarerLabs"},
-        "plugins": [
-            {
-                "name": "nerftools",
-                "description": "Nerf tools: scoped, safety-constrained CLI wrappers for AI agents",
-                "author": {"name": "WayfarerLabs"},
-                "source": "./",
-                "category": "development",
-            }
-        ],
-    }
-    p = plugin_dir / "marketplace.json"
-    p.write_text(json.dumps(marketplace_json, indent=2) + "\n")
-    written.append(p)
+    if marketplace_meta is not None:
+        p = plugin_dir / "marketplace.json"
+        p.write_text(json.dumps(marketplace_meta.to_json(plugin_meta), indent=2) + "\n")
+        written.append(p)
 
     skills_dir = output_dir / "skills"
     skills_dir.mkdir(exist_ok=True)
@@ -245,10 +234,10 @@ def build_claude_plugin(
         out.write_text(nerfctl_skill["content"])
         written.append(out)
 
-    # Overview skill
+    # Overview skill (named after the plugin, so the user-facing invocation is /<plugin>:<plugin>)
     if manifests:
-        overview_text = _build_claude_plugin_overview_text(manifests, prefix=prefix)
-        overview_dir = skills_dir / "nerftools"
+        overview_text = _build_claude_plugin_overview_text(manifests, plugin_meta, prefix=prefix)
+        overview_dir = skills_dir / plugin_meta.name
         overview_dir.mkdir(exist_ok=True)
         out = overview_dir / "SKILL.md"
         out.write_text(overview_text)
@@ -345,17 +334,21 @@ def _claude_plugin_tool_section(tool_name: str, skill_group: str, tool_spec: Too
     return "\n".join(parts)
 
 
-def _build_claude_plugin_overview_text(manifests: list[NerfManifest], prefix: str = "") -> str:
-    """Generate the nerftools overview SKILL.md for the claude-plugin format."""
+def _build_claude_plugin_overview_text(
+    manifests: list[NerfManifest],
+    plugin_meta: PluginMetadata,
+    prefix: str = "",
+) -> str:
+    """Generate the overview SKILL.md for the claude-plugin format."""
     parts: list[str] = []
 
     parts.append("---")
-    parts.append("name: nerftools")
-    parts.append('description: "Nerf tools overview and usage guidance"')
+    parts.append(f"name: {plugin_meta.name}")
+    parts.append(f'description: "{plugin_meta.description}"')
     parts.append('targets: ["*"]')
     parts.append("---")
     parts.append("")
-    parts.append("# Nerf Tools")
+    parts.append(f"# {plugin_meta.name}")
     parts.append("")
     parts.append(
         "This environment has nerf tools installed. These are scoped, safety-constrained wrappers for "

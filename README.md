@@ -1,10 +1,80 @@
-# nerftools
+# Nerf Tools
 
-Build and manage nerf tools: defanged, scoped wrappers for AI agent use.
+Build and manage nerf tools: limited-scope wrappers for common CLI utilities that allow for
+fine-grained control over agent execution.
 
-Nerf tools wrap CLI commands with safety guardrails: validated parameters, restricted flags,
-pre-flight checks, and a 2D threat model for permission management. A Python CLI reads YAML
-manifests and generates self-contained bash scripts, rulesync skills, and Claude Code plugins.
+Nerf tools wrap CLI commands so that the resulting tool has a limited, predictable scope. This then
+allows for broad permissioning in agentic tooling, knowing that the tools can't be used to perform
+operations outside of the declared scope.
+
+This mechanism was designed specifically for Claude Code, where the permission system (as of
+2026-04) is not really capable of fine-grained control over broad tools like `git`, `aws`, etc. That
+said, it should work in any environment where a permission layer can allow calling a tool like
+`nerf-git-add` but block calling `git` directly.
+
+## Core Concepts
+
+### Packages and Tools
+
+A **tool** is a single executable script that wraps one or more underlying CLI utilities in a
+limited-scope interface. Tools can support arguments (options as well as positional parameters) as
+needed to satisfy their purpose.
+
+To help keep things tidy, tools are grouped into **packages**. This organization is completely
+arbitrary but is generally done around a specific underlying CLI utility (all or part). For example,
+all nerf tools that wrap `git` might be grouped into a `git` package, while tools that wrap `aws`
+commands might be grouped into several `aws-<subservice>` packages, such as `aws-s3`, `aws-ec2`,
+etc.
+
+### Manifests
+
+**Manifests** are the way that nerf tools are defined. The nerf tool system supports several
+different types of tool that have different semantics, capabilities, and relationships to the
+underlying CLI utilities they wrap.
+
+An individual manifest can contain any number of tool definitions for a single package. Any number
+of manifest files can be used to generate tools and multiple manifests can contribute to the same
+package, with tools merged using last-wins semantics.
+
+This repo includes a set of **default manifests** in the `nerftools/default_manifests/` directory
+that define a baseline set of nerf tools for common CLI utilities. Users are free to build upon
+these with their own custom manifests or exclude them entirely by passing the `--no-default` flag to
+the CLI when generating tools.
+
+### Targets
+
+A **target** is the output format that the nerf CLI should generate from the manifests. Different
+targets produce different artifacts from the same set of manifests. For example, the `bin` target
+generates executable scripts in a single directory that can then be placed on the PATH for easy
+access. Other targets (such as `claude-plugin`) are designed and packaged for use with specific
+tooling.
+
+Many targets include a notion of "skills", which are conventional agent skills, designed to convey
+how to use the generated tools. Skills are generally created one per package, listing all the tools
+within that package along with the package-level information.
+
+## How to Use Nerf Tools
+
+This repo offers several ways to use the nerf tools. Choose the one best for your usecases:
+
+- The repo exposes a Claude Code plugin with the default tools that can be installed into a Claude
+  Code environment directly from this repository.
+- Alternatively, users can install the Python package and generate their own targets locally using
+  the CLI.
+- Additionally, platforms like [Agentworks](https://github.com/WayfarerLabs/agentworks) integrate
+  with nerf tools to allow for automated generation of targets from manifests as part of broader
+  agent workflows.
+
+## Security Model
+
+Nerf tools are specifically designed to work in environments where the agent technically has access
+to the underlying CLI utilities (e.g., `git`, `aws`, etc. are installed, configured, and available)
+but where a permission layer can restrict direct access to those tools. This is generally true for
+agentic co-development frameworks such as Claude Code, OpenCode, etc.
+
+It's important to note that the security here is only as good as the permission layer. If that can
+be circumvented such that the agent can invoke the underlying CLI utilities directly, then the nerf
+tools no longer provide any meaningful restriction on what the agent can do.
 
 **IMPORTANT: Nerf tools should not be considered universally safe.** Different tools have different
 threat profiles. Rather, the goal is that each nerf tool should limit usage of the underlying CLI
@@ -18,15 +88,19 @@ confidence that the agent can't perform operations outside the declared threat p
 # Validate manifests
 uv run nerf validate
 
-# Generate executable scripts
+# Generate executable scripts (drop on PATH)
 uv run nerf generate --target bin --outdir ./bin
 
 # Generate rulesync skills
 uv run nerf generate --target skills --outdir ./skills
 
-# Generate a Claude Code plugin
-uv run nerf generate --target claude-plugin --outdir ./claude-plugin
+# Generate a Claude Code plugin (requires a plugin metadata config)
+uv run nerf generate --target claude-plugin \
+  --plugin-config nerf-plugin.yaml \
+  --outdir ./claude-plugin
 ```
+
+See [nerf-plugin.yaml](nerf-plugin.yaml) for the plugin metadata format.
 
 ## Manifests
 
@@ -40,10 +114,9 @@ three execution modes:
 
 No special directory structure is required. A manifest is just a `.yaml` file passed to the CLI.
 
-The `nerftools/default_manifests/` directory contains the manifests that ship with nerftools.
-These are
-included automatically unless `--no-default` is passed. Custom manifests can be added alongside or
-instead of the defaults:
+The `nerftools/default_manifests/` directory contains the manifests that ship with nerftools. These
+are included automatically unless `--no-default` is passed. Custom manifests can be added alongside
+or instead of the defaults:
 
 ```bash
 # Defaults + your custom manifest
@@ -56,13 +129,12 @@ uv run nerf generate --target bin --outdir ./bin --no-default path/to/my-tools.y
 uv run nerf validate --no-default path/to/my-tools.yaml
 ```
 
-When both default and custom manifests define tools in the same package (same `package.name`),
-tools are merged at the individual tool level with last-wins semantics. A custom `git-commit`
-replaces the default `git-commit`, but the other default git tools remain. Package metadata
-(description, skill_group, skill_intro) is kept from the first manifest that defines the package.
+When both default and custom manifests define tools in the same package (same `package.name`), tools
+are merged at the individual tool level with last-wins semantics. A custom `git-commit` replaces the
+default `git-commit`, but the other default git tools remain. Package metadata (description,
+skill_group, skill_intro) is kept from the first manifest that defines the package.
 
-See [docs/guides/nerf-manifest.md](docs/guides/nerf-manifest.md) for the full manifest
-reference.
+See [docs/guides/nerf-manifest.md](docs/guides/nerf-manifest.md) for the full manifest reference.
 
 ## Default packages
 

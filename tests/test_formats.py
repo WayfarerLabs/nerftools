@@ -16,6 +16,7 @@ from nerftools.manifest import (
     ThreatSpec,
     ToolSpec,
 )
+from nerftools.plugin_meta import Author, MarketplaceMetadata, PluginMetadata
 
 _THREAT_NONE = ThreatSpec(read=ThreatLevel.NONE, write=ThreatLevel.NONE)
 
@@ -46,24 +47,72 @@ def _template_tool(command: list[str], **kwargs: object) -> ToolSpec:
     )
 
 
+def _plugin_meta(name: str = "test-plugin") -> PluginMetadata:
+    return PluginMetadata(
+        name=name,
+        version="0.0.1",
+        description="Test plugin",
+    )
+
+
+def _build(manifests: list[NerfManifest], out: Path, **kwargs: object) -> None:
+    build_claude_plugin(manifests, out, kwargs.pop("plugin_meta", _plugin_meta()), **kwargs)  # type: ignore[arg-type]
+
+
 # -- claude-plugin format ------------------------------------------------------
 
 
 def test_claude_plugin_creates_plugin_json(tmp_path: Path) -> None:
-    build_claude_plugin([_manifest()], tmp_path)
+    _build([_manifest()], tmp_path)
     plugin_json = tmp_path / ".claude-plugin" / "plugin.json"
     assert plugin_json.exists()
     data = json.loads(plugin_json.read_text())
-    assert data["name"] == "nerftools"
+    assert data["name"] == "test-plugin"
+    assert data["version"] == "0.0.1"
+    assert data["description"] == "Test plugin"
     assert data["skills"] == "./skills/"
 
 
-def test_claude_plugin_creates_marketplace_json(tmp_path: Path) -> None:
-    build_claude_plugin([_manifest()], tmp_path)
+def test_claude_plugin_plugin_json_includes_optional_fields(tmp_path: Path) -> None:
+    plugin_meta = PluginMetadata(
+        name="custom",
+        version="1.2.3",
+        description="Custom",
+        author=Author(name="Someone", email="a@b.com"),
+        homepage="https://example.com",
+        repository="https://github.com/x/y",
+        license="MIT",
+        keywords=["foo", "bar"],
+    )
+    _build([_manifest()], tmp_path, plugin_meta=plugin_meta)
+    data = json.loads((tmp_path / ".claude-plugin" / "plugin.json").read_text())
+    assert data["author"] == {"name": "Someone", "email": "a@b.com"}
+    assert data["homepage"] == "https://example.com"
+    assert data["repository"] == "https://github.com/x/y"
+    assert data["license"] == "MIT"
+    assert data["keywords"] == ["foo", "bar"]
+
+
+def test_claude_plugin_does_not_create_marketplace_json_by_default(tmp_path: Path) -> None:
+    # marketplace.json is a marketplace-level file, not a plugin-level file
+    _build([_manifest()], tmp_path)
+    assert not (tmp_path / ".claude-plugin" / "marketplace.json").exists()
+
+
+def test_claude_plugin_embeds_marketplace_when_meta_provided(tmp_path: Path) -> None:
+    marketplace_meta = MarketplaceMetadata(
+        name="standalone",
+        description="Standalone marketplace",
+        owner=Author(name="Org"),
+    )
+    _build([_manifest()], tmp_path, marketplace_meta=marketplace_meta)
     mp = tmp_path / ".claude-plugin" / "marketplace.json"
     assert mp.exists()
     data = json.loads(mp.read_text())
-    assert data["name"] == "nerftools"
+    assert data["name"] == "standalone"
+    assert data["owner"]["name"] == "Org"
+    assert data["plugins"][0]["name"] == "test-plugin"  # from plugin_meta
+    assert data["plugins"][0]["source"] == "./"
 
 
 def test_claude_plugin_creates_skills_with_scripts(tmp_path: Path) -> None:
@@ -71,7 +120,7 @@ def test_claude_plugin_creates_skills_with_scripts(tmp_path: Path) -> None:
         ["git", "add", "{{arguments.files}}"],
         arguments={"files": ArgSpec(description="files", variadic=True)},
     )}
-    build_claude_plugin([_manifest(skill_group="git", tools=tools)], tmp_path, prefix="nerf-")
+    _build([_manifest(skill_group="git", tools=tools)], tmp_path, prefix="nerf-")
 
     skill_md = tmp_path / "skills" / "nerf-git" / "SKILL.md"
     assert skill_md.exists()
@@ -83,26 +132,31 @@ def test_claude_plugin_creates_skills_with_scripts(tmp_path: Path) -> None:
 
 def test_claude_plugin_skill_uses_plugin_root(tmp_path: Path) -> None:
     tools = {"git-log": _template_tool(["git", "log"])}
-    build_claude_plugin([_manifest(skill_group="git", tools=tools)], tmp_path, prefix="nerf-")
+    _build([_manifest(skill_group="git", tools=tools)], tmp_path, prefix="nerf-")
 
     content = (tmp_path / "skills" / "nerf-git" / "SKILL.md").read_text()
     assert "${CLAUDE_PLUGIN_ROOT}" in content
     assert "nerf-git/scripts/nerf-git-log" in content
 
 
-def test_claude_plugin_overview_skill(tmp_path: Path) -> None:
+def test_claude_plugin_overview_skill_named_after_plugin(tmp_path: Path) -> None:
     tools = {"git-log": _template_tool(["git", "log"])}
-    build_claude_plugin([_manifest(skill_group="git", tools=tools)], tmp_path, prefix="nerf-")
+    _build(
+        [_manifest(skill_group="git", tools=tools)],
+        tmp_path,
+        prefix="nerf-",
+        plugin_meta=_plugin_meta("my-plugin"),
+    )
 
-    overview = tmp_path / "skills" / "nerftools" / "SKILL.md"
+    overview = tmp_path / "skills" / "my-plugin" / "SKILL.md"
     assert overview.exists()
     content = overview.read_text()
-    assert "# Nerf Tools" in content
+    assert "# my-plugin" in content
     assert "nerf-git" in content
 
 
 def test_claude_plugin_nerfctl_scripts(tmp_path: Path) -> None:
-    build_claude_plugin([_manifest()], tmp_path)
+    _build([_manifest()], tmp_path)
 
     scripts_dir = tmp_path / "scripts"
     assert scripts_dir.exists()
@@ -115,7 +169,7 @@ def test_claude_plugin_nerfctl_scripts(tmp_path: Path) -> None:
 
 
 def test_claude_plugin_nerfctl_skills(tmp_path: Path) -> None:
-    build_claude_plugin([_manifest()], tmp_path)
+    _build([_manifest()], tmp_path)
 
     for name in (
         "nerfctl-grant-allow", "nerfctl-grant-deny", "nerfctl-grant-reset",
@@ -132,13 +186,13 @@ def test_claude_plugin_cleans_output_by_default(tmp_path: Path) -> None:
     stale = tmp_path / "old-stuff"
     stale.mkdir()
     (stale / "file.txt").write_text("stale")
-    build_claude_plugin([_manifest()], tmp_path)
+    _build([_manifest()], tmp_path)
     assert not stale.exists()
 
 
 def test_claude_plugin_maps_to_line(tmp_path: Path) -> None:
     tools = {"git-push": _template_tool(["git", "push", "{{arguments.remote}}", "HEAD"])}
-    build_claude_plugin([_manifest(skill_group="git", tools=tools)], tmp_path, prefix="nerf-")
+    _build([_manifest(skill_group="git", tools=tools)], tmp_path, prefix="nerf-")
 
     content = (tmp_path / "skills" / "nerf-git" / "SKILL.md").read_text()
     assert "**Maps to:** `git push <remote> HEAD`" in content
@@ -150,7 +204,7 @@ def test_claude_plugin_threat_metadata_in_script(tmp_path: Path) -> None:
         threat=ThreatSpec(read=ThreatLevel.WORKSPACE, write=ThreatLevel.NONE),
         template=TemplateSpec(command=("git", "log")),
     )
-    build_claude_plugin([_manifest(skill_group="git", tools={"git-log": tool})], tmp_path, prefix="nerf-")
+    _build([_manifest(skill_group="git", tools={"git-log": tool})], tmp_path, prefix="nerf-")
 
     script_content = (tmp_path / "skills" / "nerf-git" / "scripts" / "nerf-git-log").read_text()
     assert "# nerf:threat:read=workspace" in script_content
@@ -163,7 +217,7 @@ def test_claude_plugin_passthrough_skill(tmp_path: Path) -> None:
         threat=_THREAT_NONE,
         passthrough=PassthroughSpec(command="find", deny=("-exec",), prefix=(".",)),
     )
-    build_claude_plugin([_manifest(skill_group="find", tools={"safe-find": tool})], tmp_path, prefix="nerf-")
+    _build([_manifest(skill_group="find", tools={"safe-find": tool})], tmp_path, prefix="nerf-")
 
     content = (tmp_path / "skills" / "nerf-find" / "SKILL.md").read_text()
     assert "**Denied patterns:**" in content

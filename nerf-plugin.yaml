@@ -1,0 +1,21 @@
+# Plugin metadata for the nerftools repo's own Claude Code plugin.
+# Used by `nerf generate --target claude-plugin --plugin-config nerf-plugin.yaml`.
+
+plugin:
+  name: nerftools
+  version: 0.1.0 # x-release-please-version
+  description: Scoped, safety-constrained CLI wrappers for AI agents
+  author:
+    name: WayfarerLabs
+  homepage: https://github.com/WayfarerLabs/nerftools
+  repository: https://github.com/WayfarerLabs/nerftools
+  license: MIT
+  keywords:
+    - claude-code
+    - agent-tools
+    - safety
+    - cli-wrappers
+
+# No `marketplace:` section: this repo distributes the plugin via the
+# repo-level marketplace at .claude-plugin/marketplace.json, not as a
+# standalone embedded marketplace.

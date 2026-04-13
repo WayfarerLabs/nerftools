@@ -1,10 +1,10 @@
 ---
 name: nerftools
-description: "Nerf tools overview and usage guidance"
+description: "Scoped, safety-constrained CLI wrappers for AI agents"
 targets: ["*"]
 ---
 
-# Nerf Tools
+# nerftools
 
 This environment has nerf tools installed. These are scoped, safety-constrained wrappers for common CLI operations like git, az, and other tools. They enforce guardrails (validated parameters, restricted flags, pre-flight checks) that keep operations safe and auditable.
 
