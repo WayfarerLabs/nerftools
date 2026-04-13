@@ -50,7 +50,8 @@ access. Other targets (such as `claude-plugin`) are designed and packaged for us
 tooling.
 
 Many targets include a notion of "skills", which are conventional agent skills, designed to convey
-how to use the generated tools.
+how to use the generated tools. Skills are generally created one per package, listing all the tools
+within that package along with the package-level information.
 
 ## How to Use Nerf Tools
 
