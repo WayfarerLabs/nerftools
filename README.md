@@ -38,8 +38,8 @@ An individual manifest can contain any number of tool definitions for a single p
 of manifest files can be used to generate tools and multiple manifests can contribute to the same
 package, with tools merged using last-wins semantics.
 
-For more detail on the manifest format and tool types/capabilities, see the detailed documentation
-at `docs/nerf-manifests.md`.
+For more detail on the manifest format and tool types/capabilities, see the
+[manifest reference](docs/nerf-manifest.md).
 
 This repo includes a set of [default manifests](nerftools/default_manifests/) that define a baseline
 set of nerf tools for common CLI utilities. Users are free to build upon these with their own custom
@@ -142,15 +142,10 @@ regardless of their declared threat profile.
 
 ### Grant by Threat Model
 
-Every tool declares what it reads and writes using a 2D threat profile:
-
-```yaml
-threat:
-  read: workspace # none | workspace | machine | remote | admin
-  write: remote # none | workspace | machine | remote | admin
-```
-
-This allow operators grant permissions by threat ceiling rather than enumerating tools:
+Every nerf tool declares a 2D threat profile (`read` and `write` scopes) as part of its manifest --
+see the [manifest reference](docs/nerf-manifest.md#threat-model) for how these are defined. Grants
+can then be expressed as threat ceilings rather than enumerations of individual tools, letting
+operators permission broadly while still bounding what an agent can do:
 
 ```bash
 # Allow all tools that read/write within the workspace
@@ -159,6 +154,9 @@ nerfctl-grant-by-threat --read workspace --write workspace
 # Also allow remote-read tools (e.g. git fetch, az boards)
 nerfctl-grant-by-threat --read remote --write workspace
 ```
+
+Any tool whose declared profile falls within the ceiling is allowed; tools with broader profiles
+are denied (or reset, depending on flags).
 
 ## Development
 

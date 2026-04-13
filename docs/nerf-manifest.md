@@ -52,8 +52,8 @@ version: 1
 - The value is a single integer (major version only).
 - The current version is **1**.
 - The CLI validates against the declared version's schema.
-- Backwards-incompatible changes require a version bump. Additive changes (new optional fields)
-  do not.
+- Backwards-incompatible changes require a version bump. Additive changes (new optional fields) do
+  not.
 
 ## Terminology
 
@@ -70,11 +70,11 @@ them against deny rules and forwards them as-is.
 
 ### Parameter types (template and script modes)
 
-| Term | What it is | Tokens consumed | Syntax | Example |
-|---|---|---|---|---|
-| **switch** | Boolean flag. Present or absent, no value. | 1 | `--flag` or `-f` | `--verbose` |
-| **option** | Named flag + value (two tokens: **option flag** and **option value**). | 2 | `--flag <value>` | `--remote origin` |
-| **argument** | Positional value identified by position, not by a flag. | 1 | `<value>` | `origin` |
+| Term         | What it is                                                             | Tokens consumed | Syntax           | Example           |
+| ------------ | ---------------------------------------------------------------------- | --------------- | ---------------- | ----------------- |
+| **switch**   | Boolean flag. Present or absent, no value.                             | 1               | `--flag` or `-f` | `--verbose`       |
+| **option**   | Named flag + value (two tokens: **option flag** and **option value**). | 2               | `--flag <value>` | `--remote origin` |
+| **argument** | Positional value identified by position, not by a flag.                | 1               | `<value>`        | `origin`          |
 
 ### Prefix and suffix tokens (passthrough mode)
 
@@ -85,6 +85,19 @@ inserted after. Both are hardcoded in the manifest.
 exec <command> <prefix...> "$@" <suffix...>
 ```
 
+### Pre-flight hooks
+
+Pre-flight hooks are inline bash snippets that run before the main execution of the tool. They can
+be used to perform checks, set up environment variables, or otherwise prepare the execution context
+before the main command runs.
+
+### Guards
+
+Guards are boolean checks that run before the main execution of the tool. Each guard is a bash
+expression that must evaluate to true for the tool to proceed. If any guard fails, the tool aborts
+execution. Guards are useful for enforcing preconditions, such as verifying that required files
+exist or that the environment is correctly configured.
+
 ### Invocation order
 
 Switches and options must come before arguments. The generated parser stops consuming flags at the
@@ -94,8 +107,11 @@ first non-flag token (or `--`).
 nerf-tool [switches] [options] [--] <arguments...>
 ```
 
+### Variadic argument (templates)
+
 A **variadic argument** collects all remaining positional values into a bash array. At most one
-variadic argument is allowed per tool, and it must be the last argument.
+variadic argument is allowed per tool, and it must be the last argument, both to the nerf tool and
+to the underlying wrapped CLI utility.
 
 ## Package
 
@@ -103,10 +119,10 @@ Top-level metadata about the tool package.
 
 ```yaml
 package:
-  name: <string>            # Unique package identifier (e.g. "git", "nx")
-  description: <string>     # Human-readable description of the package
-  skill_group: <string>     # Skill directory name (usually matches name)
-  skill_intro: <string>     # Optional multi-line intro for AI skill docs
+  name: <string> # Unique package identifier (e.g. "git", "nx")
+  description: <string> # Human-readable description of the package
+  skill_group: <string> # Skill directory name (usually matches name)
+  skill_intro: <string> # Optional multi-line intro for AI skill docs
 ```
 
 All fields except `skill_intro` are required.
@@ -116,28 +132,28 @@ All fields except `skill_intro` are required.
 ```yaml
 tools:
   <tool-name>:
-    description: <string>           # Required. What the tool does.
-    threat:                         # Required. Risk classification.
-      read: <scope>                 #   none|workspace|machine|remote|admin
-      write: <scope>                #   none|workspace|machine|remote|admin
+    description: <string> # Required. What the tool does.
+    threat: # Required. Risk classification.
+      read: <scope> #   none|workspace|machine|remote|admin
+      write: <scope> #   none|workspace|machine|remote|admin
 
     # Execution mode (exactly one required):
-    template:    { ... }            # Build a command from a template
-    passthrough: { ... }            # Forward tokens with a deny-list
-    script: <string>                # Inline bash script
+    template: { ... } # Build a command from a template
+    passthrough: { ... } # Forward tokens with a deny-list
+    script: <string> # Inline bash script
 
     # Parameters (optional, template and script only):
     switches: { ... }
-    options:  { ... }
-    arguments:  { ... }
+    options: { ... }
+    arguments: { ... }
 
     # Lifecycle (optional, all modes):
-    pre: <string>                   # Inline bash run before main execution
-    guards:                         # Pre-flight boolean checks
+    pre: <string> # Inline bash run before main execution
+    guards: # Pre-flight boolean checks
       - { ... }
 
     # Environment (optional):
-    env: { ... }                    # Key-value pairs exported before execution
+    env: { ... } # Key-value pairs exported before execution
 ```
 
 - Exactly one of `template`, `passthrough`, or `script` must be set.
@@ -160,25 +176,25 @@ permission layer (nerfctl grant commands, settings.json).
 
 ### Scopes (ordered, narrow to broad)
 
-| Scope | Meaning |
-|---|---|
-| `none` | No access in this dimension. |
-| `workspace` | Confined to the current workspace directory tree. |
-| `machine` | Anywhere on the local filesystem. |
-| `remote` | Network operations: APIs, remote repos, cloud services. |
-| `admin` | Destructive, irreversible, or elevated operations. |
+| Scope       | Meaning                                                 |
+| ----------- | ------------------------------------------------------- |
+| `none`      | No access in this dimension.                            |
+| `workspace` | Confined to the current workspace directory tree.       |
+| `machine`   | Anywhere on the local filesystem.                       |
+| `remote`    | Network operations: APIs, remote repos, cloud services. |
+| `admin`     | Destructive, irreversible, or elevated operations.      |
 
 ### Examples
 
-| Tool | Read | Write | Rationale |
-|---|---|---|---|
-| `git log` | workspace | none | Reads repo history, writes nothing |
-| `git add` | workspace | workspace | Reads and modifies the staging area |
-| `git fetch` | remote | workspace | Downloads from remote, writes to local refs |
-| `git push` | workspace | remote | Reads local refs, writes to remote |
-| `find .` | workspace | none | Reads directory tree under workspace root |
-| `cspell` | workspace | none | Reads files, reports issues |
-| `prettier --write` | workspace | workspace | Reads and reformats files |
+| Tool               | Read      | Write     | Rationale                                   |
+| ------------------ | --------- | --------- | ------------------------------------------- |
+| `git log`          | workspace | none      | Reads repo history, writes nothing          |
+| `git add`          | workspace | workspace | Reads and modifies the staging area         |
+| `git fetch`        | remote    | workspace | Downloads from remote, writes to local refs |
+| `git push`         | workspace | remote    | Reads local refs, writes to remote          |
+| `find .`           | workspace | none      | Reads directory tree under workspace root   |
+| `cspell`           | workspace | none      | Reads files, reports issues                 |
+| `prettier --write` | workspace | workspace | Reads and reformats files                   |
 
 ### Scope comparison
 
@@ -203,13 +219,13 @@ This enables runtime tool discovery and threat classification without the manife
 
 ### template
 
-Build a command from an explicit template with `{{kind.name}}` placeholders. Best for wrapping a single
-tool call where you want full control over exposed parameters.
+Build a command from an explicit template with `{{kind.name}}` placeholders. Best for wrapping a
+single tool call where you want full control over exposed parameters.
 
 ```yaml
 template:
-  command: [<string>, ...]        # Command parts with {{kind.name}} placeholders
-  npm_pkgrun: <bool>              # Use bunx/pnpx/npx resolver (default: false)
+  command: [<string>, ...] # Command parts with {{kind.name}} placeholders
+  npm_pkgrun: <bool> # Use bunx/pnpx/npx resolver (default: false)
 ```
 
 Rules:
@@ -233,7 +249,9 @@ git-commit:
     message:
       description: "Commit message: type[(scope)][!]: description"
       required: true
-      pattern: "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\([a-zA-Z0-9._-]+\\))?!?: .+"
+      pattern:
+        "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\([a-zA-Z0-9._-]+\\))?!?:
+        .+"
   guards:
     - script: "! git diff --cached --quiet"
       fail_message: No staged changes. Use git-add to stage changes first.
@@ -250,22 +268,22 @@ as-is.
 
 ```yaml
 passthrough:
-  command: <string>               # Underlying command name
-  deny: [<string>, ...]           # Glob patterns to reject (optional)
-  prefix: [<string>, ...]         # Static tokens before user tokens (optional)
-  suffix: [<string>, ...]         # Static tokens after user tokens (optional)
+  command: <string> # Underlying command name
+  deny: [<string>, ...] # Glob patterns to reject (optional)
+  prefix: [<string>, ...] # Static tokens before user tokens (optional)
+  suffix: [<string>, ...] # Static tokens after user tokens (optional)
 ```
 
 **Deny list matching:** each entry is a glob pattern matched against every token. Glob
 metacharacters are `*`, `?`, `[`, `]`. A pattern without metacharacters is an exact match.
 
-| Pattern | Matches | Does not match |
-|---|---|---|
-| `--delete` | `--delete` | `--delete-all` |
-| `-ok*` | `-ok`, `-okdir` | `--ok` |
+| Pattern    | Matches         | Does not match |
+| ---------- | --------------- | -------------- |
+| `--delete` | `--delete`      | `--delete-all` |
+| `-ok*`     | `-ok`, `-okdir` | `--ok`         |
 
-To match a literal metacharacter, escape with `\`. In YAML, use single quotes (`'\*'`) or double
-the backslash (`"\\*"`).
+To match a literal metacharacter, escape with `\`. In YAML, use single quotes (`'\*'`) or double the
+backslash (`"\\*"`).
 
 Example:
 
@@ -339,14 +357,14 @@ A boolean flag, present or absent, with no value. Switches are always optional.
 ```yaml
 switches:
   <name>:
-    description: <string>         # Required
-    flag: <string>                # Override flag (default: --<name> with _ replaced by -)
-    short: <string>               # Single-char short form (e.g. -v)
-    repeatable: <bool>            # Can be passed multiple times (default: false)
+    description: <string> # Required
+    flag: <string> # Override flag (default: --<name> with _ replaced by -)
+    short: <string> # Single-char short form (e.g. -v)
+    repeatable: <bool> # Can be passed multiple times (default: false)
 ```
 
-The shell variable is `"true"` when present, `""` when absent. For repeatable switches, the
-variable is an integer count (0 when absent, incremented each time the switch is passed).
+The shell variable is `"true"` when present, `""` when absent. For repeatable switches, the variable
+is an integer count (0 when absent, incremented each time the switch is passed).
 
 Rules:
 
@@ -360,14 +378,14 @@ A named flag that takes exactly one value.
 ```yaml
 options:
   <name>:
-    description: <string>         # Required
-    flag: <string>                # Override flag (default: --<name> with _ replaced by -)
-    short: <string>               # Single-char short form
-    required: <bool>              # Default: false
-    repeatable: <bool>            # Can be passed multiple times (default: false)
-    pattern: <string>             # Regex the value must match (auto-anchored with ^...$)
-    allow: [<string>, ...]        # Exhaustive list of allowed values
-    deny:  [<string>, ...]        # Values to reject
+    description: <string> # Required
+    flag: <string> # Override flag (default: --<name> with _ replaced by -)
+    short: <string> # Single-char short form
+    required: <bool> # Default: false
+    repeatable: <bool> # Can be passed multiple times (default: false)
+    pattern: <string> # Regex the value must match (auto-anchored with ^...$)
+    allow: [<string>, ...] # Exhaustive list of allowed values
+    deny: [<string>, ...] # Values to reject
 ```
 
 Rules:
@@ -376,8 +394,8 @@ Rules:
 - `flag` must match `-<name>` or `--<name>` pattern.
 - `short` must match `-[a-zA-Z]`.
 - `pattern` is automatically anchored to a full match in the generated bash script.
-- When `repeatable: true`, the option can be passed multiple times. The generated script
-  accumulates flag-value pairs in an array so `"${VAR[@]}"` expands to `--flag val1 --flag val2`.
+- When `repeatable: true`, the option can be passed multiple times. The generated script accumulates
+  flag-value pairs in an array so `"${VAR[@]}"` expands to `--flag val1 --flag val2`.
 
 ### arguments
 
@@ -386,13 +404,13 @@ A positional argument identified by position.
 ```yaml
 arguments:
   <name>:
-    description: <string>         # Required
-    required: <bool>              # Default: false
-    variadic: <bool>              # Collect remaining args into array (default: false)
-    allow_flags: <bool>           # Allow flag-like tokens in variadic args (default: false)
-    pattern: <string>             # Regex the value must match (auto-anchored)
-    allow: [<string>, ...]        # Exhaustive list of allowed values
-    deny:  [<string>, ...]        # Values to reject
+    description: <string> # Required
+    required: <bool> # Default: false
+    variadic: <bool> # Collect remaining args into array (default: false)
+    allow_flags: <bool> # Allow flag-like tokens in variadic args (default: false)
+    pattern: <string> # Regex the value must match (auto-anchored)
+    allow: [<string>, ...] # Exhaustive list of allowed values
+    deny: [<string>, ...] # Values to reject
 ```
 
 Rules:
@@ -418,14 +436,14 @@ Pre-flight boolean checks that run before the main execution.
 
 ```yaml
 guards:
-  - fail_message: <string>       # Required. Shown on failure.
-    command: [<string>, ...]      # Run as subprocess, output suppressed
+  - fail_message: <string> # Required. Shown on failure.
+    command: [<string>, ...] # Run as subprocess, output suppressed
     # OR
-    script: <string>             # Inline bash snippet
+    script: <string> # Inline bash snippet
 ```
 
-Exactly one of `command` or `script`. The check passes on exit code 0.
-`{{kind.name}}` placeholders are substituted with parameter values.
+Exactly one of `command` or `script`. The check passes on exit code 0. `{{kind.name}}` placeholders
+are substituted with parameter values.
 
 ### pre
 
@@ -441,8 +459,8 @@ The pre script is wrapped in a shell function (`_nerf_pre`). Key points:
 
 - **Use `return` to abort, not `exit`.** `return 1` lets the wrapper report the failure. `exit`
   kills the entire script immediately, bypassing error reporting.
-- **Print your own error messages.** The fallback message is generic. Write
-  `echo "error: ..." >&2` before `return 1`.
+- **Print your own error messages.** The fallback message is generic. Write `echo "error: ..." >&2`
+  before `return 1`.
 - **Shell variables set in pre are visible to main.** Functions execute in the caller's scope.
 - **`{{kind.name}}` placeholders work.** Parameters are parsed before pre runs.
 
@@ -489,10 +507,10 @@ Placeholders use the form `{{kind.name}}` where `kind` is one of `switches`, `op
 `arguments`. They appear in `template.command`, `guard.command`, `guard.script`, and `pre` and are
 replaced with shell variable references.
 
-| Context | Required scalar | Optional scalar | Required variadic | Optional variadic | Switch | Repeatable option |
-|---|---|---|---|---|---|---|
-| template command | `"$VAR"` | `--flag $VAR` (conditional) | `"${VAR[@]}"` | `${VAR[@]+"${VAR[@]}"}` | `${VAR:+"--flag"}` | `"${VAR[@]}"` (flag-value pairs) |
-| guard/pre script | `${VAR}` | `${VAR}` | `${VAR}` | `${VAR}` | `${VAR}` | `${VAR}` |
+| Context          | Required scalar | Optional scalar             | Required variadic | Optional variadic       | Switch             | Repeatable option                |
+| ---------------- | --------------- | --------------------------- | ----------------- | ----------------------- | ------------------ | -------------------------------- |
+| template command | `"$VAR"`        | `--flag $VAR` (conditional) | `"${VAR[@]}"`     | `${VAR[@]+"${VAR[@]}"}` | `${VAR:+"--flag"}` | `"${VAR[@]}"` (flag-value pairs) |
+| guard/pre script | `${VAR}`        | `${VAR}`                    | `${VAR}`          | `${VAR}`                | `${VAR}`           | `${VAR}`                         |
 
 In script contexts (guards, pre, inline script body), the author is responsible for quoting.
 
@@ -525,9 +543,9 @@ error: nerf-safe-find: token '-exec' is not allowed (matched deny pattern '-exec
 
 ## Dry-run mode
 
-Every generated tool supports `--nerf-dry-run`. When passed as the first argument, the tool runs
-all validation, guards, pre-hooks, and deny scans as normal, but instead of executing the final
-command it prints what would be run and exits.
+Every generated tool supports `--nerf-dry-run`. When passed as the first argument, the tool runs all
+validation, guards, pre-hooks, and deny scans as normal, but instead of executing the final command
+it prints what would be run and exits.
 
 ```bash
 $ nerf-git-fetch --nerf-dry-run origin
@@ -571,20 +589,20 @@ Generated skill files follow the same structure formatted as markdown for AI ass
 
 ## Validation summary
 
-| Rule | Scope |
-|---|---|
-| `version` is required and must be an integer | manifest |
-| `threat.read` and `threat.write` required | tool |
-| Exactly one of `template`, `passthrough`, `script` | tool |
-| `switches`/`options`/`arguments` not allowed with `passthrough` | tool |
-| `{{kind.name}}` refs must exist in switches/options/arguments | template, guards, pre |
-| All switches/options/arguments must be referenced in `{{kind.name}}` | template only |
-| Variadic argument must be last in `arguments` | arguments |
-| Variadic `{{kind.name}}` must be last element in `template.command` | template |
-| `allow` and `deny` are mutually exclusive | options, arguments |
-| Switch/option/argument names must not overlap | tool |
-| `flag` matches `-<name>` or `--<name>` pattern | switches, options |
-| `short` matches `-[a-zA-Z]` | switches, options |
-| `pattern` is a valid regex | options, arguments |
-| `env` keys match `[A-Z_][A-Z0-9_]*` | env |
-| Guard has exactly one of `command` or `script` | guards |
+| Rule                                                                 | Scope                 |
+| -------------------------------------------------------------------- | --------------------- |
+| `version` is required and must be an integer                         | manifest              |
+| `threat.read` and `threat.write` required                            | tool                  |
+| Exactly one of `template`, `passthrough`, `script`                   | tool                  |
+| `switches`/`options`/`arguments` not allowed with `passthrough`      | tool                  |
+| `{{kind.name}}` refs must exist in switches/options/arguments        | template, guards, pre |
+| All switches/options/arguments must be referenced in `{{kind.name}}` | template only         |
+| Variadic argument must be last in `arguments`                        | arguments             |
+| Variadic `{{kind.name}}` must be last element in `template.command`  | template              |
+| `allow` and `deny` are mutually exclusive                            | options, arguments    |
+| Switch/option/argument names must not overlap                        | tool                  |
+| `flag` matches `-<name>` or `--<name>` pattern                       | switches, options     |
+| `short` matches `-[a-zA-Z]`                                          | switches, options     |
+| `pattern` is a valid regex                                           | options, arguments    |
+| `env` keys match `[A-Z_][A-Z0-9_]*`                                  | env                   |
+| Guard has exactly one of `command` or `script`                       | guards                |
