@@ -11,6 +11,10 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    env:
+      # release-please-action@v4 still declares node20; force node24 on the runner.
+      # Remove once the action publishes a node24 release (see googleapis/release-please-action#1192).
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     outputs:
       pr_branch: ${{ steps.extract.outputs.pr_branch }}
     steps:
