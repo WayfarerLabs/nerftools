@@ -6,6 +6,7 @@ on:
     paths:
       - "nerftools/**"
       - "pyproject.toml"
+      - "nerf-plugin.yaml"
 
 permissions:
   contents: write
@@ -24,7 +25,7 @@ jobs:
         run: uv sync --frozen
 
       - name: Build Claude Code plugin
-        run: uv run nerf generate --target claude-plugin --outdir ./dist/claude-plugin
+        run: uv run nerf generate --target claude-plugin --plugin-config nerf-plugin.yaml --outdir ./dist/claude-plugin
 
       - name: Check for changes
         id: diff
