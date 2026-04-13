@@ -36,6 +36,8 @@ An individual manifest can contain any number of tool definitions for a single p
 of manifest files can be used to generate tools and multiple manifests can contribute to the same
 package, with tools merged using last-wins semantics.
 
+For more detail on the manifest format and tool types/capabilities, see the detailed documentation at `docs/nerf-manifests.md`.
+
 This repo includes a set of **default manifests** in the `nerftools/default_manifests/` directory
 that define a baseline set of nerf tools for common CLI utilities. Users are free to build upon
 these with their own custom manifests or exclude them entirely by passing the `--no-default` flag to
@@ -100,43 +102,10 @@ uv run nerf generate --target claude-plugin \
   --outdir ./claude-plugin
 ```
 
-See [nerf-plugin.yaml](nerf-plugin.yaml) for the plugin metadata format.
+Plugin metadata is sourced from an external file to make it easy for teams to personalize the output
+plugin for their needs. See [nerf-plugin.yaml](nerf-plugin.yaml) for the plugin metadata format.
 
-## Manifests
-
-A manifest is a single YAML file that declares tools within a package. Multiple manifests can
-contribute to the same package, with tools merged using last-wins semantics. Each tool uses one of
-three execution modes:
-
-- **template**: build a command from explicit parameters and a `{{kind.name}}` template
-- **passthrough**: forward all tokens after a deny-list scan
-- **script**: run an inline bash script
-
-No special directory structure is required. A manifest is just a `.yaml` file passed to the CLI.
-
-The `nerftools/default_manifests/` directory contains the manifests that ship with nerftools. These
-are included automatically unless `--no-default` is passed. Custom manifests can be added alongside
-or instead of the defaults:
-
-```bash
-# Defaults + your custom manifest
-uv run nerf generate --target bin --outdir ./bin path/to/my-tools.yaml
-
-# Only your custom manifests, skip defaults
-uv run nerf generate --target bin --outdir ./bin --no-default path/to/my-tools.yaml
-
-# Validate a custom manifest in isolation
-uv run nerf validate --no-default path/to/my-tools.yaml
-```
-
-When both default and custom manifests define tools in the same package (same `package.name`), tools
-are merged at the individual tool level with last-wins semantics. A custom `git-commit` replaces the
-default `git-commit`, but the other default git tools remain. Package metadata (description,
-skill_group, skill_intro) is kept from the first manifest that defines the package.
-
-See [docs/guides/nerf-manifest.md](docs/guides/nerf-manifest.md) for the full manifest reference.
-
-## Default packages
+## Default Manifests/Packages
 
 | Package      | Tools | Description                                                      |
 | ------------ | ----- | ---------------------------------------------------------------- |
@@ -151,7 +120,23 @@ See [docs/guides/nerf-manifest.md](docs/guides/nerf-manifest.md) for the full ma
 | gh           | 10    | GitHub CLI (PRs, issues, workflow runs)                          |
 | uv           | 4     | Python dev tools via uv run (pytest, ruff, mypy)                 |
 
-## Threat model
+## Nerf Control Tools
+
+This package includes tools for managing nerf permissions and grants, allowing operators to control
+which tools an agent can invoke based on the declared threat profile of each tool. These are
+specific to the target tooling (e.g. Claude Code).
+
+These allow two major ways of managing nerf tool permissions as listed below. Note that these can
+generally be used together with last-wins semantics, where later grants or denials override earlier
+ones in the execution order.
+
+### Grant by Tool Name/Pattern
+
+Nerf tools can be granted/denied individually by specifying the tool name or a pattern that matches
+multiple tools. This allows operators to explicitly allow or block access to specific CLI utilities
+regardless of their declared threat profile.
+
+### Grant by Threat Model
 
 Every tool declares what it reads and writes using a 2D threat profile:
 
@@ -161,7 +146,7 @@ threat:
   write: remote # none | workspace | machine | remote | admin
 ```
 
-Operators grant permissions by threat ceiling rather than enumerating tools:
+This allow operators grant permissions by threat ceiling rather than enumerating tools:
 
 ```bash
 # Allow all tools that read/write within the workspace
