@@ -17,7 +17,7 @@ said, it should work in any environment where a permission layer can allow calli
 ### Packages and Tools
 
 A **tool** is a single executable script that wraps one or more underlying CLI utilities in a
-limited-scope interface. Tools can support arguments (options as well as positional parameters) as
+limited-scope interface. Tools can support parameters (options as well as positional arguments) as
 needed to satisfy their purpose.
 
 To help keep things tidy, tools are grouped into **packages**. This organization is completely
@@ -28,18 +28,23 @@ etc.
 
 ### Manifests
 
-**Manifests** are the way that nerf tools are defined. The nerf tool system supports several
-different types of tool that have different semantics, capabilities, and relationships to the
-underlying CLI utilities they wrap.
+**Manifests** are the way that nerf tools are defined. The mechanism is designed to make it very
+easy and fast to define new tools. The nerf tool system supports several different types of tool
+that have different semantics, capabilities, and relationships to the underlying CLI utilities they
+wrap. A `generate` process then takes the manifests and generates the corresponding executable nerf
+tools.
 
 An individual manifest can contain any number of tool definitions for a single package. Any number
 of manifest files can be used to generate tools and multiple manifests can contribute to the same
 package, with tools merged using last-wins semantics.
 
-This repo includes a set of **default manifests** in the `nerftools/default_manifests/` directory
-that define a baseline set of nerf tools for common CLI utilities. Users are free to build upon
-these with their own custom manifests or exclude them entirely by passing the `--no-default` flag to
-the CLI when generating tools.
+For more detail on the manifest format and tool types/capabilities, see the
+[manifest reference](docs/nerf-manifest.md).
+
+This repo includes a set of [default manifests](nerftools/default_manifests/) that define a baseline
+set of nerf tools for common CLI utilities. Users are free to build upon these with their own custom
+manifests or exclude them entirely by passing the `--no-default` flag to the CLI when generating
+tools.
 
 ### Targets
 
@@ -55,15 +60,16 @@ within that package along with the package-level information.
 
 ## How to Use Nerf Tools
 
-This repo offers several ways to use the nerf tools. Choose the one best for your usecases:
+This repo offers several ways to use the nerf tools. Choose the best one for your specific needs:
 
-- The repo exposes a Claude Code plugin with the default tools that can be installed into a Claude
-  Code environment directly from this repository.
+- The repo exposes a fully-generated Claude Code plugin with the default tools that can be installed
+  into a Claude Code environment directly from this repository. This is super easy but does not
+  allow for customization of the tools or other changes to the plugin.
 - Alternatively, users can install the Python package and generate their own targets locally using
   the CLI.
 - Additionally, platforms like [Agentworks](https://github.com/WayfarerLabs/agentworks) integrate
-  with nerf tools to allow for automated generation of targets from manifests as part of broader
-  agent workflows.
+  with nerf tools to allow for automated generation and consumption of targets from manifests as
+  part of broader agentic tooling platforms.
 
 ## Security Model
 
@@ -100,43 +106,10 @@ uv run nerf generate --target claude-plugin \
   --outdir ./claude-plugin
 ```
 
-See [nerf-plugin.yaml](nerf-plugin.yaml) for the plugin metadata format.
+Plugin metadata is sourced from an external file to make it easy for teams to personalize the output
+plugin for their needs. See [nerf-plugin.yaml](nerf-plugin.yaml) for the plugin metadata format.
 
-## Manifests
-
-A manifest is a single YAML file that declares tools within a package. Multiple manifests can
-contribute to the same package, with tools merged using last-wins semantics. Each tool uses one of
-three execution modes:
-
-- **template**: build a command from explicit parameters and a `{{kind.name}}` template
-- **passthrough**: forward all tokens after a deny-list scan
-- **script**: run an inline bash script
-
-No special directory structure is required. A manifest is just a `.yaml` file passed to the CLI.
-
-The `nerftools/default_manifests/` directory contains the manifests that ship with nerftools. These
-are included automatically unless `--no-default` is passed. Custom manifests can be added alongside
-or instead of the defaults:
-
-```bash
-# Defaults + your custom manifest
-uv run nerf generate --target bin --outdir ./bin path/to/my-tools.yaml
-
-# Only your custom manifests, skip defaults
-uv run nerf generate --target bin --outdir ./bin --no-default path/to/my-tools.yaml
-
-# Validate a custom manifest in isolation
-uv run nerf validate --no-default path/to/my-tools.yaml
-```
-
-When both default and custom manifests define tools in the same package (same `package.name`), tools
-are merged at the individual tool level with last-wins semantics. A custom `git-commit` replaces the
-default `git-commit`, but the other default git tools remain. Package metadata (description,
-skill_group, skill_intro) is kept from the first manifest that defines the package.
-
-See [docs/guides/nerf-manifest.md](docs/guides/nerf-manifest.md) for the full manifest reference.
-
-## Default packages
+## Default Manifests/Packages
 
 | Package      | Tools | Description                                                      |
 | ------------ | ----- | ---------------------------------------------------------------- |
@@ -151,17 +124,28 @@ See [docs/guides/nerf-manifest.md](docs/guides/nerf-manifest.md) for the full ma
 | gh           | 10    | GitHub CLI (PRs, issues, workflow runs)                          |
 | uv           | 4     | Python dev tools via uv run (pytest, ruff, mypy)                 |
 
-## Threat model
+## Nerf Control Tools
 
-Every tool declares what it reads and writes using a 2D threat profile:
+This package includes tools for managing nerf permissions and grants, allowing operators to control
+which tools an agent can invoke based on the declared threat profile of each tool. These are
+specific to the target tooling (e.g. Claude Code).
 
-```yaml
-threat:
-  read: workspace # none | workspace | machine | remote | admin
-  write: remote # none | workspace | machine | remote | admin
-```
+These allow two major ways of managing nerf tool permissions as listed below. Note that these can
+generally be used together with last-wins semantics, where later grants or denials override earlier
+ones in the execution order.
 
-Operators grant permissions by threat ceiling rather than enumerating tools:
+### Grant by Tool Name/Pattern
+
+Nerf tools can be granted/denied individually by specifying the tool name or a pattern that matches
+multiple tools. This allows operators to explicitly allow or block access to specific CLI utilities
+regardless of their declared threat profile.
+
+### Grant by Threat Model
+
+Every nerf tool declares a 2D threat profile (`read` and `write` scopes) as part of its manifest --
+see the [manifest reference](docs/nerf-manifest.md#threat-model) for how these are defined. Grants
+can then be expressed as threat ceilings rather than enumerations of individual tools, letting
+operators permission broadly while still bounding what an agent can do:
 
 ```bash
 # Allow all tools that read/write within the workspace
@@ -170,6 +154,9 @@ nerfctl-grant-by-threat --read workspace --write workspace
 # Also allow remote-read tools (e.g. git fetch, az boards)
 nerfctl-grant-by-threat --read remote --write workspace
 ```
+
+Any tool whose declared profile falls within the ceiling is allowed; tools with broader profiles
+are denied (or reset, depending on flags).
 
 ## Development
 
@@ -201,5 +188,5 @@ nerftools/             Python package
   default_manifests/   Default tool package manifests (YAML)
 tests/                 Test suite
 dist/claude-plugin/    Pre-built Claude Code plugin (auto-generated)
-docs/                  Manifest reference and design docs
+docs/                  Manifest spec and other (future) docs
 ```
