@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.2](https://github.com/WayfarerLabs/nerftools/compare/v0.3.1...v0.3.2) (2026-04-14)
+
+
+### Documentation
+
+* clean up pypi description ([d2b5f7f](https://github.com/WayfarerLabs/nerftools/commit/d2b5f7fef31e4ac0048a0a35059b2d24ea3e07ac))
+* clean up pypi description ([d2ab29d](https://github.com/WayfarerLabs/nerftools/commit/d2ab29d03366f92e1e6660ba99745b7d2a0469f5))
+
 ## [0.3.1](https://github.com/WayfarerLabs/nerftools/compare/v0.3.0...v0.3.1) (2026-04-14)
 
 
