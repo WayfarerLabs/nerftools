@@ -1,6 +1,6 @@
 [project]
 name = "nerftools"
-version = "0.3.1"
+version = "0.3.2"
 description = "Define and generate nerf tools: limited-scope wrappers for common CLI utilities that allow for fine-grained control over agent execution"
 requires-python = ">=3.12"
 license = "MIT"
