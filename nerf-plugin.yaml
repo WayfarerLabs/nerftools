@@ -3,7 +3,7 @@
 
 plugin:
   name: nerftools
-  version: 0.1.0 # x-release-please-version
+  version: 0.2.0 # x-release-please-version
   description: Scoped, safety-constrained CLI wrappers for AI agents
   author:
     name: WayfarerLabs
