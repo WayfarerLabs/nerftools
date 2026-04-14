@@ -187,6 +187,6 @@ nerftools/             Python package
   nerfctl/claude/      Grant management shell scripts
   default_manifests/   Default tool package manifests (YAML)
 tests/                 Test suite
-dist/claude-plugin/    Pre-built Claude Code plugin (auto-generated)
+out/claude-plugin/     Pre-built Claude Code plugin (auto-generated)
 docs/                  Manifest spec and other (future) docs
 ```

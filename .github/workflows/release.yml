@@ -58,7 +58,9 @@ jobs:
           enable-cache: true
 
       - name: Build package
-        run: uv build
+        run: uv build --out-dir pypi-dist/
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: pypi-dist/

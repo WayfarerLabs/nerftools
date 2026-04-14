@@ -13,10 +13,11 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     outputs:
       pr_branch: ${{ steps.extract.outputs.pr_branch }}
+      app_token: ${{ steps.app-token.outputs.token }}
     steps:
-      # Use a GitHub App token so the release PR triggers CI workflows.
-      # The default GITHUB_TOKEN creates PRs as github-actions[bot], which
-      # GitHub deliberately won't run workflows for (anti-recursion safeguard).
+      # Use a GitHub App token so the release PR (and any subsequent pushes
+      # to its branch) trigger CI workflows. The default GITHUB_TOKEN creates
+      # events as github-actions[bot], which GitHub won't run workflows for.
       - uses: actions/create-github-app-token@v2
         id: app-token
         with:
@@ -41,12 +42,17 @@ jobs:
     needs: release-please
     if: needs.release-please.outputs.pr_branch
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@v6
         with:
           ref: ${{ needs.release-please.outputs.pr_branch }}
+          token: ${{ steps.app-token.outputs.token }}
           fetch-depth: 0
 
       - uses: astral-sh/setup-uv@v7
@@ -57,13 +63,13 @@ jobs:
         run: uv sync --frozen
 
       - name: Regenerate Claude Code plugin
-        run: uv run nerf generate --target claude-plugin --plugin-config nerf-plugin.yaml --outdir ./dist/claude-plugin
+        run: uv run nerf generate --target claude-plugin --plugin-config nerf-plugin.yaml --outdir ./out/claude-plugin
 
       - name: Commit updated plugin
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dist/claude-plugin/
+          git config user.name "nerftools-release[bot]"
+          git config user.email "nerftools-release[bot]@users.noreply.github.com"
+          git add out/claude-plugin/
           if git diff --cached --quiet; then
             echo "No changes to plugin output"
           else

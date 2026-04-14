@@ -5,11 +5,10 @@ __pycache__/
 *.egg-info/
 *.egg
 build/
+dist/
 .eggs/
 
-# dist/ is gitignored EXCEPT dist/claude-plugin/ which is committed (auto-built)
-dist/*
-!dist/claude-plugin/
+# out/ contains pre-built targets (auto-generated, committed for distribution)
 
 # Virtual environments
 .venv/
