@@ -188,5 +188,5 @@ nerftools/             Python package
   default_manifests/   Default tool package manifests (YAML)
 tests/                 Test suite
 dist/claude-plugin/    Pre-built Claude Code plugin (auto-generated)
-docs/                  Manifest reference and design docs
+docs/                  Manifest spec and other (future) docs
 ```
