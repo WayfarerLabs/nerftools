@@ -7,7 +7,7 @@
     {
       "name": "nerftools",
       "description": "Limited scope wrappers for common CLI utilities, allows for fine-grained control over agent execution",
-      "source": "./dist/claude-plugin"
+      "source": "./out/claude-plugin"
     }
   ]
 }

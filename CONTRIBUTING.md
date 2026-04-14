@@ -38,10 +38,10 @@ After changing manifests or plugin generation code, you can rebuild the pre-buil
 to preview the output:
 
 ```bash
-uv run nerf generate --target claude-plugin --plugin-config nerf-plugin.yaml --outdir ./dist/claude-plugin
+uv run nerf generate --target claude-plugin --plugin-config nerf-plugin.yaml --outdir ./out/claude-plugin
 ```
 
-You don't need to commit the regenerated `dist/` -- CI regenerates it as part of the release PR.
+You don't need to commit the regenerated `out/` -- CI regenerates it as part of the release PR.
 But committing it can be useful so reviewers can see the exact generated output in your PR diff.
 
 ## Releases
@@ -57,7 +57,7 @@ and conventional commits. No one manually bumps versions or creates tags.
    - Computes the next version from the conventional commits since the last release.
    - Updates the version in `pyproject.toml`, `nerf-plugin.yaml`, and `.release-please-manifest.json`.
    - Updates `CHANGELOG.md`.
-   - Regenerates `dist/claude-plugin/` with the new version baked into `plugin.json`.
+   - Regenerates `out/claude-plugin/` with the new version baked into `plugin.json`.
 3. When you're ready to release, merge the release PR.
 4. On merge, `release-please` creates the git tag (`vX.Y.Z`) and a GitHub Release.
 5. The tag push triggers the `release` workflow, which verifies the tag is on `main`, runs the
@@ -74,7 +74,7 @@ and conventional commits. No one manually bumps versions or creates tags.
 - Don't edit version numbers by hand in any file. `release-please` owns them.
 - Don't create tags by hand. `release-please` creates tags on merge of the release PR.
 - Don't edit `CHANGELOG.md` by hand. It's regenerated from commit messages.
-- Don't edit `dist/claude-plugin/` by hand. Edit the source (`nerftools/`, manifests, or
+- Don't edit `out/claude-plugin/` by hand. Edit the source (`nerftools/`, manifests, or
   `nerf-plugin.yaml`) and the release PR will regenerate it.
 
 ### Breaking changes

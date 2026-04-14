@@ -51,7 +51,7 @@
   ],
   "ignorePaths": [
     "node_modules",
-    "dist/",
+    "out/",
     "CHANGELOG.md"
   ]
 }

@@ -12,5 +12,5 @@
     "MD033": false,
     "MD060": false
   },
-  "ignores": ["dist/**", "CHANGELOG.md"]
+  "ignores": ["out/**", "CHANGELOG.md"]
 }
