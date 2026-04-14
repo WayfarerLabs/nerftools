@@ -1,6 +1,6 @@
 {
   "name": "nerftools",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Scoped, safety-constrained CLI wrappers for AI agents",
   "skills": "./skills/",
   "author": {
