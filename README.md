@@ -1,6 +1,6 @@
 # Nerf Tools
 
-Build and manage nerf tools: limited-scope wrappers for common CLI utilities that allow for
+Define and generate nerf tools: limited-scope wrappers for common CLI utilities that allow for
 fine-grained control over agent execution.
 
 Nerf tools wrap CLI commands so that the resulting tool has a limited, predictable scope. This then
