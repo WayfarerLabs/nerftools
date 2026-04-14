@@ -1,11 +1,11 @@
 [project]
 name = "nerftools"
 version = "0.3.1"
-description = "Build and manage nerf tools -- defanged, scoped wrappers for agent use"
+description = "Define and generate nerf tools: limited-scope wrappers for common CLI utilities that allow for fine-grained control over agent execution"
 requires-python = ">=3.12"
 license = "MIT"
 authors = [
-    { name = "Robert Scot Hastings" },
+    { name = "Scot Hastings (Wayfarer Labs)" },
 ]
 dependencies = [
     "typer>=0.24.1",
