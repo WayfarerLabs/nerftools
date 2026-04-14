@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/WayfarerLabs/nerftools/compare/v0.3.0...v0.3.1) (2026-04-14)
+
+
+### Bug Fixes
+
+* use app token for regenerate-dist pushes so CI triggers on release PRs ([e78ae87](https://github.com/WayfarerLabs/nerftools/commit/e78ae875208a100d77cde6cb0881186e61b83e60))
+
 ## [0.3.0](https://github.com/WayfarerLabs/nerftools/compare/v0.2.0...v0.3.0) (2026-04-14)
 
 
