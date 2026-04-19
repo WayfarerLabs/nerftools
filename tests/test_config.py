@@ -283,8 +283,6 @@ targets:
 
 
 def test_resolve_embed_false_returns_none() -> None:
-    config = load_config(None)
-    # Manually set embed false via a loaded config
     from nerftools.config import ClaudePluginConfig, MarketplaceConfig, Targets
 
     config = NerfConfig(

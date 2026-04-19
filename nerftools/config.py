@@ -1,8 +1,8 @@
 """Nerf config loader and plugin metadata resolution.
 
-Loads an optional config file (passed explicitly via ``-c <path>``) that holds
-shared package identity and per-target settings.  When no config is supplied,
-built-in defaults produce installable output for every target.
+Loads an optional YAML config file (passed explicitly via ``-c <path>``) that
+holds shared package identity and per-target settings.  When no config is
+supplied, built-in defaults produce installable output for every target.
 
 Also houses the ``PluginMetadata``, ``MarketplaceMetadata``, and ``Author``
 dataclasses (previously in ``plugin_meta.py``) that describe the JSON written
@@ -90,7 +90,7 @@ class MarketplaceMetadata:
     name: str
     description: str
     owner: Author
-    category: str = "development"
+    category: str = DEFAULT_MARKETPLACE_CATEGORY
 
     def to_json(self, plugin: PluginMetadata) -> dict[str, Any]:
         return {

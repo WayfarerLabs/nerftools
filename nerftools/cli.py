@@ -21,6 +21,14 @@ app = typer.Typer(
 _VALID_TARGETS = ("bin", "skills", "claude-plugin")
 
 
+def _resolve_config_manifests(config_manifests: list[str], config_path: Path | None) -> list[Path]:
+    """Resolve manifest paths from config relative to the config file's directory."""
+    if not config_manifests:
+        return []
+    base = config_path.parent if config_path is not None else Path.cwd()
+    return [(base / m).resolve() for m in config_manifests]
+
+
 def _load_manifests(
     user_manifests: list[Path],
     *,
@@ -73,8 +81,8 @@ def validate(
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1) from e
 
-    # Merge config manifests with positional args.
-    all_manifests = [Path(m) for m in config.defaults.manifests]
+    # Merge config manifests (resolved relative to config file) with positional args.
+    all_manifests = _resolve_config_manifests(config.defaults.manifests, config_path)
     all_manifests.extend(manifests or [])
 
     loaded = _load_manifests(all_manifests, no_default=no_default)
@@ -128,8 +136,8 @@ def generate(
 
     prefix = config.defaults.prefix
 
-    # Merge config manifests with positional args.
-    all_manifests = [Path(m) for m in config.defaults.manifests]
+    # Merge config manifests (resolved relative to config file) with positional args.
+    all_manifests = _resolve_config_manifests(config.defaults.manifests, config_path)
     all_manifests.extend(manifests or [])
 
     loaded = _load_manifests(all_manifests, no_default=no_default)
