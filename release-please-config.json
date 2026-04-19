@@ -9,7 +9,7 @@
       "extra-files": [
         {
           "type": "generic",
-          "path": "nerf-plugin.yaml"
+          "path": "nerf.yaml"
         }
       ]
     }

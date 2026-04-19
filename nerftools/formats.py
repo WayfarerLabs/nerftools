@@ -13,8 +13,8 @@ from nerftools.rendering import arg_line, maps_to_text, option_line, switch_line
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from nerftools.config import MarketplaceMetadata, PluginMetadata
     from nerftools.manifest import NerfManifest, ToolSpec
-    from nerftools.plugin_meta import MarketplaceMetadata, PluginMetadata
 
 _NERFCTL_SKILLS = [
     {

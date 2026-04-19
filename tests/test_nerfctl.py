@@ -19,7 +19,6 @@ _DENY = _NERFCTL_DIR / "grant-deny.sh"
 _RESET = _NERFCTL_DIR / "grant-reset.sh"
 _BY_THREAT = _NERFCTL_DIR / "grant-by-threat.sh"
 _LIST = _NERFCTL_DIR / "grant-list.sh"
-_INSTALL_PLUGIN = _NERFCTL_DIR / "install-plugin.sh"
 
 
 def _ensure_jq() -> str | None:
@@ -311,19 +310,6 @@ def test_grant_then_reset_clears_entry(tmp_path: Path) -> None:
     assert not any("nerf-test-tool" in e for e in data["permissions"]["deny"])
 
 
-# -- install-plugin (pre-flight checks only) -----------------------------------
-
-
-def test_install_plugin_requires_marketplace() -> None:
-    result = subprocess.run(
-        ["bash", "--norc", "--noprofile", str(_INSTALL_PLUGIN)],
-        capture_output=True,
-        text=True,
-    )
-    assert result.returncode != 0
-    assert "marketplace" in result.stderr
-
-
 # -- help flags ---------------------------------------------------------------
 
 
@@ -430,7 +416,7 @@ def test_by_threat_annotations(tmp_path: Path) -> None:
 # -- help flags ---------------------------------------------------------------
 
 
-@pytest.mark.parametrize("script", [_GRANT, _DENY, _RESET, _BY_THREAT, _LIST, _INSTALL_PLUGIN])
+@pytest.mark.parametrize("script", [_GRANT, _DENY, _RESET, _BY_THREAT, _LIST])
 def test_help_flag_exits_nonzero_with_usage(script: Path) -> None:
     result = _run(script, "--help")
     assert result.returncode != 0

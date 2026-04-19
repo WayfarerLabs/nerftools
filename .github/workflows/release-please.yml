@@ -62,7 +62,7 @@ jobs:
         run: uv sync --frozen
 
       - name: Regenerate Claude Code plugin
-        run: uv run nerf generate --target claude-plugin --plugin-config nerf-plugin.yaml --outdir ./out/claude-plugin
+        run: uv run nerf generate --target claude-plugin -c nerf.yaml --outdir ./out/claude-plugin
 
       - name: Commit updated plugin
         run: |

@@ -100,14 +100,23 @@ uv run nerf generate --target bin --outdir ./bin
 # Generate rulesync skills
 uv run nerf generate --target skills --outdir ./skills
 
-# Generate a Claude Code plugin (requires a plugin metadata config)
-uv run nerf generate --target claude-plugin \
-  --plugin-config nerf-plugin.yaml \
-  --outdir ./claude-plugin
+# Generate a Claude Code plugin (uses built-in defaults if no config)
+uv run nerf generate --target claude-plugin --outdir ./claude-plugin
+
+# Generate a Claude Code plugin with custom identity
+uv run nerf generate --target claude-plugin -c nerf.yaml --outdir ./claude-plugin
 ```
 
-Plugin metadata is sourced from an external file to make it easy for teams to personalize the output
-plugin for their needs. See [nerf-plugin.yaml](nerf-plugin.yaml) for the plugin metadata format.
+Package identity and per-target settings live in an optional config file passed via `-c <path>`.
+When omitted, sensible defaults produce an installable plugin. See [nerf.yaml](nerf.yaml) for an
+example.
+
+To install the generated plugin:
+
+```bash
+claude plugin marketplace add <plugin-dir>
+claude plugin install <plugin-name>@<marketplace-name>
+```
 
 ## Default Manifests/Packages
 
@@ -183,6 +192,7 @@ nerftools/             Python package
   rendering.py         Shared display helpers (maps-to, usage tokens)
   skill.py             Rulesync skill generation
   formats.py           Claude Code plugin builder
+  config.py            Config loader, plugin metadata, defaults resolution
   cli.py               CLI (validate + generate)
   nerfctl/claude/      Grant management shell scripts
   default_manifests/   Default tool package manifests (YAML)

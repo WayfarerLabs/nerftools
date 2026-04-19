@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from nerftools.config import Author, MarketplaceMetadata, PluginMetadata
 from nerftools.formats import build_claude_plugin
 from nerftools.manifest import (
     ArgSpec,
@@ -16,7 +17,6 @@ from nerftools.manifest import (
     ThreatSpec,
     ToolSpec,
 )
-from nerftools.plugin_meta import Author, MarketplaceMetadata, PluginMetadata
 
 _THREAT_NONE = ThreatSpec(read=ThreatLevel.NONE, write=ThreatLevel.NONE)
 
@@ -165,7 +165,7 @@ def test_claude_plugin_nerfctl_scripts(tmp_path: Path) -> None:
     assert (scripts_dir / "nerfctl-grant-reset").exists()
     assert (scripts_dir / "nerfctl-grant-by-threat").exists()
     assert (scripts_dir / "nerfctl-grant-list").exists()
-    assert (scripts_dir / "nerfctl-install-plugin").exists()
+    assert not (scripts_dir / "nerfctl-install-plugin").exists()
 
 
 def test_claude_plugin_nerfctl_skills(tmp_path: Path) -> None:
