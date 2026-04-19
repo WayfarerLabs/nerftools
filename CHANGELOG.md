@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.0.0](https://github.com/WayfarerLabs/nerftools/compare/v0.3.2...v1.0.0) (2026-04-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* `--plugin-config` and `--prefix` flags are removed. Use `-c <path>` to pass a config file. `--prefix` is now configured via `defaults.prefix` in the config file.
+
+### Features
+
+* introduce optional config file, drop --plugin-config and install script ([f6a1ab9](https://github.com/WayfarerLabs/nerftools/commit/f6a1ab95f7f1e22fc84d6fea111390db38ef6ebb))
+
+
+### Bug Fixes
+
+* address review feedback from Copilot ([60f4bc5](https://github.com/WayfarerLabs/nerftools/commit/60f4bc53ca87607b40873554a48ba7984a7b6c9e))
+* **ci:** sync uv.lock during release to prevent version drift ([6eef9b8](https://github.com/WayfarerLabs/nerftools/commit/6eef9b8d6dfd2ccc0646cca71bdcc95fff779f48))
+
+
+### Documentation
+
+* **sdd:** capture the refactor sdd as it defined the fundamental structure ([5c7cad4](https://github.com/WayfarerLabs/nerftools/commit/5c7cad4248c3320cd7d67848d4963376dd8f24ee))
+
 ## [0.3.2](https://github.com/WayfarerLabs/nerftools/compare/v0.3.1...v0.3.2) (2026-04-14)
 
 
