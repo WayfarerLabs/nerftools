@@ -40,3 +40,6 @@ Thumbs.db
 .pytest_cache/
 htmlcov/
 .coverage
+
+# tmuxinator config is personal
+.tmuxinator.yml
