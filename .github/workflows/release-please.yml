@@ -58,19 +58,19 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Install dependencies
-        run: uv sync --frozen
+      - name: Sync lockfile and install dependencies
+        run: uv sync
 
       - name: Regenerate Claude Code plugin
         run: uv run nerf generate --target claude-plugin -c nerf.yaml --outdir ./out/claude-plugin
 
-      - name: Commit updated plugin
+      - name: Commit updated plugin and lockfile
         run: |
           git config user.name "nerftools-release[bot]"
           git config user.email "nerftools-release[bot]@users.noreply.github.com"
-          git add out/claude-plugin/
+          git add out/claude-plugin/ uv.lock
           if git diff --cached --quiet; then
-            echo "No changes to plugin output"
+            echo "No changes to plugin output or lockfile"
           else
             git commit -m "build: regenerate Claude Code plugin for release"
             git push
