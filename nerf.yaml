@@ -1,7 +1,7 @@
-# Plugin metadata for the nerftools repo's own Claude Code plugin.
-# Used by `nerf generate --target claude-plugin --plugin-config nerf-plugin.yaml`.
+# Nerf config for the nerftools repo.
+# Used by `nerf generate --target claude-plugin -c nerf.yaml`.
 
-plugin:
+package:
   name: nerftools
   version: 0.3.2 # x-release-please-version
   description: Scoped, safety-constrained CLI wrappers for AI agents
@@ -16,6 +16,7 @@ plugin:
     - safety
     - cli-wrappers
 
-# No `marketplace:` section: this repo distributes the plugin via the
-# repo-level marketplace at .claude-plugin/marketplace.json, not as a
-# standalone embedded marketplace.
+targets:
+  claude-plugin:
+    marketplace:
+      embed: false  # distributed via the repo-level marketplace.json
