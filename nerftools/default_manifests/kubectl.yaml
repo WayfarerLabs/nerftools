@@ -177,11 +177,7 @@ tools:
       write: remote
     guards:
       - command: [which, timeout]
-        fail_message: >-
-          GNU coreutils "timeout" is required but not found.
-          On Linux it is typically pre-installed; on macOS, install via
-          "brew install coreutils" (provides "gtimeout") or use a newer
-          macOS release where "timeout" is available natively.
+        fail_message: '"timeout" (from coreutils) is required but not found. Pre-installed on Linux and recent macOS.'
     template:
       command:
         - timeout

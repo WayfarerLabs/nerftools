@@ -40,7 +40,15 @@ tools:
         echo "error: az-monitor-activity-log: --hours-back cannot exceed 168 (7 days)" >&2
         exit 1
       fi
-      START_TIME=$(date -u -d "${HOURS} hours ago" +"%Y-%m-%dT%H:%M:%SZ")
+      # GNU date (Linux) accepts -d "<duration> ago"; BSD date (macOS) uses -v.
+      if date -u -d "1 hour ago" > /dev/null 2>&1; then
+        START_TIME=$(date -u -d "${HOURS} hours ago" +"%Y-%m-%dT%H:%M:%SZ")
+      elif date -u -v -1H > /dev/null 2>&1; then
+        START_TIME=$(date -u -v -"${HOURS}"H +"%Y-%m-%dT%H:%M:%SZ")
+      else
+        echo "error: az-monitor-activity-log: neither GNU 'date -d' nor BSD 'date -v' is available" >&2
+        exit 1
+      fi
       ARGS=(az monitor activity-log list --start-time "${START_TIME}" --output json)
       if [[ -n "${RESOURCE_GROUP}" ]]; then
         ARGS+=(--resource-group "${RESOURCE_GROUP}")
@@ -102,7 +110,7 @@ tools:
       aggregation:
         description: "Aggregation to apply: Average, Count, Maximum, Minimum, Total"
         flag: --aggregation
-        allow: [Average, Count, Maximum, Minimum, Total, None]
+        allow: [Average, Count, Maximum, Minimum, Total]
       interval:
         description: ISO8601 interval (e.g. PT1M, PT5M, PT1H)
         flag: --interval
