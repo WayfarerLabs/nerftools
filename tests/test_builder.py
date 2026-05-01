@@ -279,6 +279,36 @@ def test_variadic_arg_collected() -> None:
     assert 'FILES=("$@")' in script
 
 
+def test_extra_positional_rejected_when_no_variadic(tmp_path: Path) -> None:
+    """Trailing tokens past the declared positionals must error, not be silently dropped.
+
+    Without this check, "tool <pos> --unknown-flag" silently drops --unknown-flag because
+    the flag parser breaks at the first non-flag and the positional parser only takes $1.
+    """
+    arguments = {"target": _arg(required=True)}
+    tool = _template_tool(["echo", "{{arguments.target}}"], arguments=arguments)
+    script = build_script_text("nerf-test", "test", tool)
+    script_path = tmp_path / "nerf-test"
+    script_path.write_text(script)
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "value", "--unknown"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode != 0
+    assert "unexpected extra arguments" in result.stderr
+    assert "--unknown" in result.stderr
+
+
+def test_no_extra_check_when_variadic(tmp_path: Path) -> None:
+    """Tools with a variadic positional should accept any trailing tokens (variadic eats them)."""
+    arguments = {"files": _arg(required=True, variadic=True)}
+    tool = _template_tool(["echo", "{{arguments.files}}"], arguments=arguments)
+    script = build_script_text("nerf-test", "test", tool)
+    # The extra-args check must NOT be emitted for variadic tools.
+    assert "unexpected extra arguments" not in script
+
+
 def test_variadic_arg_exec_substitution() -> None:
     arguments = {"files": _arg(required=True, variadic=True)}
     script = build_script_text("t", "p", _template_tool(["git", "add", "{{arguments.files}}"], arguments=arguments))

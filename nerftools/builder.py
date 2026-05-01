@@ -100,7 +100,7 @@ def _build_script(tool_name: str, package_name: str, tool_spec: ToolSpec) -> str
 
     if has_positional:
         parts.append("")
-        parts.append(_positional_parser(tool_spec.arguments))
+        parts.append(_positional_parser(tool_name, tool_spec.arguments))
 
     if has_params:
         validations = _param_validations(tool_name, tool_spec)
@@ -285,8 +285,9 @@ def _flag_parser(tool_spec: ToolSpec, *, has_positional: bool, is_passthrough: b
     )
 
 
-def _positional_parser(arguments: dict[str, ArgSpec]) -> str:
+def _positional_parser(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
     lines = []
+    has_variadic = any(spec.variadic for spec in arguments.values())
     for name, spec in arguments.items():
         var = _var_name(name)
         if spec.variadic:
@@ -294,6 +295,15 @@ def _positional_parser(arguments: dict[str, ArgSpec]) -> str:
         else:
             lines.append(f'{var}="${{1:-}}"')
             lines.append("shift 2>/dev/null || true")
+    if not has_variadic:
+        # Reject any tokens left after consuming declared positionals. Without
+        # this, "tool <pos1> --unknown-flag extra" silently drops the trailing
+        # tokens because the flag parser broke out at the first non-flag.
+        lines.append("if [[ $# -gt 0 ]]; then")
+        lines.append(f'  echo "error: {tool_name}: unexpected extra arguments: $*" >&2')
+        lines.append('  echo "  hint: switches and options must come before positional arguments" >&2')
+        lines.append("  exit 1")
+        lines.append("fi")
     return "\n".join(lines)
 
 
