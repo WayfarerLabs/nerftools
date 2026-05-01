@@ -299,6 +299,33 @@ safe-find:
     prefix: [.]
 ```
 
+#### Known security limitations
+
+Passthrough deny operates on whole tokens, so it cannot enforce restrictions when the wrapped
+tool accepts alternative flag syntax:
+
+- **Short-flag stacking.** Tools that use POSIX-style or `pflag` short flags (notably `kubectl`,
+  many `getopt`-based utilities) allow combining boolean short flags into one token: `-Aw` is
+  parsed as `-A -w`. A deny entry of `-w` matches only the exact token `-w`, not `-Aw`, `-wA`,
+  `-Aow`, or any other stack containing `w`.
+- **Inline value forms.** For a flag that takes a value, the deny patterns `--watch` and `-w`
+  do not catch `--watch=true`, `-w=true`, or `-wtrue` (BSD-style short flag with concatenated
+  value). The first two can be partially mitigated with glob denies like `--watch=*` and
+  `-w=*`. The concatenated form `-wtrue` is syntactically indistinguishable from a short-flag
+  stack and cannot be reliably denied at the token level.
+
+**When this matters.** Use `template` mode when the wrapped tool is an agent-escape vector and
+supports either of the above syntaxes. Templates declare the entire surface up front, so any
+flag not declared in the manifest cannot reach the underlying command. Use passthrough only
+when the wrapped tool's flag surface is well-understood, or when an undeclared flag slipping
+through is purely an ergonomic issue rather than a safety one.
+
+**Future direction.** A future opt-in deny extension may recognize tokens matching
+`^-[a-zA-Z]{2,}$` and decompose them for deny matching, closing the short-flag-stacking gap.
+The concatenated-value form is likely to remain a passthrough limitation because it cannot be
+distinguished from a stack without per-tool flag knowledge. When in doubt, prefer template
+mode.
+
 ### script
 
 Run an inline bash script. Best for tools that need custom logic beyond wrapping a single command.
