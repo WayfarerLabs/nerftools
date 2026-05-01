@@ -1,0 +1,102 @@
+version: 1
+
+package:
+  name: az-storage
+  description: Azure Storage Account inspection tools (network rules, public access, private endpoints)
+  skill_group: az-storage
+  skill_intro: |
+    Tools for inspecting storage account configuration. az-storage-account-show
+    reports network rules, allowBlobPublicAccess, and private endpoint
+    connections. Useful for auditing tfstate accounts and verifying public
+    access is appropriately restricted.
+    All tools accept --subscription to target a specific subscription.
+
+tools:
+  az-storage-account-list:
+    description: List storage accounts (optionally filtered by resource group)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - storage
+        - account
+        - list
+        - "{{options.resource_group}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    options:
+      resource_group:
+        description: Filter to a specific resource group
+        flag: --resource-group
+        short: -g
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-storage-account-show:
+    description: Show storage account details (network rules, public access, private endpoints)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - storage
+        - account
+        - show
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --name
+        - "{{arguments.name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      name:
+        description: Storage account name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the storage account
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-storage-account-network-rule-list:
+    description: List explicit network rules on a storage account
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - storage
+        - account
+        - network-rule
+        - list
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --account-name
+        - "{{arguments.account_name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      account_name:
+        description: Storage account name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the storage account
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription

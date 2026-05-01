@@ -1,0 +1,110 @@
+version: 1
+
+package:
+  name: az-resource
+  description: Generic Azure resource and resource group inspection tools
+  skill_group: az-resource
+  skill_intro: |
+    Generic tools for listing and inspecting Azure resources and resource groups.
+    Use az-resource-list to find resources by group, type, or tag.
+    Use az-resource-show to fetch a resource by full ID.
+    Use az-group-list and az-group-show for resource groups.
+    All tools accept --subscription to target a specific subscription.
+
+tools:
+  az-resource-list:
+    description: List Azure resources, optionally filtered by group, type, or tag
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - resource
+        - list
+        - "{{options.resource_group}}"
+        - "{{options.resource_type}}"
+        - "{{options.tag}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    options:
+      resource_group:
+        description: Filter to a specific resource group
+        flag: --resource-group
+        short: -g
+      resource_type:
+        description: Filter by resource type (e.g. Microsoft.KeyVault/vaults)
+        flag: --resource-type
+      tag:
+        description: Filter by tag (e.g. env=staging)
+        flag: --tag
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-resource-show:
+    description: Show full details for a resource by ID
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - resource
+        - show
+        - --ids
+        - "{{arguments.resource_id}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      resource_id:
+        description: Full resource ID (/subscriptions/.../resourceGroups/.../providers/...)
+        required: true
+    options:
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-group-list:
+    description: List resource groups in a subscription
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - group
+        - list
+        - "{{options.subscription}}"
+        - --output
+        - json
+    options:
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-group-show:
+    description: Show details for a single resource group
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - group
+        - show
+        - --name
+        - "{{arguments.name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      name:
+        description: Resource group name
+        required: true
+    options:
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription

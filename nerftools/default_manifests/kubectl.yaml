@@ -1,0 +1,220 @@
+version: 1
+
+package:
+  name: kubectl
+  description: kubectl tools for inspecting and operating on Kubernetes clusters
+  skill_group: kubectl
+  skill_intro: |
+    Tools for inspecting and operating on Kubernetes clusters.
+    Read-only tools (kubectl-get, kubectl-describe, kubectl-logs, kubectl-top,
+    kubectl-api-resources, kubectl-api-versions, kubectl-explain) are
+    passthrough wrappers around the corresponding kubectl subcommands, with
+    follow/watch flags denied to prevent indefinite blocking.
+    Diagnostic write tools (kubectl-exec, kubectl-port-forward,
+    kubectl-rollout-restart) are templated to constrain their surface.
+    Use az-aks-get-credentials to populate ~/.kube/config first, then use
+    kubectl-config-use-context to switch between configured clusters.
+
+tools:
+  kubectl-version:
+    description: Show kubectl client and server version
+    threat:
+      read: remote
+      write: none
+    template:
+      command: [kubectl, version, --output, json]
+
+  kubectl-config-get-contexts:
+    description: List configured kubectl contexts
+    threat:
+      read: machine
+      write: none
+    template:
+      command: [kubectl, config, get-contexts]
+
+  kubectl-config-current-context:
+    description: Show the currently active kubectl context
+    threat:
+      read: machine
+      write: none
+    template:
+      command: [kubectl, config, current-context]
+
+  kubectl-config-use-context:
+    description: Switch to a different kubectl context
+    threat:
+      read: machine
+      write: machine
+    template:
+      command: [kubectl, config, use-context, "{{arguments.context}}"]
+    arguments:
+      context:
+        description: Context name (from kubectl-config-get-contexts)
+        required: true
+
+  kubectl-cluster-info:
+    description: Show cluster info (API server URL, addons)
+    threat:
+      read: remote
+      write: none
+    template:
+      command: [kubectl, cluster-info]
+
+  kubectl-get:
+    description: >-
+      Get kubernetes resources. Passthrough wrapper for "kubectl get".
+      Watch flags are denied to prevent indefinite blocking.
+    threat:
+      read: remote
+      write: none
+    passthrough:
+      command: kubectl
+      prefix: [get]
+      deny: [-w, --watch, --watch-only]
+
+  kubectl-describe:
+    description: Describe kubernetes resources. Passthrough wrapper for "kubectl describe".
+    threat:
+      read: remote
+      write: none
+    passthrough:
+      command: kubectl
+      prefix: [describe]
+
+  kubectl-logs:
+    description: >-
+      Show pod logs. Passthrough wrapper for "kubectl logs".
+      Follow flags are denied to prevent indefinite blocking.
+    threat:
+      read: remote
+      write: none
+    passthrough:
+      command: kubectl
+      prefix: [logs]
+      deny: [-f, --follow]
+
+  kubectl-top:
+    description: >-
+      Show resource usage for pods or nodes. Passthrough wrapper for
+      "kubectl top" (e.g. "kubectl-top pods -n default").
+    threat:
+      read: remote
+      write: none
+    passthrough:
+      command: kubectl
+      prefix: [top]
+
+  kubectl-api-resources:
+    description: List API resources supported by the cluster. Passthrough wrapper for "kubectl api-resources".
+    threat:
+      read: remote
+      write: none
+    passthrough:
+      command: kubectl
+      prefix: [api-resources]
+
+  kubectl-api-versions:
+    description: List API versions supported by the cluster. Passthrough wrapper for "kubectl api-versions".
+    threat:
+      read: remote
+      write: none
+    passthrough:
+      command: kubectl
+      prefix: [api-versions]
+
+  kubectl-explain:
+    description: Explain the schema of a resource. Passthrough wrapper for "kubectl explain".
+    threat:
+      read: remote
+      write: none
+    passthrough:
+      command: kubectl
+      prefix: [explain]
+
+  kubectl-exec:
+    description: >-
+      Execute a command in a pod (non-interactive, no TTY). Use this for
+      one-shot diagnostics; for cluster mutations prefer Helm/Terraform.
+    threat:
+      read: remote
+      write: remote
+    template:
+      command:
+        - kubectl
+        - exec
+        - "{{arguments.pod}}"
+        - "{{options.namespace}}"
+        - "{{options.container}}"
+        - --
+        - "{{arguments.command}}"
+    arguments:
+      pod:
+        description: Pod name
+        required: true
+        pattern: "^[a-zA-Z0-9._-]+$"
+      command:
+        description: Command and args to run in the pod
+        required: true
+        variadic: true
+        allow_flags: true
+    options:
+      namespace:
+        description: Namespace
+        flag: --namespace
+        short: -n
+      container:
+        description: Container name (when the pod has multiple containers)
+        flag: --container
+        short: -c
+
+  kubectl-port-forward:
+    description: >-
+      Forward a local port to a pod or service in the cluster. Runs until
+      interrupted; combine with a foreground time bound when scripting.
+    threat:
+      read: remote
+      write: remote
+    template:
+      command:
+        - kubectl
+        - port-forward
+        - "{{options.namespace}}"
+        - "{{arguments.target}}"
+        - "{{arguments.ports}}"
+    arguments:
+      target:
+        description: Resource to forward to (e.g. pod/<name> or svc/<name>)
+        required: true
+        pattern: "^(pod|svc|service|deployment|deploy|statefulset|sts)/[a-zA-Z0-9._-]+$"
+      ports:
+        description: Port mapping (local:remote)
+        required: true
+        pattern: "^[0-9]+:[0-9]+$"
+    options:
+      namespace:
+        description: Namespace
+        flag: --namespace
+        short: -n
+
+  kubectl-rollout-restart:
+    description: Trigger a rolling restart of a deployment, daemonset, or statefulset
+    threat:
+      read: remote
+      write: remote
+    template:
+      command:
+        - kubectl
+        - rollout
+        - restart
+        - "{{options.namespace}}"
+        - "{{arguments.target}}"
+    arguments:
+      target:
+        description: Resource to restart (e.g. deployment/<name>)
+        required: true
+        pattern: "^(deployment|deploy|daemonset|ds|statefulset|sts)/[a-zA-Z0-9._-]+$"
+    options:
+      namespace:
+        description: Namespace
+        flag: --namespace
+        short: -n

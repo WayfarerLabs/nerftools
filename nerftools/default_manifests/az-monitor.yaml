@@ -1,0 +1,143 @@
+version: 1
+
+package:
+  name: az-monitor
+  description: Azure Monitor inspection tools (activity log, metrics, diagnostic settings)
+  skill_group: az-monitor
+  skill_intro: |
+    Tools for querying Azure Monitor. az-monitor-activity-log fetches recent
+    activity-log entries scoped to a resource group or single resource (one
+    of those is required, time bounded to a configurable hours-back window
+    with a 168 hour cap). az-monitor-metrics-list pulls a single metric
+    series. az-monitor-diagnostic-settings-list audits what is wired to
+    Log Analytics for a given resource.
+    All tools accept --subscription to target a specific subscription.
+
+tools:
+  az-monitor-activity-log:
+    description: >-
+      Fetch recent Azure Monitor activity-log entries. Requires either
+      --resource-group or --resource-id (mutually exclusive). Defaults to
+      the last 1 hour; --hours-back can be raised up to 168 (7 days).
+    threat:
+      read: remote
+      write: none
+    script: |
+      if [[ -z "${RESOURCE_GROUP}" && -z "${RESOURCE_ID}" ]]; then
+        echo "error: az-monitor-activity-log: must specify either --resource-group or --resource-id" >&2
+        exit 1
+      fi
+      if [[ -n "${RESOURCE_GROUP}" && -n "${RESOURCE_ID}" ]]; then
+        echo "error: az-monitor-activity-log: --resource-group and --resource-id are mutually exclusive" >&2
+        exit 1
+      fi
+      HOURS=${HOURS_BACK:-1}
+      if (( HOURS < 1 )); then
+        echo "error: az-monitor-activity-log: --hours-back must be at least 1" >&2
+        exit 1
+      fi
+      if (( HOURS > 168 )); then
+        echo "error: az-monitor-activity-log: --hours-back cannot exceed 168 (7 days)" >&2
+        exit 1
+      fi
+      START_TIME=$(date -u -d "${HOURS} hours ago" +"%Y-%m-%dT%H:%M:%SZ")
+      ARGS=(az monitor activity-log list --start-time "${START_TIME}" --output json)
+      if [[ -n "${RESOURCE_GROUP}" ]]; then
+        ARGS+=(--resource-group "${RESOURCE_GROUP}")
+      fi
+      if [[ -n "${RESOURCE_ID}" ]]; then
+        ARGS+=(--resource-id "${RESOURCE_ID}")
+      fi
+      if [[ -n "${SUBSCRIPTION}" ]]; then
+        ARGS+=(--subscription "${SUBSCRIPTION}")
+      fi
+      exec "${ARGS[@]}"
+    options:
+      resource_group:
+        description: Filter to a resource group (mutually exclusive with --resource-id)
+        flag: --resource-group
+        short: -g
+      resource_id:
+        description: Filter to a single resource (mutually exclusive with --resource-group)
+        flag: --resource-id
+      hours_back:
+        description: How many hours back to query (default 1, max 168)
+        flag: --hours-back
+        pattern: "^[0-9]+$"
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-monitor-metrics-list:
+    description: Fetch a single metric series for a resource
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - monitor
+        - metrics
+        - list
+        - --resource
+        - "{{options.resource_id}}"
+        - --metric
+        - "{{arguments.metric}}"
+        - "{{options.aggregation}}"
+        - "{{options.interval}}"
+        - "{{options.start_time}}"
+        - "{{options.end_time}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      metric:
+        description: Metric name (e.g. CpuPercent, ServerLogins)
+        required: true
+    options:
+      resource_id:
+        description: Full resource ID to query
+        flag: --resource
+        required: true
+      aggregation:
+        description: "Aggregation to apply: Average, Count, Maximum, Minimum, Total"
+        flag: --aggregation
+        allow: [Average, Count, Maximum, Minimum, Total, None]
+      interval:
+        description: ISO8601 interval (e.g. PT1M, PT5M, PT1H)
+        flag: --interval
+        pattern: "^PT[0-9]+[SMH]$"
+      start_time:
+        description: ISO8601 start time
+        flag: --start-time
+      end_time:
+        description: ISO8601 end time
+        flag: --end-time
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-monitor-diagnostic-settings-list:
+    description: List diagnostic settings on a resource (what is wired to Log Analytics, Event Hubs, Storage)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - monitor
+        - diagnostic-settings
+        - list
+        - --resource
+        - "{{arguments.resource_id}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      resource_id:
+        description: Full resource ID to query
+        required: true
+    options:
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription

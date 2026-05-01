@@ -1,0 +1,243 @@
+version: 1
+
+package:
+  name: az-aks
+  description: Azure Kubernetes Service inspection and access tools
+  skill_group: az-aks
+  skill_intro: |
+    Tools for inspecting AKS clusters and fetching cluster credentials.
+    az-aks-show reports the apiServerAccessProfile (private cluster flag,
+    private FQDN). az-aks-get-credentials merges the cluster's kubeconfig
+    into ~/.kube/config so that kubectl tools can target the cluster.
+    az-aks-command-invoke runs a command via the AKS run-command API
+    (works without VNet access; useful for break-glass diagnostics).
+    All tools accept --subscription to target a specific subscription.
+
+tools:
+  az-aks-list:
+    description: List AKS clusters (optionally filtered by resource group)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - aks
+        - list
+        - "{{options.resource_group}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    options:
+      resource_group:
+        description: Filter to a specific resource group
+        flag: --resource-group
+        short: -g
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-aks-show:
+    description: Show AKS cluster details (network profile, private cluster flag, FQDN)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - aks
+        - show
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --name
+        - "{{arguments.name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      name:
+        description: AKS cluster name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the cluster
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-aks-nodepool-list:
+    description: List node pools on an AKS cluster
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - aks
+        - nodepool
+        - list
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --cluster-name
+        - "{{arguments.cluster_name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      cluster_name:
+        description: AKS cluster name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the cluster
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-aks-nodepool-show:
+    description: Show details for a single node pool (size, autoscaler config, taints)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - aks
+        - nodepool
+        - show
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --cluster-name
+        - "{{options.cluster_name}}"
+        - --name
+        - "{{arguments.name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      name:
+        description: Node pool name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the cluster
+        flag: --resource-group
+        short: -g
+        required: true
+      cluster_name:
+        description: AKS cluster name
+        flag: --cluster-name
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-aks-get-versions:
+    description: List supported AKS Kubernetes versions in a region
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - aks
+        - get-versions
+        - --location
+        - "{{arguments.location}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      location:
+        description: Azure region (e.g. eastus2)
+        required: true
+    options:
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-aks-get-credentials:
+    description: Merge AKS cluster credentials into ~/.kube/config so kubectl can target the cluster
+    threat:
+      read: remote
+      write: machine
+    template:
+      command:
+        - az
+        - aks
+        - get-credentials
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --name
+        - "{{arguments.name}}"
+        - "{{switches.overwrite_existing}}"
+        - "{{switches.admin}}"
+        - "{{options.subscription}}"
+    arguments:
+      name:
+        description: AKS cluster name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the cluster
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+    switches:
+      overwrite_existing:
+        description: Overwrite an existing kubeconfig entry with the same name
+        flag: --overwrite-existing
+      admin:
+        description: Fetch the cluster-admin (local accounts) kubeconfig
+        flag: --admin
+
+  az-aks-command-invoke:
+    description: >-
+      Run a kubectl/shell command against the cluster via the AKS run-command
+      API. Works without VNet access; useful for diagnosing private clusters
+      from outside the access path.
+    threat:
+      read: remote
+      write: remote
+    template:
+      command:
+        - az
+        - aks
+        - command
+        - invoke
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --name
+        - "{{options.cluster_name}}"
+        - --command
+        - "{{arguments.command}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      command:
+        description: Shell command to execute on the cluster (e.g. "kubectl get pods -A")
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the cluster
+        flag: --resource-group
+        short: -g
+        required: true
+      cluster_name:
+        description: AKS cluster name
+        flag: --name
+        short: -n
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription

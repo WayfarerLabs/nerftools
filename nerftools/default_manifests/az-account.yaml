@@ -1,0 +1,40 @@
+version: 1
+
+package:
+  name: az-account
+  description: Azure subscription and identity context tools
+  skill_group: az-account
+  skill_intro: |
+    Tools for inspecting and switching the active Azure subscription.
+    az-account-show reports the active subscription and signed-in identity.
+    az-account-list enumerates all subscriptions the principal can see.
+    az-account-set switches the active subscription for the session.
+
+tools:
+  az-account-show:
+    description: Show the currently active subscription and signed-in identity
+    threat:
+      read: remote
+      write: none
+    template:
+      command: [az, account, show, --output, json]
+
+  az-account-list:
+    description: List all Azure subscriptions accessible to the signed-in principal
+    threat:
+      read: remote
+      write: none
+    template:
+      command: [az, account, list, --output, json]
+
+  az-account-set:
+    description: Switch the active Azure subscription for this session
+    threat:
+      read: remote
+      write: machine
+    template:
+      command: [az, account, set, --subscription, "{{arguments.subscription}}"]
+    arguments:
+      subscription:
+        description: Subscription name or ID
+        required: true

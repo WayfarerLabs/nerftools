@@ -1,0 +1,602 @@
+version: 1
+
+package:
+  name: az-network
+  description: Azure networking inspection tools (VNets, peerings, NSGs, private endpoints, DNS zones)
+  skill_group: az-network
+  skill_intro: |
+    Tools for inspecting Azure networking resources: VNets, peerings, subnets,
+    NSGs, private endpoints, private DNS zones, public IPs, NICs, and route
+    tables. Use these during validation phases to confirm resources are
+    configured for private access and that public surface is minimized.
+    All tools accept --subscription to target a specific subscription.
+
+tools:
+  az-network-vnet-list:
+    description: List virtual networks (optionally filtered by resource group)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - vnet
+        - list
+        - "{{options.resource_group}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    options:
+      resource_group:
+        description: Filter to a specific resource group
+        flag: --resource-group
+        short: -g
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-network-vnet-show:
+    description: Show details for a virtual network (address space, subnets, peerings)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - vnet
+        - show
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --name
+        - "{{arguments.name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      name:
+        description: VNet name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the VNet
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-network-vnet-peering-list:
+    description: List peerings on a virtual network
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - vnet
+        - peering
+        - list
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --vnet-name
+        - "{{arguments.vnet_name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      vnet_name:
+        description: VNet name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the VNet
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-network-vnet-peering-show:
+    description: Show details for a single VNet peering (peering state, address space, gateway transit)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - vnet
+        - peering
+        - show
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --vnet-name
+        - "{{options.vnet_name}}"
+        - --name
+        - "{{arguments.name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      name:
+        description: Peering name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the VNet
+        flag: --resource-group
+        short: -g
+        required: true
+      vnet_name:
+        description: VNet that owns the peering
+        flag: --vnet-name
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-network-subnet-show:
+    description: Show subnet details (delegations, private link policies, NSG/RT bindings)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - vnet
+        - subnet
+        - show
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --vnet-name
+        - "{{options.vnet_name}}"
+        - --name
+        - "{{arguments.name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      name:
+        description: Subnet name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the VNet
+        flag: --resource-group
+        short: -g
+        required: true
+      vnet_name:
+        description: VNet that owns the subnet
+        flag: --vnet-name
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-network-nsg-list:
+    description: List network security groups (optionally filtered by resource group)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - nsg
+        - list
+        - "{{options.resource_group}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    options:
+      resource_group:
+        description: Filter to a specific resource group
+        flag: --resource-group
+        short: -g
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-network-nsg-show:
+    description: Show NSG details including all security rules
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - nsg
+        - show
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --name
+        - "{{arguments.name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      name:
+        description: NSG name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the NSG
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-network-private-endpoint-list:
+    description: List private endpoints (optionally filtered by resource group)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - private-endpoint
+        - list
+        - "{{options.resource_group}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    options:
+      resource_group:
+        description: Filter to a specific resource group
+        flag: --resource-group
+        short: -g
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-network-private-endpoint-show:
+    description: Show private endpoint details (target resource, connection state, NIC)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - private-endpoint
+        - show
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --name
+        - "{{arguments.name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      name:
+        description: Private endpoint name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the private endpoint
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-network-private-link-resource-list:
+    description: List groupIds a resource exposes for private endpoints (e.g. vault, sqlServer)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - private-link-resource
+        - list
+        - --id
+        - "{{arguments.resource_id}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      resource_id:
+        description: Full resource ID of the target resource
+        required: true
+    options:
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-network-private-dns-zone-list:
+    description: List private DNS zones (optionally filtered by resource group)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - private-dns
+        - zone
+        - list
+        - "{{options.resource_group}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    options:
+      resource_group:
+        description: Filter to a specific resource group
+        flag: --resource-group
+        short: -g
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-network-private-dns-zone-show:
+    description: Show details for a private DNS zone (record count, registration state)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - private-dns
+        - zone
+        - show
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --name
+        - "{{arguments.name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      name:
+        description: Private DNS zone name (e.g. privatelink.vaultcore.azure.net)
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the zone
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-network-private-dns-record-list:
+    description: List record sets in a private DNS zone (all record types)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - private-dns
+        - record-set
+        - list
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --zone-name
+        - "{{arguments.zone_name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      zone_name:
+        description: Private DNS zone name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the zone
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-network-private-dns-link-list:
+    description: List virtual network links on a private DNS zone
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - private-dns
+        - link
+        - vnet
+        - list
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --zone-name
+        - "{{arguments.zone_name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      zone_name:
+        description: Private DNS zone name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the zone
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-network-private-dns-link-show:
+    description: Show details for a single virtual network link on a private DNS zone
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - private-dns
+        - link
+        - vnet
+        - show
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --zone-name
+        - "{{options.zone_name}}"
+        - --name
+        - "{{arguments.name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      name:
+        description: Link name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the zone
+        flag: --resource-group
+        short: -g
+        required: true
+      zone_name:
+        description: Private DNS zone name
+        flag: --zone-name
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-network-public-ip-list:
+    description: List public IP addresses (optionally filtered by resource group)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - public-ip
+        - list
+        - "{{options.resource_group}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    options:
+      resource_group:
+        description: Filter to a specific resource group
+        flag: --resource-group
+        short: -g
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-network-public-ip-show:
+    description: Show details for a public IP (allocation method, IP address, associated resource)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - public-ip
+        - show
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --name
+        - "{{arguments.name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      name:
+        description: Public IP resource name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the public IP
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-network-nic-show:
+    description: Show NIC details (private IPs, subnet, NSG association)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - nic
+        - show
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --name
+        - "{{arguments.name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      name:
+        description: NIC name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the NIC
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-network-route-table-show:
+    description: Show route table details (routes, associated subnets)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - network
+        - route-table
+        - show
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --name
+        - "{{arguments.name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      name:
+        description: Route table name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the route table
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
