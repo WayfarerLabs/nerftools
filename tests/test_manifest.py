@@ -10,6 +10,7 @@ import yaml
 from nerftools.manifest import (
     ManifestError,
     NerfManifest,
+    PathTest,
     ThreatLevel,
     load_manifest,
     merge_manifests,
@@ -395,6 +396,121 @@ def test_argument_allow_deny_conflict_raises(tmp_path: Path) -> None:
     p = _write_manifest(tmp_path, raw)
     with pytest.raises(ManifestError, match="cannot both be set"):
         load_manifest(p)
+
+
+# -- Path tests ----------------------------------------------------------------
+
+
+def _path_test_manifest(tests: list[str], *, kind: str = "options") -> dict:
+    if kind == "options":
+        return _minimal_manifest(tools={
+            "t": {
+                "description": "x",
+                "threat": {"read": "workspace", "write": "none"},
+                "template": {"command": ["echo", "{{options.dir}}"]},
+                "options": {"dir": {"description": "d", "path_tests": tests}},
+            },
+        })
+    return _minimal_manifest(tools={
+        "t": {
+            "description": "x",
+            "threat": {"read": "workspace", "write": "none"},
+            "template": {"command": ["echo", "{{arguments.target}}"]},
+            "arguments": {
+                "target": {"description": "t", "required": True, "path_tests": tests},
+            },
+        },
+    })
+
+
+def test_path_tests_loaded_on_option(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _path_test_manifest(["under_cwd", "dir"]))
+    m = load_manifest(p)
+    opt = m.tools["t"].options["dir"]
+    assert opt.path_tests == (PathTest.UNDER_CWD, PathTest.DIR)
+
+
+def test_path_tests_loaded_on_argument(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _path_test_manifest(["under_cwd", "exists"], kind="arguments"))
+    m = load_manifest(p)
+    arg = m.tools["t"].arguments["target"]
+    assert arg.path_tests == (PathTest.UNDER_CWD, PathTest.EXISTS)
+
+
+def test_path_tests_default_empty(tmp_path: Path) -> None:
+    raw = _minimal_manifest(tools={
+        "t": {
+            "description": "x",
+            "threat": {"read": "none", "write": "none"},
+            "template": {"command": ["echo", "{{options.dir}}"]},
+            "options": {"dir": {"description": "d"}},
+        },
+    })
+    p = _write_manifest(tmp_path, raw)
+    m = load_manifest(p)
+    assert m.tools["t"].options["dir"].path_tests == ()
+
+
+def test_path_tests_empty_list_rejected(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _path_test_manifest([]))
+    with pytest.raises(ManifestError, match="must contain at least one test"):
+        load_manifest(p)
+
+
+def test_path_tests_unknown_value_rejected(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _path_test_manifest(["frobnicate"]))
+    with pytest.raises(ManifestError, match="unknown path_test 'frobnicate'"):
+        load_manifest(p)
+
+
+def test_path_tests_must_be_list(tmp_path: Path) -> None:
+    raw = _minimal_manifest(tools={
+        "t": {
+            "description": "x",
+            "threat": {"read": "none", "write": "none"},
+            "template": {"command": ["echo", "{{options.dir}}"]},
+            "options": {"dir": {"description": "d", "path_tests": "under_cwd"}},
+        },
+    })
+    p = _write_manifest(tmp_path, raw)
+    with pytest.raises(ManifestError, match="'path_tests' must be a list"):
+        load_manifest(p)
+
+
+def test_path_tests_duplicate_rejected(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _path_test_manifest(["under_cwd", "under_cwd"]))
+    with pytest.raises(ManifestError, match="duplicate path_test 'under_cwd'"):
+        load_manifest(p)
+
+
+def test_path_tests_file_dir_mutex(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _path_test_manifest(["file", "dir"]))
+    with pytest.raises(ManifestError, match="mutually exclusive: file, dir"):
+        load_manifest(p)
+
+
+def test_path_tests_exists_not_exists_mutex(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _path_test_manifest(["exists", "not_exists"]))
+    with pytest.raises(ManifestError, match="mutually exclusive: exists, not_exists"):
+        load_manifest(p)
+
+
+def test_path_tests_symlink_not_symlink_mutex(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _path_test_manifest(["symlink", "not_symlink"]))
+    with pytest.raises(ManifestError, match="mutually exclusive: symlink, not_symlink"):
+        load_manifest(p)
+
+
+def test_path_tests_not_exists_forbids_attr_tests(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _path_test_manifest(["not_exists", "readable"]))
+    with pytest.raises(ManifestError, match="'not_exists' cannot be combined with: readable"):
+        load_manifest(p)
+
+
+def test_path_tests_not_exists_with_under_cwd_ok(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _path_test_manifest(["under_cwd", "not_exists"]))
+    m = load_manifest(p)
+    assert m.tools["t"].options["dir"].path_tests == (PathTest.UNDER_CWD, PathTest.NOT_EXISTS)
 
 
 # -- Guards and pre hooks ------------------------------------------------------

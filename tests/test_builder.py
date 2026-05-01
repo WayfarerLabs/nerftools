@@ -15,6 +15,7 @@ from nerftools.manifest import (
     OptionSpec,
     PackageMeta,
     PassthroughSpec,
+    PathTest,
     SwitchSpec,
     TemplateSpec,
     ThreatLevel,
@@ -771,3 +772,196 @@ def test_non_pkgrun_has_no_resolver() -> None:
     tool = _template_tool(["git", "add", "{{arguments.files}}"], arguments={"files": _arg(variadic=True)})
     script = build_script_text("git-add", "test", tool)
     assert "_PKGRUN" not in script
+
+
+# -- Path tests ----------------------------------------------------------------
+
+
+def _path_option_tool(
+    tests: tuple[PathTest, ...],
+    *,
+    required: bool = False,
+) -> ToolSpec:
+    options = {
+        "dir": OptionSpec(
+            flag="-C", description="Directory", required=required, path_tests=tests,
+        ),
+    }
+    return _template_tool(["echo", "{{options.dir}}"], options=options)
+
+
+def _path_arg_tool(
+    tests: tuple[PathTest, ...],
+    *,
+    required: bool = True,
+    variadic: bool = False,
+) -> ToolSpec:
+    arguments = {
+        "target": ArgSpec(
+            description="Target", required=required, variadic=variadic,
+            path_tests=tests,
+        ),
+    }
+    return _template_tool(["echo", "{{arguments.target}}"], arguments=arguments)
+
+
+def test_no_path_tests_no_helper() -> None:
+    script = build_script_text("t", "p", _template_tool(["echo", "hello"]))
+    assert "_nerf_check_path" not in script
+
+
+def test_path_tests_emit_helper() -> None:
+    script = build_script_text("t", "p", _path_option_tool((PathTest.UNDER_CWD,)))
+    assert "_nerf_check_path()" in script
+    assert "realpath -m" in script
+
+
+def test_path_tests_helper_emitted_once_per_tool() -> None:
+    options = {
+        "dir": OptionSpec(
+            flag="-C", description="d", required=False,
+            path_tests=(PathTest.UNDER_CWD, PathTest.DIR),
+        ),
+    }
+    arguments = {
+        "target": ArgSpec(
+            description="t", required=True,
+            path_tests=(PathTest.UNDER_CWD, PathTest.EXISTS),
+        ),
+    }
+    tool = _template_tool(
+        ["echo", "{{options.dir}}", "{{arguments.target}}"],
+        options=options, arguments=arguments,
+    )
+    script = build_script_text("t", "p", tool)
+    assert script.count("_nerf_check_path() {") == 1
+
+
+def test_path_tests_option_invocation() -> None:
+    script = build_script_text("t", "p", _path_option_tool((PathTest.UNDER_CWD, PathTest.DIR)))
+    assert "_nerf_check_path 'option -C' \"${DIR}\" 'under_cwd,dir'" in script
+    # Optional option is gated on non-empty:
+    assert 'if [[ -n "${DIR}" ]]; then' in script
+
+
+def test_path_tests_required_argument_invocation() -> None:
+    script = build_script_text("t", "p", _path_arg_tool((PathTest.UNDER_CWD, PathTest.EXISTS)))
+    assert "_nerf_check_path 'argument <target>' \"${TARGET}\" 'under_cwd,exists'" in script
+
+
+def test_path_tests_variadic_argument_loops() -> None:
+    script = build_script_text("t", "p", _path_arg_tool((PathTest.UNDER_CWD,), variadic=True))
+    assert 'for _v in "${TARGET[@]}"; do' in script
+    assert "_nerf_check_path 'argument <target>' \"$_v\" 'under_cwd'" in script
+
+
+def test_path_tests_generated_bash_is_valid() -> None:
+    options = {
+        "dir": OptionSpec(
+            flag="-C", description="d", required=False,
+            path_tests=(PathTest.UNDER_CWD, PathTest.DIR),
+        ),
+    }
+    arguments = {
+        "target": ArgSpec(
+            description="t", required=True,
+            path_tests=(PathTest.UNDER_CWD, PathTest.EXISTS),
+        ),
+    }
+    tool = _template_tool(
+        ["echo", "{{options.dir}}", "{{arguments.target}}"],
+        options=options, arguments=arguments,
+    )
+    script = build_script_text("t", "p", tool)
+    result = subprocess.run(["bash", "-n"], input=script, capture_output=True, text=True)
+    assert result.returncode == 0, f"bash -n failed:\n{result.stderr}"
+
+
+def _write_and_run(
+    tmp_path: Path, tool: ToolSpec, args: list[str], *, cwd: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
+    script_path = tmp_path / "nerf-test"
+    script_path.write_text(build_script_text("nerf-test", "test", tool))
+    script_path.chmod(0o755)
+    return subprocess.run(
+        [str(script_path), *args],
+        capture_output=True, text=True,
+        cwd=str(cwd or tmp_path),
+    )
+
+
+def test_under_cwd_rejects_outside_path(tmp_path: Path) -> None:
+    tool = _path_arg_tool((PathTest.UNDER_CWD,))
+    result = _write_and_run(tmp_path, tool, ["/etc/hosts"])
+    assert result.returncode != 0
+    assert "'under_cwd' failed" in result.stderr
+
+
+def test_under_cwd_accepts_relative_inside(tmp_path: Path) -> None:
+    (tmp_path / "subdir").mkdir()
+    tool = _path_arg_tool((PathTest.UNDER_CWD,))
+    result = _write_and_run(tmp_path, tool, ["--nerf-dry-run", "subdir"])
+    assert result.returncode == 0, result.stderr
+
+
+def test_under_cwd_accepts_absolute_inside(tmp_path: Path) -> None:
+    (tmp_path / "subdir").mkdir()
+    tool = _path_arg_tool((PathTest.UNDER_CWD,))
+    result = _write_and_run(tmp_path, tool, ["--nerf-dry-run", str(tmp_path / "subdir")])
+    assert result.returncode == 0, result.stderr
+
+
+def test_exists_rejects_missing(tmp_path: Path) -> None:
+    tool = _path_arg_tool((PathTest.EXISTS,))
+    result = _write_and_run(tmp_path, tool, ["does-not-exist"])
+    assert result.returncode != 0
+    assert "'exists' failed" in result.stderr
+
+
+def test_not_exists_rejects_present(tmp_path: Path) -> None:
+    (tmp_path / "already-here").touch()
+    tool = _path_arg_tool((PathTest.NOT_EXISTS,))
+    result = _write_and_run(tmp_path, tool, ["already-here"])
+    assert result.returncode != 0
+    assert "'not_exists' failed" in result.stderr
+
+
+def test_file_rejects_dir(tmp_path: Path) -> None:
+    (tmp_path / "subdir").mkdir()
+    tool = _path_arg_tool((PathTest.FILE,))
+    result = _write_and_run(tmp_path, tool, ["subdir"])
+    assert result.returncode != 0
+    assert "'file' failed" in result.stderr
+
+
+def test_dir_rejects_file(tmp_path: Path) -> None:
+    (tmp_path / "afile").touch()
+    tool = _path_arg_tool((PathTest.DIR,))
+    result = _write_and_run(tmp_path, tool, ["afile"])
+    assert result.returncode != 0
+    assert "'dir' failed" in result.stderr
+
+
+def test_symlink_resolves_outside_cwd_rejected(tmp_path: Path) -> None:
+    """A symlink whose target is outside cwd should fail under_cwd."""
+    link = tmp_path / "outlink"
+    link.symlink_to("/etc")
+    tool = _path_arg_tool((PathTest.UNDER_CWD,))
+    result = _write_and_run(tmp_path, tool, ["outlink"])
+    assert result.returncode != 0
+    assert "'under_cwd' failed" in result.stderr
+
+
+def test_control_character_rejected(tmp_path: Path) -> None:
+    tool = _path_arg_tool((PathTest.UNDER_CWD,))
+    result = _write_and_run(tmp_path, tool, ["bad\nname"])
+    assert result.returncode != 0
+    assert "illegal control character" in result.stderr
+
+
+def test_optional_option_path_test_skipped_when_unset(tmp_path: Path) -> None:
+    tool = _path_option_tool((PathTest.UNDER_CWD, PathTest.DIR), required=False)
+    # No -C provided -- option is unset, helper should not run, dry-run succeeds.
+    # Tool also has no required positionals so this should reach the dry-run.
+    result = _write_and_run(tmp_path, tool, ["--nerf-dry-run"])
+    assert result.returncode == 0, result.stderr
