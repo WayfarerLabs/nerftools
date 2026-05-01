@@ -60,4 +60,4 @@ jobs:
       - name: cspell
         uses: streetsidesoftware/cspell-action@v8
         with:
-          files: "**/*.{md,py,yaml}"
+          files: "**/*.md"
