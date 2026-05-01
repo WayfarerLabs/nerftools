@@ -56,8 +56,12 @@ tools:
         description: Subscription name or ID (defaults to active)
         flag: --subscription
 
-  az-role-assignment-show:
-    description: Show details for a single role assignment by ID
+  az-role-assignment-by-id:
+    description: >-
+      Fetch role assignments by full ID. Wraps "az role assignment list --ids"
+      (the Azure CLI does not have a "show" subcommand for role assignments),
+      so the result is always a JSON array -- typically with one element when
+      the ID exists, empty when it does not.
     threat:
       read: remote
       write: none
