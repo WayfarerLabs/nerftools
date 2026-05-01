@@ -70,7 +70,7 @@ tools:
     passthrough:
       command: kubectl
       prefix: [get]
-      deny: [-w, --watch, --watch-only]
+      deny: [-w, --watch, --watch-only, '-w=*', '--watch=*', '--watch-only=*']
 
   kubectl-describe:
     description: Describe kubernetes resources. Passthrough wrapper for "kubectl describe".
@@ -91,7 +91,7 @@ tools:
     passthrough:
       command: kubectl
       prefix: [logs]
-      deny: [-f, --follow]
+      deny: [-f, --follow, '-f=*', '--follow=*']
 
   kubectl-top:
     description: >-
@@ -169,13 +169,16 @@ tools:
 
   kubectl-port-forward:
     description: >-
-      Forward a local port to a pod or service in the cluster. Runs until
-      interrupted; combine with a foreground time bound when scripting.
+      Forward a local port to a pod or service in the cluster. Wrapped with
+      coreutils "timeout" so unattended runs cannot hang -- the forward is
+      terminated after --timeout-seconds (required).
     threat:
       read: remote
       write: remote
     template:
       command:
+        - timeout
+        - "{{options.timeout_seconds}}"
         - kubectl
         - port-forward
         - "{{options.namespace}}"
@@ -191,6 +194,11 @@ tools:
         required: true
         pattern: "^[0-9]+:[0-9]+$"
     options:
+      timeout_seconds:
+        description: Maximum seconds to keep the forward open (required; passed to coreutils timeout)
+        flag: --timeout-seconds
+        required: true
+        pattern: "^[1-9][0-9]*$"
       namespace:
         description: Namespace
         flag: --namespace

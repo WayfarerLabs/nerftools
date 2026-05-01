@@ -135,11 +135,10 @@ tools:
       if [[ -n "${SUBSCRIPTION}" ]]; then
         ARGS+=(--subscription "${SUBSCRIPTION}")
       fi
-      RESPONSE=$("${ARGS[@]}")
-      if [[ -z "${RESPONSE}" ]]; then
+      RESPONSE=$("${ARGS[@]}") || {
         echo "error: az-keyvault-secret-stats: failed to fetch secret '${NAME}' from vault '${VAULT_NAME}'" >&2
         exit 1
-      fi
+      }
       VALUE=$(printf '%s' "${RESPONSE}" | jq -r '.value')
       CONTENT_TYPE=$(printf '%s' "${RESPONSE}" | jq -r '.contentType // ""')
       UPDATED=$(printf '%s' "${RESPONSE}" | jq -r '.attributes.updated // ""')
@@ -194,11 +193,10 @@ tools:
       if [[ -n "${SUBSCRIPTION}" ]]; then
         ARGS+=(--subscription "${SUBSCRIPTION}")
       fi
-      RESPONSE=$("${ARGS[@]}")
-      if [[ -z "${RESPONSE}" ]]; then
+      RESPONSE=$("${ARGS[@]}") || {
         echo "error: az-keyvault-secret-show-masked: failed to fetch secret '${NAME}' from vault '${VAULT_NAME}'" >&2
         exit 1
-      fi
+      }
       VALUE=$(printf '%s' "${RESPONSE}" | jq -r '.value')
       UPDATED=$(printf '%s' "${RESPONSE}" | jq -r '.attributes.updated // ""')
       LEN=${#VALUE}

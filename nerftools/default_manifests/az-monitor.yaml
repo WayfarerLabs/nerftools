@@ -31,7 +31,7 @@ tools:
         echo "error: az-monitor-activity-log: --resource-group and --resource-id are mutually exclusive" >&2
         exit 1
       fi
-      HOURS=${HOURS_BACK:-1}
+      HOURS=$((10#${HOURS_BACK:-1}))
       if (( HOURS < 1 )); then
         echo "error: az-monitor-activity-log: --hours-back must be at least 1" >&2
         exit 1
