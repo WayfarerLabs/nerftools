@@ -516,6 +516,19 @@ A parameter with `path_tests: [under_cwd, ...]` is constrained to the workspace,
 credibly claim `read: workspace` or `write: workspace` rather than `read: machine` or
 `write: machine` for that filesystem-touching surface.
 
+### Don't duplicate the wrapped tool's own checks
+
+`path_tests` exists to enforce *boundaries* (workspace containment, control characters, basic
+canonicalization). It is not a place to recreate validation that the wrapped tool already does.
+For most cases, `[under_cwd]` alone is the right answer: it locks the path to the workspace and
+delegates type, existence, and content checks to the tool you're calling.
+
+For example, `git -C <dir>` already produces a clear `fatal: cannot change to '...': Not a
+directory` if the path is wrong. Adding `dir` to `path_tests` would only duplicate that check
+and produce a less informative error than git's. Reach for the longer test lists only when the
+wrapped tool's behavior on the failure mode is genuinely worse than failing at the boundary
+(e.g. silently no-oping, hanging, or modifying state).
+
 ### Caveats
 
 - Symlink resolution uses `realpath -m`, which follows symlinks. A symlink inside `$PWD` whose
