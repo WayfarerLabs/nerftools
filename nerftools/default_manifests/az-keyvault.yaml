@@ -10,7 +10,9 @@ package:
     and private endpoint connections. az-keyvault-secret-list returns secret
     names only (no values). For confirming a secret value matches expectations
     without exposing it, use az-keyvault-secret-stats (length, charset class,
-    sha256 prefix) or az-keyvault-secret-show-masked (first/last 3 chars).
+    last modified) or az-keyvault-secret-show-masked (first/last 2 chars
+    when length >= 16). Neither tool emits a content-derived fingerprint;
+    use last_modified to detect rotation.
     All tools accept --subscription to target a specific subscription.
 
 tools:
@@ -123,18 +125,17 @@ tools:
 
   az-keyvault-secret-stats:
     description: >-
-      Show fingerprint stats for a secret value (length, charset class,
-      sha256 prefix, content type, last modified) without revealing any
-      characters. Use to confirm a secret was rotated or matches a known
-      shape, without exposing the value.
+      Show metadata for a secret value (length, charset class, content
+      type, last modified) without revealing any characters. Use
+      last_modified to detect rotation. No content-derived fingerprint is
+      emitted: a deterministic fingerprint would let an agent verify
+      guessed values offline.
     threat:
       read: remote
       write: none
     guards:
       - command: [which, jq]
         fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
-      - command: [which, sha256sum]
-        fail_message: 'sha256sum is required but not installed (typically part of GNU coreutils).'
     script: |
       ARGS=(az keyvault secret show --vault-name "${VAULT_NAME}" --name "${NAME}" --output json)
       if [[ -n "${SUBSCRIPTION}" ]]; then
@@ -148,7 +149,11 @@ tools:
       CONTENT_TYPE=$(printf '%s' "${RESPONSE}" | jq -r '.contentType // ""')
       UPDATED=$(printf '%s' "${RESPONSE}" | jq -r '.attributes.updated // ""')
       LEN=${#VALUE}
-      if [[ "${VALUE}" =~ ^[A-Fa-f0-9]+$ ]]; then
+      if (( LEN == 0 )); then
+        CHARSET="empty"
+      elif (( LEN < 4 )); then
+        CHARSET="too-short-to-classify"
+      elif [[ "${VALUE}" =~ ^[A-Fa-f0-9]+$ ]]; then
         CHARSET="hex"
       elif [[ "${VALUE}" =~ ^[A-Za-z0-9+/]+=*$ ]]; then
         CHARSET="base64"
@@ -163,16 +168,14 @@ tools:
       else
         CHARSET="mixed-printable"
       fi
-      FINGERPRINT=$(printf '%s' "${VALUE}" | sha256sum | cut -c1-12)
       jq -n \
         --arg vault "${VAULT_NAME}" \
         --arg name "${NAME}" \
         --argjson length "${LEN}" \
         --arg charset "${CHARSET}" \
-        --arg fingerprint "${FINGERPRINT}" \
         --arg content_type "${CONTENT_TYPE}" \
         --arg updated "${UPDATED}" \
-        '{vault: $vault, name: $name, length: $length, charset_class: $charset, sha256_prefix: $fingerprint, content_type: $content_type, last_modified: $updated}'
+        '{vault: $vault, name: $name, length: $length, charset_class: $charset, content_type: $content_type, last_modified: $updated}'
     arguments:
       vault_name:
         description: Key Vault name
@@ -187,9 +190,12 @@ tools:
 
   az-keyvault-secret-show-masked:
     description: >-
-      Show first 3 and last 3 characters of a secret value, plus length and
-      last modified. For values shorter than 12 characters, the masked output
-      omits the prefix/suffix to avoid revealing too much.
+      Show first 2 and last 2 characters of a secret value, plus length and
+      last modified. For values shorter than 16 characters the masked
+      output omits the prefix/suffix entirely. Combined with charset_class
+      from secret-stats this is enough information to brute-force short or
+      low-entropy secrets, so do not return the masked value or length to
+      untrusted parties.
     threat:
       read: remote
       write: none
@@ -208,11 +214,11 @@ tools:
       VALUE=$(printf '%s' "${RESPONSE}" | jq -r '.value')
       UPDATED=$(printf '%s' "${RESPONSE}" | jq -r '.attributes.updated // ""')
       LEN=${#VALUE}
-      if (( LEN < 12 )); then
+      if (( LEN < 16 )); then
         MASKED="(value too short to mask safely)"
       else
-        PREFIX="${VALUE:0:3}"
-        SUFFIX="${VALUE: -3}"
+        PREFIX="${VALUE:0:2}"
+        SUFFIX="${VALUE: -2}"
         MASKED="${PREFIX}...${SUFFIX}"
       fi
       jq -n \
