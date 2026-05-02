@@ -163,7 +163,12 @@ tools:
         flag: --subscription
 
   az-aks-get-credentials:
-    description: Merge AKS cluster credentials into ~/.kube/config so kubectl can target the cluster
+    description: >-
+      Merge AKS cluster credentials into ~/.kube/config so kubectl can
+      target the cluster. Uses Azure AD/Entra; subsequent kubectl calls
+      are scoped by the principal's Azure RBAC. Use
+      az-aks-get-credentials-admin (separate tool, admin threat) when
+      you need the local-account cluster-admin kubeconfig.
     threat:
       read: remote
       write: machine
@@ -177,7 +182,6 @@ tools:
         - --name
         - "{{arguments.name}}"
         - "{{switches.overwrite_existing}}"
-        - "{{switches.admin}}"
         - "{{options.subscription}}"
     arguments:
       name:
@@ -196,37 +200,76 @@ tools:
       overwrite_existing:
         description: Overwrite an existing kubeconfig entry with the same name
         flag: --overwrite-existing
-      admin:
-        description: Fetch the cluster-admin (local accounts) kubeconfig
-        flag: --admin
 
-  az-aks-command-invoke:
+  az-aks-get-credentials-admin:
     description: >-
-      Run a kubectl/shell command against the cluster via the AKS run-command
-      API. Works without VNet access; useful for diagnosing private clusters
-      from outside the access path.
+      Fetch the cluster-admin (local accounts) kubeconfig for an AKS
+      cluster. The fetched credentials grant cluster-admin via static
+      client cert and bypass Azure RBAC entirely, so subsequent kubectl
+      calls operate at the cluster-admin level. Marked admin so the
+      harness can default-deny; only use for clusters where local
+      accounts are intentionally enabled and admin access is required.
     threat:
       read: remote
-      write: remote
+      write: admin
     template:
       command:
         - az
         - aks
-        - command
-        - invoke
+        - get-credentials
+        - --admin
         - --resource-group
         - "{{options.resource_group}}"
         - --name
-        - "{{options.cluster_name}}"
-        - --command
-        - "{{arguments.command}}"
+        - "{{arguments.name}}"
+        - "{{switches.overwrite_existing}}"
         - "{{options.subscription}}"
-        - --output
-        - json
+    arguments:
+      name:
+        description: AKS cluster name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the cluster
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+    switches:
+      overwrite_existing:
+        description: Overwrite an existing kubeconfig entry with the same name
+        flag: --overwrite-existing
+
+  az-aks-command-invoke:
+    description: >-
+      Run a kubectl/shell command on the cluster via the AKS run-command
+      API. The command runs server-side as a managed pod with
+      cluster-admin service-account bindings, so this is full RCE on
+      whichever cluster --resource-group / --name (and --subscription if
+      set) resolve to. Marked admin: ensure the harness only allows it
+      for clusters the agent is intentionally authorized to operate on.
+    threat:
+      read: remote
+      write: admin
+    script: |
+      COMMAND_STR="${COMMAND[*]}"
+      ARGS=(az aks command invoke
+        --resource-group "${RESOURCE_GROUP}"
+        --name "${CLUSTER_NAME}"
+        --command "${COMMAND_STR}"
+        --output json)
+      if [[ -n "${SUBSCRIPTION}" ]]; then
+        ARGS+=(--subscription "${SUBSCRIPTION}")
+      fi
+      exec "${ARGS[@]}"
     arguments:
       command:
-        description: Shell command to execute on the cluster (e.g. "kubectl get pods -A")
+        description: Command and args to run on the cluster (e.g. kubectl get pods -A)
         required: true
+        variadic: true
+        allow_flags: true
     options:
       resource_group:
         description: Resource group containing the cluster
