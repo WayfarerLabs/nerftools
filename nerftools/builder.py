@@ -537,6 +537,11 @@ def _pre_hook(tool_name: str, tool_spec: ToolSpec) -> str:
     pre_body = _substitute_script(tool_spec.pre or "", tool_spec)
     lines = [
         "_nerf_pre() {",
+        # bash suppresses set -e inside a function whose return code is being
+        # tested by the caller (we use "_nerf_pre || _nerf_pre_rc=$?" below).
+        # Re-enable it explicitly so a bare command failure inside pre aborts
+        # the hook the way authors expect.
+        "  set -e",
     ]
     for line in pre_body.strip().splitlines():
         lines.append(f"  {line}")

@@ -146,6 +146,10 @@ tools:
         exit 1
       }
       VALUE=$(printf '%s' "${RESPONSE}" | jq -r '.value')
+      if [[ "${VALUE}" == "null" ]]; then
+        echo "error: az-keyvault-secret-stats: response contained no .value field for '${NAME}' in '${VAULT_NAME}'" >&2
+        exit 1
+      fi
       CONTENT_TYPE=$(printf '%s' "${RESPONSE}" | jq -r '.contentType // ""')
       UPDATED=$(printf '%s' "${RESPONSE}" | jq -r '.attributes.updated // ""')
       LEN=${#VALUE}
@@ -212,6 +216,10 @@ tools:
         exit 1
       }
       VALUE=$(printf '%s' "${RESPONSE}" | jq -r '.value')
+      if [[ "${VALUE}" == "null" ]]; then
+        echo "error: az-keyvault-secret-show-masked: response contained no .value field for '${NAME}' in '${VAULT_NAME}'" >&2
+        exit 1
+      fi
       UPDATED=$(printf '%s' "${RESPONSE}" | jq -r '.attributes.updated // ""')
       LEN=${#VALUE}
       if (( LEN < 16 )); then
