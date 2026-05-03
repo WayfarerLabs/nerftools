@@ -309,6 +309,24 @@ def test_no_extra_check_when_variadic(tmp_path: Path) -> None:
     assert "unexpected extra arguments" not in script
 
 
+def test_dry_run_preserves_quoting_for_values_with_spaces(tmp_path: Path) -> None:
+    """Dry-run must shell-quote values so multi-word args don't look like multiple args."""
+    arguments = {"target": _arg(required=True)}
+    tool = _template_tool(["echo", "{{arguments.target}}"], arguments=arguments)
+    script_path = tmp_path / "nerf-test"
+    script_path.write_text(build_script_text("nerf-test", "test", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "--nerf-dry-run", "a b c"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0
+    # printf %q escapes spaces with backslash; the value is presented as one shell-quoted token.
+    assert "a\\ b\\ c" in result.stdout
+    # The naive "echo dry-run: ..." form would have shown plain "a b c".
+    assert "a b c" not in result.stdout
+
+
 def test_variadic_arg_exec_substitution() -> None:
     arguments = {"files": _arg(required=True, variadic=True)}
     script = build_script_text("t", "p", _template_tool(["git", "add", "{{arguments.files}}"], arguments=arguments))

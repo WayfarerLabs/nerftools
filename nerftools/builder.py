@@ -540,16 +540,23 @@ def _dry_run_check(tool_name: str, tool_spec: ToolSpec) -> str:
 
     Only called for template and script modes. Passthrough mode handles
     dry-run inline in _passthrough_exec (after the deny scan).
+
+    For template mode, the args are captured into an array and emitted
+    via printf %q so that values containing spaces or shell-meaningful
+    characters render as proper quoted tokens, faithfully showing what
+    would execute.
     """
     lines = ['if [[ "$_NERF_DRY_RUN" == "true" ]]; then']
 
     if tool_spec.template is not None:
         exec_args = _substitute_template_command(tool_spec.template.command, tool_spec)
         if tool_spec.template.npm_pkgrun:
-            cmd = 'echo "dry-run: $_PKGRUN ' + " ".join(exec_args) + '"'
+            lines.append('  _NERF_DRY_CMD=("$_PKGRUN" ' + " ".join(exec_args) + ")")
         else:
-            cmd = 'echo "dry-run: ' + " ".join(exec_args) + '"'
-        lines.append(f"  {cmd}")
+            lines.append("  _NERF_DRY_CMD=(" + " ".join(exec_args) + ")")
+        lines.append("  printf 'dry-run:'")
+        lines.append('  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done')
+        lines.append("  echo")
     else:
         lines.append(f'  echo "dry-run: {tool_name} would run inline script"')
 
