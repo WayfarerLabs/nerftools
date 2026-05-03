@@ -8,7 +8,9 @@ package:
     These tools wrap git operations with safety guardrails. Always stage changes
     with git-add before committing. Commit messages must follow the
     Conventional Commits specification. All remote operations take the remote
-    name as the first positional argument (typically origin).
+    name as the first positional argument (typically origin). Every tool
+    accepts an optional -C <directory> to operate on a different repo
+    subdirectory; the directory must be under the workspace root.
 
 tools:
   git-add:
@@ -17,7 +19,12 @@ tools:
       read: workspace
       write: workspace
     template:
-      command: [git, add, "{{arguments.files}}"]
+      command: [git, "{{options.directory}}", add, "{{arguments.files}}"]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
     arguments:
       files:
         description: Files or directories to stage
@@ -34,14 +41,19 @@ tools:
       read: workspace
       write: workspace
     template:
-      command: [git, commit, -m, "{{arguments.message}}"]
+      command: [git, "{{options.directory}}", commit, -m, "{{arguments.message}}"]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
     arguments:
       message:
         description: "Commit message: type[(scope)][!]: description"
         required: true
         pattern: "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\([a-zA-Z0-9._-]+\\))?!?: .+"
     guards:
-      - script: "! git diff --cached --quiet"
+      - script: '! git ${DIRECTORY:+-C "${DIRECTORY}"} diff --cached --quiet'
         fail_message: No staged changes. Use git-add to stage changes first.
       - script: |
           ! echo "{{arguments.message}}" | grep -qi 'co-authored-by:'
@@ -55,18 +67,23 @@ tools:
       read: workspace
       write: workspace
     template:
-      command: [git, commit, --amend, -m, "{{arguments.message}}"]
+      command: [git, "{{options.directory}}", commit, --amend, -m, "{{arguments.message}}"]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
     arguments:
       message:
         description: "Commit message: type[(scope)][!]: description"
         required: true
         pattern: "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\([a-zA-Z0-9._-]+\\))?!?: .+"
     pre: |
-      if ! git rev-parse HEAD > /dev/null 2>&1; then
+      if ! git ${DIRECTORY:+-C "${DIRECTORY}"} rev-parse HEAD > /dev/null 2>&1; then
         echo "error: no commits to amend" >&2
         return 1
       fi
-      REMOTE_BRANCHES=$(git branch -r --contains HEAD 2>/dev/null)
+      REMOTE_BRANCHES=$(git ${DIRECTORY:+-C "${DIRECTORY}"} branch -r --contains HEAD 2>/dev/null)
       if [ -n "$REMOTE_BRANCHES" ]; then
         echo "error: HEAD exists on remote branches -- amending would require a force push" >&2
         echo "  remote branches: $(echo "$REMOTE_BRANCHES" | tr -s ' \n' ', ' | sed 's/,$//')" >&2
@@ -81,7 +98,12 @@ tools:
       read: workspace
       write: workspace
     template:
-      command: [git, revert, --no-edit, "{{arguments.ref}}"]
+      command: [git, "{{options.directory}}", revert, --no-edit, "{{arguments.ref}}"]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
     arguments:
       ref:
         description: Commit to revert (e.g. HEAD, a commit SHA, or HEAD~2)
@@ -95,13 +117,18 @@ tools:
       read: workspace
       write: workspace
     template:
-      command: [git, reset, --hard, HEAD~1]
+      command: [git, "{{options.directory}}", reset, --hard, HEAD~1]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
     pre: |
-      if ! git rev-parse HEAD > /dev/null 2>&1; then
+      if ! git ${DIRECTORY:+-C "${DIRECTORY}"} rev-parse HEAD > /dev/null 2>&1; then
         echo "error: no commits to reset" >&2
         return 1
       fi
-      REMOTE_BRANCHES=$(git branch -r --contains HEAD 2>/dev/null)
+      REMOTE_BRANCHES=$(git ${DIRECTORY:+-C "${DIRECTORY}"} branch -r --contains HEAD 2>/dev/null)
       if [ -n "$REMOTE_BRANCHES" ]; then
         echo "error: HEAD exists on remote branches -- resetting would require a force push" >&2
         echo "  remote branches: $(echo "$REMOTE_BRANCHES" | tr -s ' \n' ', ' | sed 's/,$//')" >&2
@@ -114,7 +141,12 @@ tools:
       read: remote
       write: workspace
     template:
-      command: [git, fetch, "{{arguments.remote}}", --tags]
+      command: [git, "{{options.directory}}", fetch, "{{arguments.remote}}", --tags]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
     arguments:
       remote:
         description: Remote name (e.g. origin)
@@ -127,7 +159,12 @@ tools:
       read: remote
       write: workspace
     template:
-      command: [git, pull, "{{arguments.remote}}"]
+      command: [git, "{{options.directory}}", pull, "{{arguments.remote}}"]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
     arguments:
       remote:
         description: Remote name (e.g. origin)
@@ -142,7 +179,12 @@ tools:
       read: workspace
       write: admin
     template:
-      command: [git, push, --follow-tags, "{{arguments.remote}}", main]
+      command: [git, "{{options.directory}}", push, --follow-tags, "{{arguments.remote}}", main]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
     arguments:
       remote:
         description: Remote name (e.g. origin)
@@ -157,14 +199,19 @@ tools:
       read: workspace
       write: remote
     template:
-      command: [git, push, --follow-tags, "{{arguments.remote}}", HEAD]
+      command: [git, "{{options.directory}}", push, --follow-tags, "{{arguments.remote}}", HEAD]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
     arguments:
       remote:
         description: Remote name (e.g. origin)
         required: true
         pattern: "^[a-z0-9_-]+$"
     pre: |
-      BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+      BRANCH=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null)
       if [ -z "$BRANCH" ]; then
         echo "error: cannot push from detached HEAD state" >&2
         return 1
@@ -180,7 +227,12 @@ tools:
       read: workspace
       write: none
     template:
-      command: [git, log, --oneline, --no-decorate, -20]
+      command: [git, "{{options.directory}}", log, --oneline, --no-decorate, -20]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
 
   git-tag:
     description: >-
@@ -190,7 +242,12 @@ tools:
       read: workspace
       write: workspace
     template:
-      command: [git, tag, -a, "{{arguments.tag}}", -m, "{{arguments.tag}}"]
+      command: [git, "{{options.directory}}", tag, -a, "{{arguments.tag}}", -m, "{{arguments.tag}}"]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
     arguments:
       tag:
         description: Tag name to create (e.g. v1.2.3)
@@ -198,5 +255,5 @@ tools:
         pattern: "^[a-zA-Z0-9._/-]+$"
     guards:
       - script: |
-          ! git rev-parse "refs/tags/{{arguments.tag}}" > /dev/null 2>&1
+          ! git ${DIRECTORY:+-C "${DIRECTORY}"} rev-parse "refs/tags/{{arguments.tag}}" > /dev/null 2>&1
         fail_message: Tag already exists. Use a different version.

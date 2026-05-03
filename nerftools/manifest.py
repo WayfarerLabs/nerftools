@@ -62,6 +62,47 @@ _THREAT_ORDER: dict[ThreatLevel, int] = {member: i for i, member in enumerate(Th
 THREAT_LEVEL_NAMES = tuple(t.value for t in ThreatLevel)
 
 
+class PathTest(Enum):
+    """Filesystem checks that may be applied to a path-typed parameter.
+
+    Presence of a path_tests list on a parameter marks it as a filesystem
+    path. The generated script applies a baseline (control-character reject,
+    realpath canonicalization succeeds) plus the listed tests in a
+    deterministic order: boundary -> existence -> type -> access.
+    """
+
+    UNDER_CWD = "under_cwd"
+    EXISTS = "exists"
+    NOT_EXISTS = "not_exists"
+    FILE = "file"
+    DIR = "dir"
+    READABLE = "readable"
+    WRITABLE = "writable"
+    EXECUTABLE = "executable"
+    SYMLINK = "symlink"
+    NOT_SYMLINK = "not_symlink"
+
+
+PATH_TEST_NAMES = tuple(t.value for t in PathTest)
+
+# Mutual-exclusion groups. Any two members of a tuple cannot coexist.
+_PATH_TEST_EXCLUSIONS: tuple[tuple[PathTest, ...], ...] = (
+    (PathTest.EXISTS, PathTest.NOT_EXISTS),
+    (PathTest.FILE, PathTest.DIR),
+    (PathTest.SYMLINK, PathTest.NOT_SYMLINK),
+)
+
+# not_exists rules out attribute checks that require the path to exist.
+_PATH_TEST_NOT_EXISTS_FORBIDS: tuple[PathTest, ...] = (
+    PathTest.FILE,
+    PathTest.DIR,
+    PathTest.READABLE,
+    PathTest.WRITABLE,
+    PathTest.EXECUTABLE,
+    PathTest.SYMLINK,
+)
+
+
 # -- Data classes --------------------------------------------------------------
 
 
@@ -112,6 +153,7 @@ class OptionSpec:
     pattern: str | None = None
     allow: tuple[str, ...] = field(default_factory=tuple)
     deny: tuple[str, ...] = field(default_factory=tuple)
+    path_tests: tuple[PathTest, ...] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True)
@@ -131,6 +173,7 @@ class ArgSpec:
     pattern: str | None = None
     allow: tuple[str, ...] = field(default_factory=tuple)
     deny: tuple[str, ...] = field(default_factory=tuple)
+    path_tests: tuple[PathTest, ...] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True)
@@ -434,6 +477,7 @@ def _load_options(raw: dict[str, Any], path: Path, tool_name: str) -> dict[str, 
                 raise ManifestError(f"{ctx}: '{key}' must be a list, got {type(val).__name__}")
         allow = tuple(str(v) for v in spec_raw.get("allow", []))
         deny = tuple(str(v) for v in spec_raw.get("deny", []))
+        path_tests = _load_path_tests(spec_raw, ctx)
 
         if not re.fullmatch(r"-{1,2}[a-zA-Z][a-zA-Z0-9-]*", flag):
             raise ManifestError(f"{ctx}: 'flag' must match -<name> or --<name> pattern, got {flag!r}")
@@ -451,6 +495,7 @@ def _load_options(raw: dict[str, Any], path: Path, tool_name: str) -> dict[str, 
             description=description, flag=flag, short=short,
             required=required, repeatable=repeatable,
             pattern=pattern, allow=allow, deny=deny,
+            path_tests=path_tests,
         )
 
     return options
@@ -478,6 +523,7 @@ def _load_arguments(raw: dict[str, Any], path: Path, tool_name: str) -> dict[str
                 raise ManifestError(f"{ctx}: '{key}' must be a list, got {type(val).__name__}")
         allow = tuple(str(v) for v in spec_raw.get("allow", []))
         deny = tuple(str(v) for v in spec_raw.get("deny", []))
+        path_tests = _load_path_tests(spec_raw, ctx)
 
         if allow_flags and not variadic:
             raise ManifestError(f"{ctx}: 'allow_flags' is only valid on variadic arguments")
@@ -492,6 +538,7 @@ def _load_arguments(raw: dict[str, Any], path: Path, tool_name: str) -> dict[str
         arguments[name] = ArgSpec(
             description=description, required=required, variadic=variadic,
             allow_flags=allow_flags, pattern=pattern, allow=allow, deny=deny,
+            path_tests=path_tests,
         )
 
     return arguments
@@ -694,3 +741,48 @@ def _require_str(data: dict[str, Any], key: str, ctx: str) -> str:
     if key not in data:
         raise ManifestError(f"{ctx}: '{key}' is required")
     return str(data[key])
+
+
+def _load_path_tests(spec_raw: dict[str, Any], ctx: str) -> tuple[PathTest, ...]:
+    if "path_tests" not in spec_raw:
+        return ()
+
+    raw = spec_raw["path_tests"]
+    if not isinstance(raw, list):
+        raise ManifestError(f"{ctx}: 'path_tests' must be a list, got {type(raw).__name__}")
+    if not raw:
+        raise ManifestError(
+            f"{ctx}: 'path_tests' must contain at least one test "
+            f"(omit the field if you don't want path validation)"
+        )
+
+    valid = ", ".join(PATH_TEST_NAMES)
+    tests: list[PathTest] = []
+    seen: set[PathTest] = set()
+    for item in raw:
+        try:
+            test = PathTest(str(item))
+        except ValueError:
+            raise ManifestError(
+                f"{ctx}: unknown path_test '{item}' (expected one of {valid})"
+            ) from None
+        if test in seen:
+            raise ManifestError(f"{ctx}: duplicate path_test '{test.value}'")
+        seen.add(test)
+        tests.append(test)
+
+    for group in _PATH_TEST_EXCLUSIONS:
+        present = [t for t in group if t in seen]
+        if len(present) > 1:
+            names = ", ".join(t.value for t in present)
+            raise ManifestError(f"{ctx}: path_tests are mutually exclusive: {names}")
+
+    if PathTest.NOT_EXISTS in seen:
+        forbidden = [t for t in _PATH_TEST_NOT_EXISTS_FORBIDS if t in seen]
+        if forbidden:
+            names = ", ".join(t.value for t in forbidden)
+            raise ManifestError(
+                f"{ctx}: path_test 'not_exists' cannot be combined with: {names}"
+            )
+
+    return tuple(tests)

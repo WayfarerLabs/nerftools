@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from nerftools.manifest import PLACEHOLDER_RE, resolve_placeholder
+from nerftools.manifest import PLACEHOLDER_RE, PathTest, resolve_placeholder
 from nerftools.rendering import maps_to_text, usage_tokens
 
 if TYPE_CHECKING:
@@ -101,6 +101,10 @@ def _build_script(tool_name: str, package_name: str, tool_spec: ToolSpec) -> str
     if has_positional:
         parts.append("")
         parts.append(_positional_parser(tool_name, tool_spec.arguments))
+
+    if _has_path_tests(tool_spec):
+        parts.append("")
+        parts.append(_path_check_helper(tool_name))
 
     if has_params:
         validations = _param_validations(tool_name, tool_spec)
@@ -307,6 +311,109 @@ def _positional_parser(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
     return "\n".join(lines)
 
 
+# -- Path validation helper ----------------------------------------------------
+
+
+def _has_path_tests(tool_spec: ToolSpec) -> bool:
+    return any(o.path_tests for o in tool_spec.options.values()) or any(
+        a.path_tests for a in tool_spec.arguments.values()
+    )
+
+
+def _path_check_helper(tool_name: str) -> str:
+    """Bash helper called per path-typed parameter.
+
+    Runs a baseline check (control characters, canonicalization succeeds)
+    and a deterministic sequence of opt-in tests passed via the third arg
+    as a comma-separated list. Each test entry corresponds to a PathTest
+    enum value.
+    """
+    return _PATH_CHECK_HELPER.format(tool=tool_name)
+
+
+_PATH_CHECK_HELPER = """\
+_nerf_check_path() {{
+  local _label=$1 _input=$2 _tests=$3
+  local _cwd _canonical
+  case "$_input" in
+    *$'\\n'*|*$'\\r'*|*$'\\t'*)
+      echo "error: {tool}: ${{_label}}: contains illegal control character" >&2
+      echo "  hint: paths must not contain newlines, carriage returns, or tabs" >&2
+      return 1 ;;
+  esac
+  _cwd=$(realpath -- "$PWD") || {{
+    echo "error: {tool}: failed to canonicalize cwd '$PWD'" >&2
+    echo "  hint: invoke from a valid directory" >&2
+    return 1
+  }}
+  _canonical=$(realpath -m -- "$_input") || {{
+    echo "error: {tool}: ${{_label}}: failed to canonicalize '${{_input}}'" >&2
+    echo "  hint: pass a syntactically valid path" >&2
+    return 1
+  }}
+  if [[ ",$_tests," == *",under_cwd,"* ]]; then
+    # Skip the prefix check when cwd is root: every absolute path qualifies, and the
+    # naive prefix comparison would build "//" and reject otherwise-valid paths.
+    if [[ "$_cwd" != "/" && "$_canonical" != "$_cwd" && "$_canonical" != "$_cwd"/* ]]; then
+      echo "error: {tool}: ${{_label}}: 'under_cwd' failed: '${{_input}}'" >&2
+      echo "  resolves to '${{_canonical}}', not under '${{_cwd}}'" >&2
+      echo "  hint: pass a path inside the current workspace" >&2
+      echo "  hint: symlinks are followed -- if the link's target is outside the workspace it is rejected" >&2
+      return 1
+    fi
+  fi
+  if [[ ",$_tests," == *",exists,"* ]] && [[ ! -e "$_input" ]]; then
+    echo "error: {tool}: ${{_label}}: 'exists' failed: '${{_input}}' does not exist" >&2
+    echo "  hint: create the path or pass an existing one" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",not_exists,"* ]] && [[ -e "$_input" ]]; then
+    echo "error: {tool}: ${{_label}}: 'not_exists' failed: '${{_input}}' already exists" >&2
+    echo "  hint: choose a different path or remove the existing one first" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",file,"* ]] && [[ ! -f "$_input" ]]; then
+    echo "error: {tool}: ${{_label}}: 'file' failed: '${{_input}}' is not a regular file" >&2
+    echo "  hint: pass a regular file path (not a directory, symlink-to-dir, device, or missing path)" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",dir,"* ]] && [[ ! -d "$_input" ]]; then
+    echo "error: {tool}: ${{_label}}: 'dir' failed: '${{_input}}' is not a directory" >&2
+    echo "  hint: pass a directory path (not a regular file or missing path)" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",symlink,"* ]] && [[ ! -L "$_input" ]]; then
+    echo "error: {tool}: ${{_label}}: 'symlink' failed: '${{_input}}' is not a symlink" >&2
+    echo "  hint: pass a symbolic link (the test does not follow the link)" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",not_symlink,"* ]] && [[ -L "$_input" ]]; then
+    echo "error: {tool}: ${{_label}}: 'not_symlink' failed: '${{_input}}' is a symlink" >&2
+    echo "  hint: pass a real path, not a symlink (the test does not follow the link)" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",readable,"* ]] && [[ ! -r "$_input" ]]; then
+    echo "error: {tool}: ${{_label}}: 'readable' failed: '${{_input}}' is not readable" >&2
+    echo "  hint: check filesystem permissions for the current user" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",writable,"* ]] && [[ ! -w "$_input" ]]; then
+    echo "error: {tool}: ${{_label}}: 'writable' failed: '${{_input}}' is not writable" >&2
+    echo "  hint: check filesystem permissions for the current user" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",executable,"* ]] && [[ ! -x "$_input" ]]; then
+    echo "error: {tool}: ${{_label}}: 'executable' failed: '${{_input}}' is not executable" >&2
+    echo "  hint: check filesystem permissions for the current user" >&2
+    return 1
+  fi
+}}"""
+
+
+def _path_tests_csv(tests: tuple[PathTest, ...]) -> str:
+    return ",".join(t.value for t in tests)
+
+
 # -- Validations ---------------------------------------------------------------
 
 
@@ -358,6 +465,14 @@ def _param_validations(tool_name: str, tool_spec: ToolSpec) -> str:
                 lines.append('  echo "  hint: use a different value" >&2')
                 lines.append("  exit 1")
                 lines.append("fi")
+            lines.append("")
+
+        if opt.path_tests:
+            csv = _path_tests_csv(opt.path_tests)
+            label = f"option {opt.flag}"
+            lines.append(f'if [[ -n "${{{var}}}" ]]; then')
+            lines.append(f"  _nerf_check_path '{label}' \"${{{var}}}\" '{csv}' || exit 1")
+            lines.append("fi")
             lines.append("")
 
     return "\n".join(lines).rstrip()
@@ -443,6 +558,13 @@ def _arg_validations(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
                     lines.append("  fi")
                 lines.append("done")
                 lines.append("")
+            if spec.path_tests:
+                csv = _path_tests_csv(spec.path_tests)
+                label = f"argument <{name}>"
+                lines.append(f'for _v in "${{{var}[@]}}"; do')
+                lines.append(f"  _nerf_check_path '{label}' \"$_v\" '{csv}' || exit 1")
+                lines.append("done")
+                lines.append("")
         else:
             lines.append(f'if [[ -n "${{{var}}}" ]] && [[ "${{{var}}}" == -* ]]; then')
             lines.append(f"  echo \"error: {tool_name}: <{name}> cannot start with '-'\" >&2")
@@ -489,6 +611,13 @@ def _arg_validations(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
                     lines.append('  echo "  hint: use a different value" >&2')
                     lines.append("  exit 1")
                     lines.append("fi")
+                lines.append("")
+            if spec.path_tests:
+                csv = _path_tests_csv(spec.path_tests)
+                label = f"argument <{name}>"
+                lines.append(f'if [[ -n "${{{var}}}" ]]; then')
+                lines.append(f"  _nerf_check_path '{label}' \"${{{var}}}\" '{csv}' || exit 1")
+                lines.append("fi")
                 lines.append("")
 
     return "\n".join(lines).rstrip()

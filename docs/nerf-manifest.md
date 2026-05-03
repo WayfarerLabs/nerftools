@@ -413,6 +413,7 @@ options:
     pattern: <string> # Regex the value must match (auto-anchored with ^...$)
     allow: [<string>, ...] # Exhaustive list of allowed values
     deny: [<string>, ...] # Values to reject
+    path_tests: [<test>, ...] # Mark as a filesystem path; see "Path tests" below
 ```
 
 Rules:
@@ -438,6 +439,7 @@ arguments:
     pattern: <string> # Regex the value must match (auto-anchored)
     allow: [<string>, ...] # Exhaustive list of allowed values
     deny: [<string>, ...] # Values to reject
+    path_tests: [<test>, ...] # Mark as a filesystem path; see "Path tests" below
 ```
 
 Rules:
@@ -448,6 +450,102 @@ Rules:
 - Variadic arguments become bash arrays; all others become scalar variables.
 - By default, variadic arguments reject tokens starting with `-` to prevent flag injection. Set
   `allow_flags: true` when forwarding to a tool that expects its own flags (e.g. pytest, ruff).
+
+## Path tests
+
+Mark an option or argument as a filesystem path by setting `path_tests` to a non-empty list of
+test names. The generated script applies a baseline check (control characters rejected,
+canonicalization succeeds) plus the listed tests in a deterministic order.
+
+```yaml
+options:
+  directory:
+    description: Directory to run in
+    flag: -C
+    path_tests: [under_cwd, dir]
+arguments:
+  target:
+    description: File to format
+    required: true
+    path_tests: [under_cwd, file]
+```
+
+### Test catalog
+
+| Test | Meaning | Bash primitive |
+| ------------- | --------------------------------------------------------------- | -------------- |
+| `under_cwd`   | Canonicalized path is `$PWD` itself or under it (symlink-aware) | `realpath -m`  |
+| `exists`      | Path exists                                                     | `[[ -e ]]`     |
+| `not_exists`  | Path does not exist (e.g. for new-file targets)                 | `[[ ! -e ]]`   |
+| `file`        | Exists and is a regular file (implies `exists`)                 | `[[ -f ]]`     |
+| `dir`         | Exists and is a directory (implies `exists`)                    | `[[ -d ]]`     |
+| `readable`    | Readable by the current user (implies `exists`)                 | `[[ -r ]]`     |
+| `writable`    | Writable by the current user (implies `exists`)                 | `[[ -w ]]`     |
+| `executable`  | Executable by the current user (implies `exists`)               | `[[ -x ]]`     |
+| `symlink`     | Path is a symlink                                               | `[[ -L ]]`     |
+| `not_symlink` | Path is not a symlink                                           | `! [[ -L ]]`   |
+
+**Symlinks behave differently across tests.** `under_cwd` follows symlinks via `realpath -m`,
+so a symlink whose target is outside the workspace fails the boundary check even if the link
+itself is inside. The `exists`/`file`/`dir`/`readable`/`writable`/`executable` tests also follow
+symlinks (they check the target, not the link). Only `symlink` and `not_symlink` test the path
+itself without following the link. Combine them deliberately if you mean both, e.g.
+`[under_cwd, file]` requires the resolved target to be a regular file inside the workspace,
+while `[under_cwd, not_symlink, file]` additionally rejects symlinks even when their targets
+would qualify.
+
+### Evaluation order
+
+For each path-typed parameter, the helper runs:
+
+1. **Baseline** -- reject `\n` / `\r` / `\t` in the input, canonicalize `$PWD` and the input.
+2. **Boundary** -- `under_cwd`.
+3. **Existence** -- `exists`, `not_exists`.
+4. **Type** -- `file`, `dir`, `symlink`, `not_symlink`.
+5. **Access** -- `readable`, `writable`, `executable`.
+
+The helper short-circuits on the first failure and reports the failed test name.
+
+### Rules
+
+- `path_tests` only applies to `options` and `arguments`, not `switches`.
+- An empty list is rejected at validation time. Omit the field entirely if you do not want path
+  validation.
+- Mutually exclusive: `exists` and `not_exists`; `file` and `dir`; `symlink` and `not_symlink`.
+- `not_exists` cannot be combined with `file`, `dir`, `readable`, `writable`, `executable`, or
+  `symlink` -- those tests require the path to exist.
+- Unknown test names are rejected at validation time.
+- For variadic arguments the helper runs once per element.
+- Optional parameters are skipped when unset; required parameters are checked after the
+  required-value check.
+
+### Threat-scope implication
+
+A parameter with `path_tests: [under_cwd, ...]` is constrained to the workspace, so the tool can
+credibly claim `read: workspace` or `write: workspace` rather than `read: machine` or
+`write: machine` for that filesystem-touching surface.
+
+### Don't duplicate the wrapped tool's own checks
+
+`path_tests` exists to enforce *boundaries* (workspace containment, control characters, basic
+canonicalization). It is not a place to recreate validation that the wrapped tool already does.
+For most cases, `[under_cwd]` alone is the right answer: it locks the path to the workspace and
+delegates type, existence, and content checks to the tool you're calling.
+
+For example, `git -C <dir>` already produces a clear `fatal: cannot change to '...': Not a
+directory` if the path is wrong. Adding `dir` to `path_tests` would only duplicate that check
+and produce a less informative error than git's. Reach for the longer test lists only when the
+wrapped tool's behavior on the failure mode is genuinely worse than failing at the boundary
+(e.g. silently no-oping, hanging, or modifying state).
+
+### Caveats
+
+- Symlink resolution uses `realpath -m`, which follows symlinks. A symlink inside `$PWD` whose
+  target is outside `$PWD` fails `under_cwd`. This is intentional.
+- The check is not a security boundary against an adversarial filesystem actor (TOCTOU between
+  validation and use is possible).
+- `realpath` is required and is part of GNU coreutils on Linux and modern macOS coreutils. Pure
+  BSD environments are not supported.
 
 ## Lifecycle
 
@@ -645,3 +743,6 @@ Generated skill files follow the same structure formatted as markdown for AI ass
 | `pattern` is a valid regex                                           | options, arguments    |
 | `env` keys match `[A-Z_][A-Z0-9_]*`                                  | env                   |
 | Guard has exactly one of `command` or `script`                       | guards                |
+| `path_tests` is non-empty if present                                 | options, arguments    |
+| `path_tests` entries are known names                                 | options, arguments    |
+| `path_tests` mutual exclusions enforced                              | options, arguments    |
