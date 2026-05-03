@@ -10,6 +10,14 @@ package:
     az-account-list enumerates all subscriptions the principal can see.
     az-account-set switches the active subscription for the session.
 
+    Scope note: every az-* tool accepts --subscription. The wrappers do
+    not enforce a subscription allow-list; the principal's Azure RBAC is
+    the actual boundary. If the signed-in identity has access to
+    multiple subscriptions or guest access in other tenants, those are
+    all reachable via --subscription. Restrict the principal at the
+    Entra/RBAC layer if you need a tighter scope than "everything the
+    identity can see."
+
 tools:
   az-account-show:
     description: Show the currently active subscription and signed-in identity
