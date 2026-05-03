@@ -8,6 +8,7 @@
     "codegen",
     "dataclass",
     "dataclasses",
+    "errexit",
     "esac",
     "footguns",
     "execdir",
