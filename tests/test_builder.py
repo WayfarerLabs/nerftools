@@ -911,6 +911,17 @@ def test_under_cwd_accepts_absolute_inside(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
 
 
+def test_under_cwd_root_cwd_accepts_any_absolute_path(tmp_path: Path) -> None:
+    """Regression: when cwd is "/", the naive prefix check would build "//" and
+    reject every valid absolute path. The codegen short-circuits the prefix check
+    in that case because every absolute path is trivially under root.
+    """
+    tool = _path_arg_tool((PathTest.UNDER_CWD,))
+    # Run from "/" instead of tmp_path. Use --nerf-dry-run so no actual exec is needed.
+    result = _write_and_run(tmp_path, tool, ["--nerf-dry-run", "/etc"], cwd=Path("/"))
+    assert result.returncode == 0, result.stderr
+
+
 def test_exists_rejects_missing(tmp_path: Path) -> None:
     tool = _path_arg_tool((PathTest.EXISTS,))
     result = _write_and_run(tmp_path, tool, ["does-not-exist"])

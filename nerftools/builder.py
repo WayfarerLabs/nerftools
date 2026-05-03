@@ -352,7 +352,9 @@ _nerf_check_path() {{
     return 1
   }}
   if [[ ",$_tests," == *",under_cwd,"* ]]; then
-    if [[ "$_canonical" != "$_cwd" && "$_canonical" != "$_cwd"/* ]]; then
+    # Skip the prefix check when cwd is root: every absolute path qualifies, and the
+    # naive prefix comparison would build "//" and reject otherwise-valid paths.
+    if [[ "$_cwd" != "/" && "$_canonical" != "$_cwd" && "$_canonical" != "$_cwd"/* ]]; then
       echo "error: {tool}: ${{_label}}: 'under_cwd' failed: '${{_input}}'" >&2
       echo "  resolves to '${{_canonical}}', not under '${{_cwd}}'" >&2
       echo "  hint: pass a path inside the current workspace" >&2
