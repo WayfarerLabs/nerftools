@@ -327,6 +327,39 @@ def test_dry_run_preserves_quoting_for_values_with_spaces(tmp_path: Path) -> Non
     assert "a b c" not in result.stdout
 
 
+def test_optional_option_value_with_spaces_passes_as_one_argv_element(tmp_path: Path) -> None:
+    """The ${VAR:+"--flag"} ${VAR:+"$VAR"} substitution must preserve embedded spaces.
+
+    This is a defensive regression test for the codegen pattern. If a future builder
+    edit removes the inner double quotes (e.g. emits ${VAR:+--flag $VAR}), values with
+    spaces would word-split into multiple argv elements, silently changing semantics
+    for every tool with an optional option. The helper prints one argv element per
+    line so word splitting would manifest as extra lines.
+    """
+    helper = tmp_path / "argv-dump"
+    helper.write_text("#!/bin/bash\nprintf '%s\\n' \"$@\"\n")
+    helper.chmod(0o755)
+
+    options = {"label": _option("--label", required=False)}
+    tool = _template_tool(
+        [str(helper), "{{options.label}}"],
+        options=options,
+    )
+    script_path = tmp_path / "nerf-argv"
+    script_path.write_text(build_script_text("nerf-argv", "test", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "--label", "my multi word value"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0
+    lines = result.stdout.splitlines()
+    # Expect exactly two argv elements: "--label" and "my multi word value".
+    assert lines == ["--label", "my multi word value"], (
+        f"Optional option value lost shell quoting; got argv lines: {lines}"
+    )
+
+
 def test_variadic_arg_exec_substitution() -> None:
     arguments = {"files": _arg(required=True, variadic=True)}
     script = build_script_text("t", "p", _template_tool(["git", "add", "{{arguments.files}}"], arguments=arguments))
