@@ -41,17 +41,24 @@ tools:
       command: [kubectl, config, current-context]
 
   kubectl-config-use-context:
-    description: Switch to a different kubectl context
+    description: >-
+      Switch to a different kubectl context. Marked admin because
+      activating an admin-account context (e.g. one fetched via
+      az-aks-get-credentials-admin) gives every subsequent kubectl call
+      cluster-admin powers; the threat marker on this tool has to be at
+      least as strict as the credential fetch that wrote the context.
+      The harness should default-deny this tool whenever it default-
+      denies az-aks-get-credentials-admin.
     threat:
       read: machine
-      write: machine
+      write: admin
     template:
       command: [kubectl, config, use-context, "{{arguments.context}}"]
     arguments:
       context:
         description: Context name (from kubectl-config-get-contexts)
         required: true
-        pattern: "^[a-zA-Z0-9._-]+$"
+        pattern: "^[a-zA-Z0-9_]([a-zA-Z0-9._-]*[a-zA-Z0-9_])?$"
 
   kubectl-cluster-info:
     description: Show cluster info (API server URL, addons)
