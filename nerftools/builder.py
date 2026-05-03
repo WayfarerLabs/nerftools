@@ -378,6 +378,25 @@ def _arg_validations(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
                 lines.append("  fi")
                 lines.append("done")
                 lines.append("")
+            else:
+                # variadic+allow_flags: reject "--nerf-dry-run" tokens inside the variadic.
+                # The flag parser breaks at the first non-flag token, so a wrapper flag
+                # placed AFTER positional args ends up captured into the variadic and is
+                # silently passed to the wrapped command. For --nerf-dry-run this means
+                # the dry-run gate is bypassed (the real call runs); on admin-threat tools
+                # this is dangerous. False-positive risk is zero -- no inner command takes
+                # --nerf-dry-run as one of its own flags.
+                lines.append(f'for _v in "${{{var}[@]}}"; do')
+                lines.append('  if [[ "$_v" == "--nerf-dry-run" ]]; then')
+                lines.append(
+                    f'    echo "error: {tool_name}: --nerf-dry-run inside the command'
+                    ' tokens would be a no-op (it is a wrapper flag)" >&2'
+                )
+                lines.append('    echo "  hint: place --nerf-dry-run before the command tokens" >&2')
+                lines.append("    exit 1")
+                lines.append("  fi")
+                lines.append("done")
+                lines.append("")
             if spec.required:
                 lines.append(f"if [[ ${{#{var}[@]}} -eq 0 ]]; then")
                 lines.append(f'  echo "error: {tool_name}: missing required argument <{name}>" >&2')

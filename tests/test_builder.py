@@ -327,6 +327,52 @@ def test_dry_run_preserves_quoting_for_values_with_spaces(tmp_path: Path) -> Non
     assert "a b c" not in result.stdout
 
 
+def test_variadic_allow_flags_rejects_nerf_dry_run_inside_command(tmp_path: Path) -> None:
+    """--nerf-dry-run inside a variadic+allow_flags arg must be rejected explicitly.
+
+    The flag parser breaks at the first non-flag token, so wrapper flags placed AFTER
+    positional args end up captured into the variadic and silently passed to the wrapped
+    command. For --nerf-dry-run this means the dry-run gate is bypassed -- the real call
+    runs without the agent realizing.
+    """
+    arguments = {"command": _arg(required=True, variadic=True)}
+    # Build a tool with allow_flags=True via direct ArgSpec
+    from nerftools.manifest import ArgSpec
+    arguments = {"command": ArgSpec(description="", required=True, variadic=True, allow_flags=True)}
+    tool = _template_tool(["echo", "{{arguments.command}}"], arguments=arguments)
+    script_path = tmp_path / "nerf-runs"
+    script_path.write_text(build_script_text("nerf-runs", "test", tool))
+    script_path.chmod(0o755)
+    # Dry-run AFTER positionals: caught
+    result = subprocess.run(
+        [str(script_path), "kubectl", "get", "pods", "--nerf-dry-run"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode != 0
+    assert "no-op" in result.stderr
+    assert "wrapper flag" in result.stderr
+
+
+def test_variadic_allow_flags_check_does_not_fire_for_unrelated_flags(tmp_path: Path) -> None:
+    """The check is targeted at --nerf-dry-run only; legitimate inner flags (--help, etc.)
+    must pass through without false positives.
+    """
+    from nerftools.manifest import ArgSpec
+    arguments = {"command": ArgSpec(description="", required=True, variadic=True, allow_flags=True)}
+    tool = _template_tool(["echo", "{{arguments.command}}"], arguments=arguments)
+    script_path = tmp_path / "nerf-runs2"
+    script_path.write_text(build_script_text("nerf-runs2", "test", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "--nerf-dry-run", "kubectl", "--help"],
+        capture_output=True, text=True,
+    )
+    # --help here is a token in the command, not a wrapper flag -- must pass.
+    assert result.returncode == 0, result.stderr
+    assert "kubectl" in result.stdout
+    assert "--help" in result.stdout
+
+
 def test_optional_option_value_with_spaces_passes_as_one_argv_element(tmp_path: Path) -> None:
     """The ${VAR:+"--flag"} ${VAR:+"$VAR"} substitution must preserve embedded spaces.
 
