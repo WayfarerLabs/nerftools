@@ -577,7 +577,8 @@ error: nerf-safe-find: token '-exec' is not allowed (matched deny pattern '-exec
 
 ## Dry-run mode
 
-Every generated tool supports `--nerf-dry-run`. When passed as the first argument, the tool runs all
+Every generated tool supports `--nerf-dry-run`. When passed in the flag region (before any
+positional argument), the tool runs all
 validation, guards, pre-hooks, and deny scans as normal, but instead of executing the final command
 it prints what would be run and exits.
 

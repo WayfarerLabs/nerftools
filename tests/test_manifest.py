@@ -597,9 +597,14 @@ def test_builtin_git_loads() -> None:
 
 
 def _builtin_manifest_paths() -> list[Path]:
+    """Mirror the CLI's built-in manifest discovery (cli.py): .yaml files only."""
     from nerftools.cli import _DEFAULT_MANIFESTS_DIR
 
-    return sorted(p for p in _DEFAULT_MANIFESTS_DIR.iterdir() if p.suffix in (".yaml", ".yml"))
+    if not _DEFAULT_MANIFESTS_DIR.exists():
+        return []
+    return sorted(
+        p for p in _DEFAULT_MANIFESTS_DIR.iterdir() if p.suffix == ".yaml" and p.is_file()
+    )
 
 
 @pytest.mark.parametrize(
