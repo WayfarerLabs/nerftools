@@ -2,17 +2,15 @@ version: 1
 
 package:
   name: az-keyvault
-  description: Azure Key Vault inspection tools (network ACLs, secret metadata, masked secret access)
+  description: Azure Key Vault inspection tools (network ACLs, secret metadata)
   skill_group: az-keyvault
   skill_intro: |
     Tools for inspecting Key Vault configuration and secret metadata.
     az-keyvault-show reports network ACLs, public network access, RBAC mode,
     and private endpoint connections. az-keyvault-secret-list returns secret
-    names only (no values). For confirming a secret value matches expectations
-    without exposing it, use az-keyvault-secret-stats (length, charset class,
-    last modified) or az-keyvault-secret-show-masked (first/last 2 chars
-    when length >= 16). Neither tool emits a content-derived fingerprint;
-    use last_modified to detect rotation.
+    names only (no values). az-keyvault-secret-stats returns length,
+    content type, and last_modified for a single secret without revealing
+    the value -- use last_modified to detect rotation.
     All tools accept --subscription to target a specific subscription.
 
 tools:
@@ -125,11 +123,11 @@ tools:
 
   az-keyvault-secret-stats:
     description: >-
-      Show metadata for a secret value (length, charset class, content
-      type, last modified) without revealing any characters. Use
-      last_modified to detect rotation. No content-derived fingerprint is
-      emitted: a deterministic fingerprint would let an agent verify
-      guessed values offline.
+      Show metadata for a secret value (length, content type, last
+      modified) without revealing any characters. Use last_modified to
+      detect rotation. No content-derived fingerprint is emitted: a
+      deterministic fingerprint would let an agent verify guessed values
+      offline.
     threat:
       read: remote
       write: none
@@ -153,89 +151,13 @@ tools:
       CONTENT_TYPE=$(printf '%s' "${RESPONSE}" | jq -r '.contentType // ""')
       UPDATED=$(printf '%s' "${RESPONSE}" | jq -r '.attributes.updated // ""')
       LEN=${#VALUE}
-      if (( LEN == 0 )); then
-        CHARSET="empty"
-      elif (( LEN < 4 )); then
-        CHARSET="too-short-to-classify"
-      elif [[ "${VALUE}" =~ ^[A-Fa-f0-9]+$ ]]; then
-        CHARSET="hex"
-      elif [[ "${VALUE}" =~ ^[A-Za-z0-9+/]+=*$ ]]; then
-        CHARSET="base64"
-      elif [[ "${VALUE}" =~ ^[A-Za-z0-9_-]+$ ]]; then
-        CHARSET="urlsafe"
-      elif [[ "${VALUE}" =~ ^[A-Za-z0-9]+$ ]]; then
-        CHARSET="alphanumeric"
-      elif [[ "${VALUE}" =~ [[:cntrl:]] ]]; then
-        CHARSET="contains-control"
-      elif [[ "${VALUE}" =~ [^[:print:]] ]]; then
-        CHARSET="contains-nonprint"
-      else
-        CHARSET="mixed-printable"
-      fi
       jq -n \
         --arg vault "${VAULT_NAME}" \
         --arg name "${NAME}" \
         --argjson length "${LEN}" \
-        --arg charset "${CHARSET}" \
         --arg content_type "${CONTENT_TYPE}" \
         --arg updated "${UPDATED}" \
-        '{vault: $vault, name: $name, length: $length, charset_class: $charset, content_type: $content_type, last_modified: $updated}'
-    arguments:
-      vault_name:
-        description: Key Vault name
-        required: true
-      name:
-        description: Secret name
-        required: true
-    options:
-      subscription:
-        description: Subscription name or ID (defaults to active)
-        flag: --subscription
-
-  az-keyvault-secret-show-masked:
-    description: >-
-      Show first 2 and last 2 characters of a secret value, plus length and
-      last modified. For values shorter than 16 characters the masked
-      output omits the prefix/suffix entirely. Combined with charset_class
-      from secret-stats this is enough information to brute-force short or
-      low-entropy secrets, so do not return the masked value or length to
-      untrusted parties.
-    threat:
-      read: remote
-      write: none
-    guards:
-      - command: [which, jq]
-        fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
-    script: |
-      ARGS=(az keyvault secret show --vault-name "${VAULT_NAME}" --name "${NAME}" --output json)
-      if [[ -n "${SUBSCRIPTION}" ]]; then
-        ARGS+=(--subscription "${SUBSCRIPTION}")
-      fi
-      RESPONSE=$("${ARGS[@]}") || {
-        echo "error: az-keyvault-secret-show-masked: failed to fetch secret '${NAME}' from vault '${VAULT_NAME}'" >&2
-        exit 1
-      }
-      VALUE=$(printf '%s' "${RESPONSE}" | jq -r '.value')
-      if [[ "${VALUE}" == "null" ]]; then
-        echo "error: az-keyvault-secret-show-masked: response contained no .value field for '${NAME}' in '${VAULT_NAME}'" >&2
-        exit 1
-      fi
-      UPDATED=$(printf '%s' "${RESPONSE}" | jq -r '.attributes.updated // ""')
-      LEN=${#VALUE}
-      if (( LEN < 16 )); then
-        MASKED="(value too short to mask safely)"
-      else
-        PREFIX="${VALUE:0:2}"
-        SUFFIX="${VALUE: -2}"
-        MASKED="${PREFIX}...${SUFFIX}"
-      fi
-      jq -n \
-        --arg vault "${VAULT_NAME}" \
-        --arg name "${NAME}" \
-        --argjson length "${LEN}" \
-        --arg masked "${MASKED}" \
-        --arg updated "${UPDATED}" \
-        '{vault: $vault, name: $name, length: $length, masked: $masked, last_modified: $updated}'
+        '{vault: $vault, name: $name, length: $length, content_type: $content_type, last_modified: $updated}'
     arguments:
       vault_name:
         description: Key Vault name
