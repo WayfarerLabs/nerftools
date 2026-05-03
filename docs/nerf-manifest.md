@@ -299,6 +299,33 @@ safe-find:
     prefix: [.]
 ```
 
+#### Known security limitations
+
+Passthrough deny operates on whole tokens, so it cannot enforce restrictions when the wrapped
+tool accepts alternative flag syntax:
+
+- **Short-flag stacking.** Tools that use POSIX-style or `pflag` short flags (notably `kubectl`,
+  many `getopt`-based utilities) allow combining boolean short flags into one token: `-Aw` is
+  parsed as `-A -w`. A deny entry of `-w` matches only the exact token `-w`, not `-Aw`, `-wA`,
+  `-Aow`, or any other stack containing `w`.
+- **Inline value forms.** For a flag that takes a value, the deny patterns `--watch` and `-w`
+  do not catch `--watch=true`, `-w=true`, or `-wtrue` (BSD-style short flag with concatenated
+  value). The first two can be partially mitigated with glob denies like `--watch=*` and
+  `-w=*`. The concatenated form `-wtrue` is syntactically indistinguishable from a short-flag
+  stack and cannot be reliably denied at the token level.
+
+**When this matters.** Use `template` mode when the wrapped tool is an agent-escape vector and
+supports either of the above syntaxes. Templates declare the entire surface up front, so any
+flag not declared in the manifest cannot reach the underlying command. Use passthrough only
+when the wrapped tool's flag surface is well-understood, or when an undeclared flag slipping
+through is purely an ergonomic issue rather than a safety one.
+
+**Future direction.** A future opt-in deny extension may recognize tokens matching
+`^-[a-zA-Z]{2,}$` and decompose them for deny matching, closing the short-flag-stacking gap.
+The concatenated-value form is likely to remain a passthrough limitation because it cannot be
+distinguished from a stack without per-tool flag knowledge. When in doubt, prefer template
+mode.
+
 ### script
 
 Run an inline bash script. Best for tools that need custom logic beyond wrapping a single command.
@@ -462,7 +489,14 @@ The pre script is wrapped in a shell function (`_nerf_pre`). Key points:
 - **Print your own error messages.** The fallback message is generic. Write `echo "error: ..." >&2`
   before `return 1`.
 - **Shell variables set in pre are visible to main.** Functions execute in the caller's scope.
+  Do **not** use `local` -- a `local` declaration limits scope to the function body and the
+  variable will be empty when main runs.
 - **`{{kind.name}}` placeholders work.** Parameters are parsed before pre runs.
+- **`set -e` does NOT abort pre on bare command failure.** Bash suppresses errexit inside any
+  function whose return code is being tested by the caller, and the wrapper invokes pre via
+  `_nerf_pre || _nerf_pre_rc=$?`. Even adding `set -e` inside the function body has no effect
+  per POSIX/bash semantics. **Always check command results explicitly with `if`/`||` and
+  `return 1`.**
 
 Example:
 
@@ -543,7 +577,8 @@ error: nerf-safe-find: token '-exec' is not allowed (matched deny pattern '-exec
 
 ## Dry-run mode
 
-Every generated tool supports `--nerf-dry-run`. When passed as the first argument, the tool runs all
+Every generated tool supports `--nerf-dry-run`. When passed in the flag region (before any
+positional argument), the tool runs all
 validation, guards, pre-hooks, and deny scans as normal, but instead of executing the final command
 it prints what would be run and exits.
 
@@ -565,8 +600,12 @@ $ nerf-find-cwd --nerf-dry-run -exec echo {} \;
 error: nerf-find-cwd: token '-exec' is not allowed (matched deny pattern '-exec')
 ```
 
-`--nerf-dry-run` must be the first token because the parser stops consuming flags at the first
-unrecognized argument.
+`--nerf-dry-run` may appear anywhere in the flag region (before the first positional argument);
+like other declared flags it is recognized in any order. The parser stops consuming flags at the
+first non-flag token, so `--nerf-dry-run` placed after a positional argument is captured into
+that argument (or rejected as an extra) and does not enable dry-run. For tools with
+variadic+allow_flags arguments, the codegen rejects `--nerf-dry-run` tokens inside the variadic
+explicitly to prevent silent dry-run bypass.
 
 ## Generated documentation
 

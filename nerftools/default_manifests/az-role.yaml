@@ -1,0 +1,119 @@
+version: 1
+
+package:
+  name: az-role
+  description: Azure RBAC inspection tools (role assignments, role definitions)
+  skill_group: az-role
+  skill_intro: |
+    Tools for inspecting Azure RBAC. az-role-assignment-list supports the
+    reliable "--all --assignee <principal>" form that surfaces orphaned
+    assignments which other queries miss. az-role-definition-list looks up
+    role names and their permissions.
+    All tools accept --subscription to target a specific subscription.
+
+tools:
+  az-role-assignment-list:
+    description: >-
+      List role assignments. Supports filtering by assignee, scope, role,
+      and resource group. --all is recommended when looking up assignments
+      by principal (catches orphaned assignments at any scope).
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - role
+        - assignment
+        - list
+        - "{{switches.all}}"
+        - "{{options.assignee}}"
+        - "{{options.scope}}"
+        - "{{options.role}}"
+        - "{{options.resource_group}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    switches:
+      all:
+        description: Show assignments at all scopes (recommended with --assignee)
+        flag: --all
+    options:
+      assignee:
+        description: User UPN, group object ID, or service principal object ID
+        flag: --assignee
+      scope:
+        description: Scope to filter by (full Azure resource ID)
+        flag: --scope
+      role:
+        description: Role name or definition ID to filter by
+        flag: --role
+      resource_group:
+        description: Filter to a specific resource group
+        flag: --resource-group
+        short: -g
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-role-assignment-by-id:
+    description: >-
+      Fetch role assignments by full ID. Wraps "az role assignment list --ids"
+      (the Azure CLI does not have a "show" subcommand for role assignments),
+      so the result is always a JSON array -- typically with one element when
+      the ID exists, empty when it does not.
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - role
+        - assignment
+        - list
+        - --ids
+        - "{{arguments.assignment_id}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      assignment_id:
+        description: Full role assignment resource ID
+        required: true
+    options:
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-role-definition-list:
+    description: List role definitions (optionally filtered by name or scope)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - role
+        - definition
+        - list
+        - "{{options.name}}"
+        - "{{options.scope}}"
+        - "{{switches.custom_role_only}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    switches:
+      custom_role_only:
+        description: Show only custom (non-built-in) roles
+        flag: --custom-role-only
+    options:
+      name:
+        description: Role name (e.g. "Network Contributor")
+        flag: --name
+        short: -n
+      scope:
+        description: Scope to filter by (full Azure resource ID)
+        flag: --scope
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription

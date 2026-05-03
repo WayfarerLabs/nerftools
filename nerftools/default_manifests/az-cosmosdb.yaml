@@ -1,0 +1,133 @@
+version: 1
+
+package:
+  name: az-cosmosdb
+  description: Azure Cosmos DB account inspection tools (network access, VNet rules, databases)
+  skill_group: az-cosmosdb
+  skill_intro: |
+    Tools for inspecting Cosmos DB account configuration. az-cosmosdb-show
+    reports publicNetworkAccess, isVirtualNetworkFilterEnabled,
+    virtualNetworkRules, and the private endpoint connections list.
+    Use during private-networking validation to confirm VNet filtering
+    is active and the public surface is restricted.
+    All tools accept --subscription to target a specific subscription.
+
+tools:
+  az-cosmosdb-list:
+    description: List Cosmos DB accounts (optionally filtered by resource group)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - cosmosdb
+        - list
+        - "{{options.resource_group}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    options:
+      resource_group:
+        description: Filter to a specific resource group
+        flag: --resource-group
+        short: -g
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-cosmosdb-show:
+    description: Show Cosmos DB account details (network access, VNet rules, private endpoints)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - cosmosdb
+        - show
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --name
+        - "{{arguments.name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      name:
+        description: Cosmos DB account name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the account
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-cosmosdb-database-list:
+    description: List SQL databases in a Cosmos DB account
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - cosmosdb
+        - sql
+        - database
+        - list
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --account-name
+        - "{{arguments.account_name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      account_name:
+        description: Cosmos DB account name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the account
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-cosmosdb-network-rule-list:
+    description: List virtual network rules on a Cosmos DB account
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - cosmosdb
+        - network-rule
+        - list
+        - --resource-group
+        - "{{options.resource_group}}"
+        - --name
+        - "{{arguments.account_name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      account_name:
+        description: Cosmos DB account name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the account
+        flag: --resource-group
+        short: -g
+        required: true
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription

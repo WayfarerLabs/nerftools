@@ -100,7 +100,7 @@ def _build_script(tool_name: str, package_name: str, tool_spec: ToolSpec) -> str
 
     if has_positional:
         parts.append("")
-        parts.append(_positional_parser(tool_spec.arguments))
+        parts.append(_positional_parser(tool_name, tool_spec.arguments))
 
     if has_params:
         validations = _param_validations(tool_name, tool_spec)
@@ -285,8 +285,9 @@ def _flag_parser(tool_spec: ToolSpec, *, has_positional: bool, is_passthrough: b
     )
 
 
-def _positional_parser(arguments: dict[str, ArgSpec]) -> str:
+def _positional_parser(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
     lines = []
+    has_variadic = any(spec.variadic for spec in arguments.values())
     for name, spec in arguments.items():
         var = _var_name(name)
         if spec.variadic:
@@ -294,6 +295,15 @@ def _positional_parser(arguments: dict[str, ArgSpec]) -> str:
         else:
             lines.append(f'{var}="${{1:-}}"')
             lines.append("shift 2>/dev/null || true")
+    if not has_variadic:
+        # Reject any tokens left after consuming declared positionals. Without
+        # this, "tool <pos1> --unknown-flag extra" silently drops the trailing
+        # tokens because the flag parser broke out at the first non-flag.
+        lines.append("if [[ $# -gt 0 ]]; then")
+        lines.append(f'  echo "error: {tool_name}: unexpected extra arguments: $*" >&2')
+        lines.append('  echo "  hint: switches and options must come before positional arguments" >&2')
+        lines.append("  exit 1")
+        lines.append("fi")
     return "\n".join(lines)
 
 
@@ -364,6 +374,25 @@ def _arg_validations(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
                 lines.append('  if [[ "$_v" == -* ]]; then')
                 lines.append(f"    echo \"error: {tool_name}: <{name}> values cannot start with '-'\" >&2")
                 lines.append('    echo "  hint: use -- before positional arguments if needed" >&2')
+                lines.append("    exit 1")
+                lines.append("  fi")
+                lines.append("done")
+                lines.append("")
+            else:
+                # variadic+allow_flags: reject "--nerf-dry-run" tokens inside the variadic.
+                # The flag parser breaks at the first non-flag token, so a wrapper flag
+                # placed AFTER positional args ends up captured into the variadic and is
+                # silently passed to the wrapped command. For --nerf-dry-run this means
+                # the dry-run gate is bypassed (the real call runs); on admin-threat tools
+                # this is dangerous. False-positive risk is zero -- no inner command takes
+                # --nerf-dry-run as one of its own flags.
+                lines.append(f'for _v in "${{{var}[@]}}"; do')
+                lines.append('  if [[ "$_v" == "--nerf-dry-run" ]]; then')
+                lines.append(
+                    f'    echo "error: {tool_name}: --nerf-dry-run inside the command'
+                    ' tokens would be a no-op (it is a wrapper flag)" >&2'
+                )
+                lines.append('    echo "  hint: place --nerf-dry-run before the command tokens" >&2')
                 lines.append("    exit 1")
                 lines.append("  fi")
                 lines.append("done")
@@ -530,16 +559,23 @@ def _dry_run_check(tool_name: str, tool_spec: ToolSpec) -> str:
 
     Only called for template and script modes. Passthrough mode handles
     dry-run inline in _passthrough_exec (after the deny scan).
+
+    For template mode, the args are captured into an array and emitted
+    via printf %q so that values containing spaces or shell-meaningful
+    characters render as proper quoted tokens, faithfully showing what
+    would execute.
     """
     lines = ['if [[ "$_NERF_DRY_RUN" == "true" ]]; then']
 
     if tool_spec.template is not None:
         exec_args = _substitute_template_command(tool_spec.template.command, tool_spec)
         if tool_spec.template.npm_pkgrun:
-            cmd = 'echo "dry-run: $_PKGRUN ' + " ".join(exec_args) + '"'
+            lines.append('  _NERF_DRY_CMD=("$_PKGRUN" ' + " ".join(exec_args) + ")")
         else:
-            cmd = 'echo "dry-run: ' + " ".join(exec_args) + '"'
-        lines.append(f"  {cmd}")
+            lines.append("  _NERF_DRY_CMD=(" + " ".join(exec_args) + ")")
+        lines.append("  printf 'dry-run:'")
+        lines.append('  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done')
+        lines.append("  echo")
     else:
         lines.append(f'  echo "dry-run: {tool_name} would run inline script"')
 

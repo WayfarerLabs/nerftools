@@ -1,0 +1,449 @@
+version: 1
+
+package:
+  name: kubectl
+  description: kubectl tools for inspecting and operating on Kubernetes clusters
+  skill_group: kubectl
+  skill_intro: |
+    Tools for inspecting and operating on Kubernetes clusters. All tools
+    are template-mode wrappers, so the agent can only pass the parameters
+    declared here -- no arbitrary kubectl flags, no connection overrides,
+    no short-flag stacks. Output is always JSON where applicable; pipe
+    through jq for advanced extraction. kubectl-get refuses Secrets;
+    use kubectl-get-secrets, which scrubs .data / .stringData / the
+    last-applied-configuration annotation. Use az-aks-get-credentials
+    to populate ~/.kube/config first, then kubectl-config-use-context
+    to switch between configured clusters.
+
+tools:
+  kubectl-version:
+    description: Show kubectl client and server version
+    threat:
+      read: remote
+      write: none
+    template:
+      command: [kubectl, version, --output, json]
+
+  kubectl-config-get-contexts:
+    description: List configured kubectl contexts
+    threat:
+      read: machine
+      write: none
+    template:
+      command: [kubectl, config, get-contexts]
+
+  kubectl-config-current-context:
+    description: Show the currently active kubectl context
+    threat:
+      read: machine
+      write: none
+    template:
+      command: [kubectl, config, current-context]
+
+  kubectl-config-use-context:
+    description: >-
+      Switch to a different kubectl context. Marked admin because
+      activating an admin-account context (e.g. one fetched via
+      az-aks-get-credentials-admin) gives every subsequent kubectl call
+      cluster-admin powers; the threat marker on this tool has to be at
+      least as strict as the credential fetch that wrote the context.
+      The harness should default-deny this tool whenever it default-
+      denies az-aks-get-credentials-admin.
+    threat:
+      read: machine
+      write: admin
+    template:
+      command: [kubectl, config, use-context, "{{arguments.context}}"]
+    arguments:
+      context:
+        description: Context name (from kubectl-config-get-contexts)
+        required: true
+        pattern: "^[a-zA-Z0-9_]([a-zA-Z0-9._-]*[a-zA-Z0-9_])?$"
+
+  kubectl-cluster-info:
+    description: Show cluster info (API server URL, addons)
+    threat:
+      read: remote
+      write: none
+    template:
+      command: [kubectl, cluster-info]
+
+  kubectl-get:
+    description: >-
+      Get kubernetes resources. Returns JSON; pipe through jq for
+      extraction. Refuses Secrets -- use kubectl-get-secrets instead,
+      which redacts .data and .stringData.
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - kubectl
+        - get
+        - "{{arguments.resource}}"
+        - "{{arguments.name}}"
+        - "{{options.namespace}}"
+        - "{{switches.all_namespaces}}"
+        - "{{options.selector}}"
+        - "{{options.field_selector}}"
+        - "{{switches.show_labels}}"
+        - --output
+        - json
+    arguments:
+      resource:
+        description: Resource type (e.g. pods, services, deployments) or "kind/name"
+        required: true
+        pattern: "^[a-z][a-zA-Z0-9.-]*(/[a-zA-Z0-9._-]+)?$"
+      name:
+        description: Specific resource name (optional)
+        pattern: "^[a-zA-Z0-9._-]+$"
+    options:
+      namespace:
+        description: Namespace
+        flag: --namespace
+        short: -n
+        pattern: "^[a-z0-9-]+$"
+      selector:
+        description: Label selector (e.g. app=foo,env!=prod)
+        flag: --selector
+        short: -l
+      field_selector:
+        description: Field selector (e.g. status.phase=Running)
+        flag: --field-selector
+    switches:
+      all_namespaces:
+        description: List across all namespaces
+        flag: --all-namespaces
+        short: -A
+      show_labels:
+        description: Include labels in the output
+        flag: --show-labels
+    guards:
+      - script: |
+          [[ ! "$(echo "${RESOURCE}" | tr '[:upper:]' '[:lower:]')" =~ ^secrets?($|\.|/) ]]
+        fail_message: kubectl-get refuses secrets. Use kubectl-get-secrets which redacts .data / .stringData.
+
+  kubectl-get-secrets:
+    description: >-
+      List Secret metadata with .data, .stringData, and ALL
+      metadata.annotations removed. Cannot reveal secret values.
+      Annotations are dropped wholesale because kubectl apply stores
+      the rendered manifest (including .data) in the
+      last-applied-configuration annotation, and operator-injected
+      annotations may carry sensitive content. Labels are preserved.
+      For secret values, go through az-keyvault or the secret-syncing
+      source.
+    threat:
+      read: remote
+      write: none
+    guards:
+      - command: [which, jq]
+        fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
+    script: |
+      ARGS=(kubectl get secrets)
+      [[ -n "${NAME}" ]] && ARGS+=("${NAME}")
+      [[ -n "${NAMESPACE}" ]] && ARGS+=(--namespace "${NAMESPACE}")
+      [[ -n "${ALL_NAMESPACES}" ]] && ARGS+=(--all-namespaces)
+      [[ -n "${SELECTOR}" ]] && ARGS+=(--selector "${SELECTOR}")
+      ARGS+=(--output json)
+      "${ARGS[@]}" | jq 'walk(if type == "object" then
+        del(.data, .stringData, .metadata.annotations)
+      else . end)'
+    arguments:
+      name:
+        description: Specific secret name (optional)
+        pattern: "^[a-z0-9.-]+$"
+    options:
+      namespace:
+        description: Namespace
+        flag: --namespace
+        short: -n
+        pattern: "^[a-z0-9-]+$"
+      selector:
+        description: Label selector
+        flag: --selector
+        short: -l
+    switches:
+      all_namespaces:
+        description: List across all namespaces
+        flag: --all-namespaces
+        short: -A
+
+  kubectl-describe:
+    description: >-
+      Describe a kubernetes resource. Refuses Secrets because
+      "kubectl describe" prints the metadata.annotations section
+      verbatim, and any Secret created via "kubectl apply" carries a
+      kubectl.kubernetes.io/last-applied-configuration annotation
+      containing the original (base64-encoded) .data, which would
+      bypass kubectl-get-secrets' redaction.
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - kubectl
+        - describe
+        - "{{arguments.resource}}"
+        - "{{arguments.name}}"
+        - "{{options.namespace}}"
+    arguments:
+      resource:
+        description: Resource type (e.g. pod, deployment)
+        required: true
+        pattern: "^[a-z][a-zA-Z0-9.-]*$"
+      name:
+        description: Resource name
+        required: true
+        pattern: "^[a-zA-Z0-9._-]+$"
+    options:
+      namespace:
+        description: Namespace
+        flag: --namespace
+        short: -n
+        pattern: "^[a-z0-9-]+$"
+    guards:
+      - script: |
+          [[ ! "$(echo "${RESOURCE}" | tr '[:upper:]' '[:lower:]')" =~ ^secrets?($|\.|/) ]]
+        fail_message: kubectl-describe refuses secrets (annotations may include last-applied-configuration with raw .data). Use kubectl-get-secrets which redacts.
+
+  kubectl-logs:
+    description: >-
+      Fetch pod logs (no follow). Use --tail to cap the line count.
+      Combine with kubectl-get to poll if you need updates.
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - kubectl
+        - logs
+        - "{{arguments.pod}}"
+        - "{{options.namespace}}"
+        - "{{options.container}}"
+        - "{{options.tail}}"
+        - "{{switches.previous}}"
+    arguments:
+      pod:
+        description: Pod name (or "pod/<name>" form)
+        required: true
+        pattern: "^(pod/)?[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"
+    options:
+      namespace:
+        description: Namespace
+        flag: --namespace
+        short: -n
+        pattern: "^[a-z0-9-]+$"
+      container:
+        description: Container name (when the pod has multiple)
+        flag: --container
+        short: -c
+        pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+      tail:
+        description: Number of recent lines to fetch
+        flag: --tail
+        pattern: "^[0-9]+$"
+    switches:
+      previous:
+        description: Get logs from a previous container instance (after a crash/restart)
+        flag: --previous
+        short: -p
+
+  kubectl-top-pods:
+    description: Show CPU and memory usage of pods
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - kubectl
+        - top
+        - pods
+        - "{{options.namespace}}"
+        - "{{switches.all_namespaces}}"
+        - "{{options.selector}}"
+    options:
+      namespace:
+        description: Namespace
+        flag: --namespace
+        short: -n
+        pattern: "^[a-z0-9-]+$"
+      selector:
+        description: Label selector
+        flag: --selector
+        short: -l
+    switches:
+      all_namespaces:
+        description: List across all namespaces
+        flag: --all-namespaces
+        short: -A
+
+  kubectl-top-nodes:
+    description: Show CPU and memory usage of nodes
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - kubectl
+        - top
+        - nodes
+        - "{{options.selector}}"
+    options:
+      selector:
+        description: Label selector
+        flag: --selector
+        short: -l
+
+  kubectl-api-resources:
+    description: List API resources supported by the cluster (resource names only)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - kubectl
+        - api-resources
+        - --output
+        - name
+        - "{{options.api_group}}"
+    options:
+      api_group:
+        description: Filter by API group (e.g. apps, batch)
+        flag: --api-group
+        pattern: "^[a-z0-9.-]*$"
+
+  kubectl-api-versions:
+    description: List API group/versions supported by the cluster
+    threat:
+      read: remote
+      write: none
+    template:
+      command: [kubectl, api-versions]
+
+  kubectl-explain:
+    description: Show the schema documentation for a resource or field path
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - kubectl
+        - explain
+        - "{{arguments.resource}}"
+        - "{{switches.recursive}}"
+    arguments:
+      resource:
+        description: Resource type or field path (e.g. pod, pod.spec.containers)
+        required: true
+        pattern: "^[a-z][a-zA-Z0-9.-]*$"
+    switches:
+      recursive:
+        description: Print the entire schema recursively
+        flag: --recursive
+
+  kubectl-exec:
+    description: >-
+      Execute a command in a pod (non-interactive, no TTY). Use this for
+      one-shot diagnostics; for cluster mutations prefer Helm/Terraform.
+    threat:
+      read: remote
+      write: remote
+    template:
+      command:
+        - kubectl
+        - exec
+        - "{{arguments.pod}}"
+        - "{{options.namespace}}"
+        - "{{options.container}}"
+        - --
+        - "{{arguments.command}}"
+    arguments:
+      pod:
+        description: Pod name
+        required: true
+        pattern: "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"
+      command:
+        description: Command and args to run in the pod
+        required: true
+        variadic: true
+        allow_flags: true
+    options:
+      namespace:
+        description: Namespace
+        flag: --namespace
+        short: -n
+        pattern: "^[a-z0-9-]+$"
+      container:
+        description: Container name (when the pod has multiple containers)
+        flag: --container
+        short: -c
+        pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+
+  kubectl-port-forward:
+    description: >-
+      Forward a local port to a pod or service in the cluster. Wrapped
+      with coreutils "timeout" so unattended runs cannot hang -- the
+      forward is terminated after --timeout-seconds (required). Note
+      that the wrapper exits 124 (the standard "timeout" exit code) when
+      the time bound is reached; this is the expected success path for
+      unattended diagnostics.
+    threat:
+      read: remote
+      write: remote
+    guards:
+      - command: [which, timeout]
+        fail_message: '"timeout" (from coreutils) is required but not found. Pre-installed on Linux and recent macOS.'
+    template:
+      command:
+        - timeout
+        - "{{options.timeout_seconds}}"
+        - kubectl
+        - port-forward
+        - "{{options.namespace}}"
+        - "{{arguments.target}}"
+        - "{{arguments.ports}}"
+    arguments:
+      target:
+        description: Resource to forward to (e.g. pod/<name> or svc/<name>)
+        required: true
+        pattern: "^(pod|svc|service|deployment|deploy|statefulset|sts)/[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"
+      ports:
+        description: Port mapping (local:remote)
+        required: true
+        pattern: "^[0-9]+:[0-9]+$"
+    options:
+      timeout_seconds:
+        description: Maximum seconds to keep the forward open (required; passed to coreutils timeout)
+        flag: --timeout-seconds
+        required: true
+        pattern: "^[1-9][0-9]*$"
+      namespace:
+        description: Namespace
+        flag: --namespace
+        short: -n
+        pattern: "^[a-z0-9-]+$"
+
+  kubectl-rollout-restart:
+    description: Trigger a rolling restart of a deployment, daemonset, or statefulset
+    threat:
+      read: remote
+      write: remote
+    template:
+      command:
+        - kubectl
+        - rollout
+        - restart
+        - "{{options.namespace}}"
+        - "{{arguments.target}}"
+    arguments:
+      target:
+        description: Resource to restart (e.g. deployment/<name>)
+        required: true
+        pattern: "^(deployment|deploy|daemonset|ds|statefulset|sts)/[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"
+    options:
+      namespace:
+        description: Namespace
+        flag: --namespace
+        short: -n
+        pattern: "^[a-z0-9-]+$"

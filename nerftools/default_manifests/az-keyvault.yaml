@@ -1,0 +1,171 @@
+version: 1
+
+package:
+  name: az-keyvault
+  description: Azure Key Vault inspection tools (network ACLs, secret metadata)
+  skill_group: az-keyvault
+  skill_intro: |
+    Tools for inspecting Key Vault configuration and secret metadata.
+    az-keyvault-show reports network ACLs, public network access, RBAC mode,
+    and private endpoint connections. az-keyvault-secret-list returns secret
+    names only (no values). az-keyvault-secret-stats returns length,
+    content type, and last_modified for a single secret without revealing
+    the value -- use last_modified to detect rotation.
+    All tools accept --subscription to target a specific subscription.
+
+tools:
+  az-keyvault-list:
+    description: List Key Vaults (optionally filtered by resource group)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - keyvault
+        - list
+        - "{{options.resource_group}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    options:
+      resource_group:
+        description: Filter to a specific resource group
+        flag: --resource-group
+        short: -g
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-keyvault-show:
+    description: Show Key Vault details (network ACLs, publicNetworkAccess, RBAC mode, private endpoints)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - keyvault
+        - show
+        - --name
+        - "{{arguments.name}}"
+        - "{{options.resource_group}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      name:
+        description: Key Vault name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the vault (optional, helps with disambiguation)
+        flag: --resource-group
+        short: -g
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-keyvault-network-rule-list:
+    description: List explicit network rules on a Key Vault
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - keyvault
+        - network-rule
+        - list
+        - --name
+        - "{{arguments.vault_name}}"
+        - "{{options.resource_group}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      vault_name:
+        description: Key Vault name
+        required: true
+    options:
+      resource_group:
+        description: Resource group containing the vault (optional)
+        flag: --resource-group
+        short: -g
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-keyvault-secret-list:
+    description: List secret names in a Key Vault (no values)
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - keyvault
+        - secret
+        - list
+        - --vault-name
+        - "{{arguments.vault_name}}"
+        - "{{options.subscription}}"
+        - --output
+        - json
+    arguments:
+      vault_name:
+        description: Key Vault name
+        required: true
+    options:
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription
+
+  az-keyvault-secret-stats:
+    description: >-
+      Show metadata for a secret value (length, content type, last
+      modified) without revealing any characters. Use last_modified to
+      detect rotation. No content-derived fingerprint is emitted: a
+      deterministic fingerprint would let an agent verify guessed values
+      offline.
+    threat:
+      read: remote
+      write: none
+    guards:
+      - command: [which, jq]
+        fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
+    script: |
+      ARGS=(az keyvault secret show --vault-name "${VAULT_NAME}" --name "${NAME}" --output json)
+      if [[ -n "${SUBSCRIPTION}" ]]; then
+        ARGS+=(--subscription "${SUBSCRIPTION}")
+      fi
+      RESPONSE=$("${ARGS[@]}") || {
+        echo "error: az-keyvault-secret-stats: failed to fetch secret '${NAME}' from vault '${VAULT_NAME}'" >&2
+        exit 1
+      }
+      VALUE=$(printf '%s' "${RESPONSE}" | jq -r '.value')
+      if [[ "${VALUE}" == "null" ]]; then
+        echo "error: az-keyvault-secret-stats: response contained no .value field for '${NAME}' in '${VAULT_NAME}'" >&2
+        exit 1
+      fi
+      CONTENT_TYPE=$(printf '%s' "${RESPONSE}" | jq -r '.contentType // ""')
+      UPDATED=$(printf '%s' "${RESPONSE}" | jq -r '.attributes.updated // ""')
+      LEN=${#VALUE}
+      jq -n \
+        --arg vault "${VAULT_NAME}" \
+        --arg name "${NAME}" \
+        --argjson length "${LEN}" \
+        --arg content_type "${CONTENT_TYPE}" \
+        --arg updated "${UPDATED}" \
+        '{vault: $vault, name: $name, length: $length, content_type: $content_type, last_modified: $updated}'
+    arguments:
+      vault_name:
+        description: Key Vault name
+        required: true
+      name:
+        description: Secret name
+        required: true
+    options:
+      subscription:
+        description: Subscription name or ID (defaults to active)
+        flag: --subscription

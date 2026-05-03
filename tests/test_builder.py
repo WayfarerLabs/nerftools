@@ -279,6 +279,133 @@ def test_variadic_arg_collected() -> None:
     assert 'FILES=("$@")' in script
 
 
+def test_extra_positional_rejected_when_no_variadic(tmp_path: Path) -> None:
+    """Trailing tokens past the declared positionals must error, not be silently dropped.
+
+    Without this check, "tool <pos> --unknown-flag" silently drops --unknown-flag because
+    the flag parser breaks at the first non-flag and the positional parser only takes $1.
+    """
+    arguments = {"target": _arg(required=True)}
+    tool = _template_tool(["echo", "{{arguments.target}}"], arguments=arguments)
+    script = build_script_text("nerf-test", "test", tool)
+    script_path = tmp_path / "nerf-test"
+    script_path.write_text(script)
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "value", "--unknown"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode != 0
+    assert "unexpected extra arguments" in result.stderr
+    assert "--unknown" in result.stderr
+
+
+def test_no_extra_check_when_variadic(tmp_path: Path) -> None:
+    """Tools with a variadic positional should accept any trailing tokens (variadic eats them)."""
+    arguments = {"files": _arg(required=True, variadic=True)}
+    tool = _template_tool(["echo", "{{arguments.files}}"], arguments=arguments)
+    script = build_script_text("nerf-test", "test", tool)
+    # The extra-args check must NOT be emitted for variadic tools.
+    assert "unexpected extra arguments" not in script
+
+
+def test_dry_run_preserves_quoting_for_values_with_spaces(tmp_path: Path) -> None:
+    """Dry-run must shell-quote values so multi-word args don't look like multiple args."""
+    arguments = {"target": _arg(required=True)}
+    tool = _template_tool(["echo", "{{arguments.target}}"], arguments=arguments)
+    script_path = tmp_path / "nerf-test"
+    script_path.write_text(build_script_text("nerf-test", "test", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "--nerf-dry-run", "a b c"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0
+    # printf %q escapes spaces with backslash; the value is presented as one shell-quoted token.
+    assert "a\\ b\\ c" in result.stdout
+    # The naive "echo dry-run: ..." form would have shown plain "a b c".
+    assert "a b c" not in result.stdout
+
+
+def test_variadic_allow_flags_rejects_nerf_dry_run_inside_command(tmp_path: Path) -> None:
+    """--nerf-dry-run inside a variadic+allow_flags arg must be rejected explicitly.
+
+    The flag parser breaks at the first non-flag token, so wrapper flags placed AFTER
+    positional args end up captured into the variadic and silently passed to the wrapped
+    command. For --nerf-dry-run this means the dry-run gate is bypassed -- the real call
+    runs without the agent realizing.
+    """
+    arguments = {"command": _arg(required=True, variadic=True)}
+    # Build a tool with allow_flags=True via direct ArgSpec
+    from nerftools.manifest import ArgSpec
+    arguments = {"command": ArgSpec(description="", required=True, variadic=True, allow_flags=True)}
+    tool = _template_tool(["echo", "{{arguments.command}}"], arguments=arguments)
+    script_path = tmp_path / "nerf-runs"
+    script_path.write_text(build_script_text("nerf-runs", "test", tool))
+    script_path.chmod(0o755)
+    # Dry-run AFTER positionals: caught
+    result = subprocess.run(
+        [str(script_path), "kubectl", "get", "pods", "--nerf-dry-run"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode != 0
+    assert "no-op" in result.stderr
+    assert "wrapper flag" in result.stderr
+
+
+def test_variadic_allow_flags_check_does_not_fire_for_unrelated_flags(tmp_path: Path) -> None:
+    """The check is targeted at --nerf-dry-run only; legitimate inner flags (--help, etc.)
+    must pass through without false positives.
+    """
+    from nerftools.manifest import ArgSpec
+    arguments = {"command": ArgSpec(description="", required=True, variadic=True, allow_flags=True)}
+    tool = _template_tool(["echo", "{{arguments.command}}"], arguments=arguments)
+    script_path = tmp_path / "nerf-runs2"
+    script_path.write_text(build_script_text("nerf-runs2", "test", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "--nerf-dry-run", "kubectl", "--help"],
+        capture_output=True, text=True,
+    )
+    # --help here is a token in the command, not a wrapper flag -- must pass.
+    assert result.returncode == 0, result.stderr
+    assert "kubectl" in result.stdout
+    assert "--help" in result.stdout
+
+
+def test_optional_option_value_with_spaces_passes_as_one_argv_element(tmp_path: Path) -> None:
+    """The ${VAR:+"--flag"} ${VAR:+"$VAR"} substitution must preserve embedded spaces.
+
+    This is a defensive regression test for the codegen pattern. If a future builder
+    edit removes the inner double quotes (e.g. emits ${VAR:+--flag $VAR}), values with
+    spaces would word-split into multiple argv elements, silently changing semantics
+    for every tool with an optional option. The helper prints one argv element per
+    line so word splitting would manifest as extra lines.
+    """
+    helper = tmp_path / "argv-dump"
+    helper.write_text("#!/bin/bash\nprintf '%s\\n' \"$@\"\n")
+    helper.chmod(0o755)
+
+    options = {"label": _option("--label", required=False)}
+    tool = _template_tool(
+        [str(helper), "{{options.label}}"],
+        options=options,
+    )
+    script_path = tmp_path / "nerf-argv"
+    script_path.write_text(build_script_text("nerf-argv", "test", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "--label", "my multi word value"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0
+    lines = result.stdout.splitlines()
+    # Expect exactly two argv elements: "--label" and "my multi word value".
+    assert lines == ["--label", "my multi word value"], (
+        f"Optional option value lost shell quoting; got argv lines: {lines}"
+    )
+
+
 def test_variadic_arg_exec_substitution() -> None:
     arguments = {"files": _arg(required=True, variadic=True)}
     script = build_script_text("t", "p", _template_tool(["git", "add", "{{arguments.files}}"], arguments=arguments))

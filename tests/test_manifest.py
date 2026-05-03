@@ -594,3 +594,32 @@ def test_builtin_git_loads() -> None:
     assert m.tools["git-log"].threat.read == ThreatLevel.WORKSPACE
     assert m.tools["git-log"].threat.write == ThreatLevel.NONE
     assert m.tools["git-push-branch"].threat.write == ThreatLevel.REMOTE
+
+
+def _builtin_manifest_paths() -> list[Path]:
+    """Mirror the CLI's built-in manifest discovery (cli.py): .yaml files only."""
+    from nerftools.cli import _DEFAULT_MANIFESTS_DIR
+
+    if not _DEFAULT_MANIFESTS_DIR.exists():
+        return []
+    return sorted(
+        p for p in _DEFAULT_MANIFESTS_DIR.iterdir() if p.suffix == ".yaml" and p.is_file()
+    )
+
+
+@pytest.mark.parametrize(
+    "manifest_path",
+    _builtin_manifest_paths(),
+    ids=lambda p: p.name,
+)
+def test_builtin_manifest_parses(manifest_path: Path) -> None:
+    """Every built-in manifest must parse cleanly. Catches schema/typo regressions."""
+    m = load_manifest(manifest_path)
+    assert m.version == 1
+    assert m.package.name, f"{manifest_path.name} has empty package.name"
+    assert m.tools, f"{manifest_path.name} has no tools"
+
+
+def test_builtin_manifests_directory_not_empty() -> None:
+    """Guard against the parametrized test silently passing zero cases."""
+    assert _builtin_manifest_paths(), "no built-in manifests discovered"
