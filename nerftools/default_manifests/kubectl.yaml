@@ -118,10 +118,13 @@ tools:
 
   kubectl-get-secrets:
     description: >-
-      List Secret metadata with .data, .stringData, and the
-      last-applied-configuration annotation removed. Cannot reveal
-      secret values. Use this for existence/label/annotation checks;
-      for the value itself go through az-keyvault or the secret-syncing
+      List Secret metadata with .data, .stringData, and ALL
+      metadata.annotations removed. Cannot reveal secret values.
+      Annotations are dropped wholesale because kubectl apply stores
+      the rendered manifest (including .data) in the
+      last-applied-configuration annotation, and operator-injected
+      annotations may carry sensitive content. Labels are preserved.
+      For secret values, go through az-keyvault or the secret-syncing
       source.
     threat:
       read: remote
@@ -137,8 +140,7 @@ tools:
       [[ -n "${SELECTOR}" ]] && ARGS+=(--selector "${SELECTOR}")
       ARGS+=(--output json)
       "${ARGS[@]}" | jq 'walk(if type == "object" then
-        del(.data, .stringData)
-        | (.metadata.annotations["kubectl.kubernetes.io/last-applied-configuration"]?) |= empty
+        del(.data, .stringData, .metadata.annotations)
       else . end)'
     arguments:
       name:
@@ -162,8 +164,12 @@ tools:
 
   kubectl-describe:
     description: >-
-      Describe a kubernetes resource. Safe for Secrets -- "kubectl
-      describe secret" shows key names and byte counts but never values.
+      Describe a kubernetes resource. Refuses Secrets because
+      "kubectl describe" prints the metadata.annotations section
+      verbatim, and any Secret created via "kubectl apply" carries a
+      kubectl.kubernetes.io/last-applied-configuration annotation
+      containing the original (base64-encoded) .data, which would
+      bypass kubectl-get-secrets' redaction.
     threat:
       read: remote
       write: none
@@ -189,6 +195,10 @@ tools:
         flag: --namespace
         short: -n
         pattern: "^[a-z0-9-]+$"
+    guards:
+      - script: |
+          [[ ! "$(echo "${RESOURCE}" | tr '[:upper:]' '[:lower:]')" =~ ^secrets?($|\.|/) ]]
+        fail_message: kubectl-describe refuses secrets (annotations may include last-applied-configuration with raw .data). Use kubectl-get-secrets which redacts.
 
   kubectl-logs:
     description: >-

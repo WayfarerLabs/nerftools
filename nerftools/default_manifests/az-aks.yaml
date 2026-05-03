@@ -254,7 +254,14 @@ tools:
       read: remote
       write: admin
     script: |
-      COMMAND_STR="${COMMAND[*]}"
+      # Shell-quote each token so argv boundaries survive the inner shell on the cluster.
+      # Plain "${COMMAND[*]}" would join with space and lose quoting around tokens that
+      # contain spaces or shell metacharacters.
+      COMMAND_STR=""
+      for _t in "${COMMAND[@]}"; do
+        COMMAND_STR+=" $(printf '%q' "$_t")"
+      done
+      COMMAND_STR="${COMMAND_STR# }"
       ARGS=(az aks command invoke
         --resource-group "${RESOURCE_GROUP}"
         --name "${CLUSTER_NAME}"
