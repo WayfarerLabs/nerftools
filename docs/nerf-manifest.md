@@ -489,7 +489,12 @@ The pre script is wrapped in a shell function (`_nerf_pre`). Key points:
 - **Print your own error messages.** The fallback message is generic. Write `echo "error: ..." >&2`
   before `return 1`.
 - **Shell variables set in pre are visible to main.** Functions execute in the caller's scope.
+  Do **not** use `local` -- a `local` declaration limits scope to the function body and the
+  variable will be empty when main runs.
 - **`{{kind.name}}` placeholders work.** Parameters are parsed before pre runs.
+- **`set -e` is re-enabled at the top of the function body.** Bash suppresses `set -e` inside a
+  function whose return code is being tested by the caller, but the codegen restores strictness
+  so a bare command failure inside pre aborts the hook the way authors expect.
 
 Example:
 
@@ -592,8 +597,12 @@ $ nerf-find-cwd --nerf-dry-run -exec echo {} \;
 error: nerf-find-cwd: token '-exec' is not allowed (matched deny pattern '-exec')
 ```
 
-`--nerf-dry-run` must be the first token because the parser stops consuming flags at the first
-unrecognized argument.
+`--nerf-dry-run` may appear anywhere in the flag region (before the first positional argument);
+like other declared flags it is recognized in any order. The parser stops consuming flags at the
+first non-flag token, so `--nerf-dry-run` placed after a positional argument is captured into
+that argument (or rejected as an extra) and does not enable dry-run. For tools with
+variadic+allow_flags arguments, the codegen rejects `--nerf-dry-run` tokens inside the variadic
+explicitly to prevent silent dry-run bypass.
 
 ## Generated documentation
 
