@@ -492,9 +492,11 @@ The pre script is wrapped in a shell function (`_nerf_pre`). Key points:
   Do **not** use `local` -- a `local` declaration limits scope to the function body and the
   variable will be empty when main runs.
 - **`{{kind.name}}` placeholders work.** Parameters are parsed before pre runs.
-- **`set -e` is re-enabled at the top of the function body.** Bash suppresses `set -e` inside a
-  function whose return code is being tested by the caller, but the codegen restores strictness
-  so a bare command failure inside pre aborts the hook the way authors expect.
+- **`set -e` does NOT abort pre on bare command failure.** Bash suppresses errexit inside any
+  function whose return code is being tested by the caller, and the wrapper invokes pre via
+  `_nerf_pre || _nerf_pre_rc=$?`. Even adding `set -e` inside the function body has no effect
+  per POSIX/bash semantics. **Always check command results explicitly with `if`/`||` and
+  `return 1`.**
 
 Example:
 
