@@ -338,57 +338,71 @@ _nerf_check_path() {{
   case "$_input" in
     *$'\\n'*|*$'\\r'*|*$'\\t'*)
       echo "error: {tool}: ${{_label}}: contains illegal control character" >&2
+      echo "  hint: paths must not contain newlines, carriage returns, or tabs" >&2
       return 1 ;;
   esac
   _cwd=$(realpath -- "$PWD") || {{
     echo "error: {tool}: failed to canonicalize cwd '$PWD'" >&2
+    echo "  hint: invoke from a valid directory" >&2
     return 1
   }}
   _canonical=$(realpath -m -- "$_input") || {{
     echo "error: {tool}: ${{_label}}: failed to canonicalize '${{_input}}'" >&2
+    echo "  hint: pass a syntactically valid path" >&2
     return 1
   }}
   if [[ ",$_tests," == *",under_cwd,"* ]]; then
     if [[ "$_canonical" != "$_cwd" && "$_canonical" != "$_cwd"/* ]]; then
       echo "error: {tool}: ${{_label}}: 'under_cwd' failed: '${{_input}}'" >&2
       echo "  resolves to '${{_canonical}}', not under '${{_cwd}}'" >&2
+      echo "  hint: pass a path inside the current workspace" >&2
+      echo "  hint: symlinks are followed -- if the link's target is outside the workspace it is rejected" >&2
       return 1
     fi
   fi
   if [[ ",$_tests," == *",exists,"* ]] && [[ ! -e "$_input" ]]; then
     echo "error: {tool}: ${{_label}}: 'exists' failed: '${{_input}}' does not exist" >&2
+    echo "  hint: create the path or pass an existing one" >&2
     return 1
   fi
   if [[ ",$_tests," == *",not_exists,"* ]] && [[ -e "$_input" ]]; then
     echo "error: {tool}: ${{_label}}: 'not_exists' failed: '${{_input}}' already exists" >&2
+    echo "  hint: choose a different path or remove the existing one first" >&2
     return 1
   fi
   if [[ ",$_tests," == *",file,"* ]] && [[ ! -f "$_input" ]]; then
     echo "error: {tool}: ${{_label}}: 'file' failed: '${{_input}}' is not a regular file" >&2
+    echo "  hint: pass a regular file path (not a directory, symlink-to-dir, device, or missing path)" >&2
     return 1
   fi
   if [[ ",$_tests," == *",dir,"* ]] && [[ ! -d "$_input" ]]; then
     echo "error: {tool}: ${{_label}}: 'dir' failed: '${{_input}}' is not a directory" >&2
+    echo "  hint: pass a directory path (not a regular file or missing path)" >&2
     return 1
   fi
   if [[ ",$_tests," == *",symlink,"* ]] && [[ ! -L "$_input" ]]; then
     echo "error: {tool}: ${{_label}}: 'symlink' failed: '${{_input}}' is not a symlink" >&2
+    echo "  hint: pass a symbolic link (the test does not follow the link)" >&2
     return 1
   fi
   if [[ ",$_tests," == *",not_symlink,"* ]] && [[ -L "$_input" ]]; then
     echo "error: {tool}: ${{_label}}: 'not_symlink' failed: '${{_input}}' is a symlink" >&2
+    echo "  hint: pass a real path, not a symlink (the test does not follow the link)" >&2
     return 1
   fi
   if [[ ",$_tests," == *",readable,"* ]] && [[ ! -r "$_input" ]]; then
     echo "error: {tool}: ${{_label}}: 'readable' failed: '${{_input}}' is not readable" >&2
+    echo "  hint: check filesystem permissions for the current user" >&2
     return 1
   fi
   if [[ ",$_tests," == *",writable,"* ]] && [[ ! -w "$_input" ]]; then
     echo "error: {tool}: ${{_label}}: 'writable' failed: '${{_input}}' is not writable" >&2
+    echo "  hint: check filesystem permissions for the current user" >&2
     return 1
   fi
   if [[ ",$_tests," == *",executable,"* ]] && [[ ! -x "$_input" ]]; then
     echo "error: {tool}: ${{_label}}: 'executable' failed: '${{_input}}' is not executable" >&2
+    echo "  hint: check filesystem permissions for the current user" >&2
     return 1
   fi
 }}"""

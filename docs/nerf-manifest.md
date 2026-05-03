@@ -485,6 +485,15 @@ arguments:
 | `symlink`     | Path is a symlink                                               | `[[ -L ]]`     |
 | `not_symlink` | Path is not a symlink                                           | `! [[ -L ]]`   |
 
+**Symlinks behave differently across tests.** `under_cwd` follows symlinks via `realpath -m`,
+so a symlink whose target is outside the workspace fails the boundary check even if the link
+itself is inside. The `exists`/`file`/`dir`/`readable`/`writable`/`executable` tests also follow
+symlinks (they check the target, not the link). Only `symlink` and `not_symlink` test the path
+itself without following the link. Combine them deliberately if you mean both, e.g.
+`[under_cwd, file]` requires the resolved target to be a regular file inside the workspace,
+while `[under_cwd, not_symlink, file]` additionally rejects symlinks even when their targets
+would qualify.
+
 ### Evaluation order
 
 For each path-typed parameter, the helper runs:
