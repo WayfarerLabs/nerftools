@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-uv-ruff-check -- Run ruff check (lint without modifying files)
+# nerf-uv-ruff-check -- Run ruff check (lint without modifying files).
 # Generated from uv manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=none

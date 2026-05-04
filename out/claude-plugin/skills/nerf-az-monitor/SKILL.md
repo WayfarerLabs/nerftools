@@ -18,7 +18,7 @@ All tools accept --subscription to target a specific subscription.
 
 ## nerf-az-monitor-activity-log
 
-Fetch recent Azure Monitor activity-log entries. Requires either --resource-group or --resource-id (mutually exclusive). Defaults to the last 1 hour; --hours-back can be raised up to 168 (7 days)..
+Fetch recent Azure Monitor activity-log entries. Requires either --resource-group or --resource-id (mutually exclusive). Defaults to the last 1 hour; --hours-back can be raised up to 168 (7 days).
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-monitor/scripts/nerf-az-monitor-activity-log [--resource-group|-g <resource_group>] [--resource-id <resource_id>] [--hours-back <hours_back>] [--subscription <subscription>]`
 

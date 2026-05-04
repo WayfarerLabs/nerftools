@@ -18,6 +18,7 @@ Each tool's usage line shows the full absolute path to call it. Use that path di
 - **nerf-az-aks**: Azure Kubernetes Service inspection and access tools
 - **nerf-az-boards**: Azure Boards work item tools for querying, viewing, creating, and updating work items
 - **nerf-az-cosmosdb**: Azure Cosmos DB account inspection tools (network access, VNet rules, databases)
+- **nerf-az-devops**: Azure DevOps organization-level configuration tools
 - **nerf-az-keyvault**: Azure Key Vault inspection tools (network ACLs, secret metadata)
 - **nerf-az-monitor**: Azure Monitor inspection tools (activity log, metrics, diagnostic settings)
 - **nerf-az-network**: Azure networking inspection tools (VNets, peerings, NSGs, private endpoints, DNS zones)

@@ -157,7 +157,7 @@ def _tool_section(tool_name: str, tool_spec: ToolSpec) -> str:
 
     parts.append(f"## {tool_name}")
     parts.append("")
-    parts.append(tool_spec.description + ".")
+    parts.append(tool_spec.description)
     parts.append("")
 
     usage = " ".join([f"<nerf-bin>/{tool_name}", *usage_tokens(tool_spec)])

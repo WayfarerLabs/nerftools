@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-uv-ruff-fix -- Run ruff check with --fix to auto-fix lint issues
+# nerf-uv-ruff-fix -- Run ruff check with --fix to auto-fix lint issues.
 # Generated from uv manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=workspace

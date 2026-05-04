@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-gh-issue-list -- List open issues in the current repository
+# nerf-gh-issue-list -- List open issues in the current repository.
 # Generated from gh manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

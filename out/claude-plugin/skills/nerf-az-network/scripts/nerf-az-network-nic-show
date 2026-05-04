@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-network-nic-show -- Show NIC details (private IPs, subnet, NSG association)
+# nerf-az-network-nic-show -- Show NIC details (private IPs, subnet, NSG association).
 # Generated from az-network manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

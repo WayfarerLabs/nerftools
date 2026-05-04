@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-cosmosdb-show -- Show Cosmos DB account details (network access, VNet rules, private endpoints)
+# nerf-az-cosmosdb-show -- Show Cosmos DB account details (network access, VNet rules, private endpoints).
 # Generated from az-cosmosdb manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

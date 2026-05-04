@@ -18,7 +18,7 @@ Options:
 
 Maps to: git <directory> reset --hard HEAD~1
 
-Drop the most recent commit entirely, discarding its changes. Fails if the commit has already been pushed to any remote..
+Drop the most recent commit entirely, discarding its changes. Fails if the commit has already been pushed to any remote.
 EOF
   exit 1
 }

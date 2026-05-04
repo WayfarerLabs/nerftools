@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-nx-reset -- Clear the Nx cache and reset the Nx daemon
+# nerf-nx-reset -- Clear the Nx cache and reset the Nx daemon.
 # Generated from nx manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=workspace

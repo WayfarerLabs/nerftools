@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-role-definition-list -- List role definitions (optionally filtered by name or scope)
+# nerf-az-role-definition-list -- List role definitions (optionally filtered by name or scope).
 # Generated from az-role manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

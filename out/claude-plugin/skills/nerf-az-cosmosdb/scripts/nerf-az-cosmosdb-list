@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-cosmosdb-list -- List Cosmos DB accounts (optionally filtered by resource group)
+# nerf-az-cosmosdb-list -- List Cosmos DB accounts (optionally filtered by resource group).
 # Generated from az-cosmosdb manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

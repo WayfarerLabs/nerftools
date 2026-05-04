@@ -23,7 +23,7 @@ Arguments:
 
 Maps to: git <directory> push --follow-tags <remote> main
 
-Push the local main branch to a remote including annotated tags (no force push). Use only when the local main branch is ready to publish..
+Push the local main branch to a remote including annotated tags (no force push). Use only when the local main branch is ready to publish.
 EOF
   exit 1
 }

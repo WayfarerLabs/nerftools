@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-account-set -- Switch the active Azure subscription for this session
+# nerf-az-account-set -- Switch the active Azure subscription for this session.
 # Generated from az-account manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=machine

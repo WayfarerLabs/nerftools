@@ -23,7 +23,7 @@ Options:
   --subscription <subscription>
       Subscription name or ID (defaults to active)
 
-Fetch recent Azure Monitor activity-log entries. Requires either --resource-group or --resource-id (mutually exclusive). Defaults to the last 1 hour; --hours-back can be raised up to 168 (7 days)..
+Fetch recent Azure Monitor activity-log entries. Requires either --resource-group or --resource-id (mutually exclusive). Defaults to the last 1 hour; --hours-back can be raised up to 168 (7 days).
 EOF
   exit 1
 }

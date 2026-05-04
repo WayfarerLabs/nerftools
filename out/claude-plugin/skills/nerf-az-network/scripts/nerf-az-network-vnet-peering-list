@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-network-vnet-peering-list -- List peerings on a virtual network
+# nerf-az-network-vnet-peering-list -- List peerings on a virtual network.
 # Generated from az-network manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

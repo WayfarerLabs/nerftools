@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-aks-nodepool-show -- Show details for a single node pool (size, autoscaler config, taints)
+# nerf-az-aks-nodepool-show -- Show details for a single node pool (size, autoscaler config, taints).
 # Generated from az-aks manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

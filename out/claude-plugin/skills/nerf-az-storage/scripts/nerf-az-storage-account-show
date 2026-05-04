@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-storage-account-show -- Show storage account details (network rules, public access, private endpoints)
+# nerf-az-storage-account-show -- Show storage account details (network rules, public access, private endpoints).
 # Generated from az-storage manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

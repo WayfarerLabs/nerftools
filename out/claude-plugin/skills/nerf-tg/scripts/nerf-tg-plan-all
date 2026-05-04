@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-tg-plan-all -- Run terragrunt plan across all units under the current directory
+# nerf-tg-plan-all -- Run terragrunt plan across all units under the current directory.
 # Generated from tg manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

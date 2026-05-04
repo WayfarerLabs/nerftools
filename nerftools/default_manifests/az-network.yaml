@@ -13,7 +13,7 @@ package:
 
 tools:
   az-network-vnet-list:
-    description: List virtual networks (optionally filtered by resource group)
+    description: List virtual networks (optionally filtered by resource group).
     threat:
       read: remote
       write: none
@@ -37,7 +37,7 @@ tools:
         flag: --subscription
 
   az-network-vnet-show:
-    description: Show details for a virtual network (address space, subnets, peerings)
+    description: Show details for a virtual network (address space, subnets, peerings).
     threat:
       read: remote
       write: none
@@ -69,7 +69,7 @@ tools:
         flag: --subscription
 
   az-network-vnet-peering-list:
-    description: List peerings on a virtual network
+    description: List peerings on a virtual network.
     threat:
       read: remote
       write: none
@@ -102,7 +102,7 @@ tools:
         flag: --subscription
 
   az-network-vnet-peering-show:
-    description: Show details for a single VNet peering (peering state, address space, gateway transit)
+    description: Show details for a single VNet peering (peering state, address space, gateway transit).
     threat:
       read: remote
       write: none
@@ -141,7 +141,7 @@ tools:
         flag: --subscription
 
   az-network-subnet-show:
-    description: Show subnet details (delegations, private link policies, NSG/RT bindings)
+    description: Show subnet details (delegations, private link policies, NSG/RT bindings).
     threat:
       read: remote
       write: none
@@ -180,7 +180,7 @@ tools:
         flag: --subscription
 
   az-network-nsg-list:
-    description: List network security groups (optionally filtered by resource group)
+    description: List network security groups (optionally filtered by resource group).
     threat:
       read: remote
       write: none
@@ -204,7 +204,7 @@ tools:
         flag: --subscription
 
   az-network-nsg-show:
-    description: Show NSG details including all security rules
+    description: Show NSG details including all security rules.
     threat:
       read: remote
       write: none
@@ -236,7 +236,7 @@ tools:
         flag: --subscription
 
   az-network-private-endpoint-list:
-    description: List private endpoints (optionally filtered by resource group)
+    description: List private endpoints (optionally filtered by resource group).
     threat:
       read: remote
       write: none
@@ -260,7 +260,7 @@ tools:
         flag: --subscription
 
   az-network-private-endpoint-show:
-    description: Show private endpoint details (target resource, connection state, NIC)
+    description: Show private endpoint details (target resource, connection state, NIC).
     threat:
       read: remote
       write: none
@@ -292,7 +292,7 @@ tools:
         flag: --subscription
 
   az-network-private-link-resource-list:
-    description: List groupIds a resource exposes for private endpoints (e.g. vault, sqlServer)
+    description: List groupIds a resource exposes for private endpoints (e.g. vault, sqlServer).
     threat:
       read: remote
       write: none
@@ -317,7 +317,7 @@ tools:
         flag: --subscription
 
   az-network-private-dns-zone-list:
-    description: List private DNS zones (optionally filtered by resource group)
+    description: List private DNS zones (optionally filtered by resource group).
     threat:
       read: remote
       write: none
@@ -342,7 +342,7 @@ tools:
         flag: --subscription
 
   az-network-private-dns-zone-show:
-    description: Show details for a private DNS zone (record count, registration state)
+    description: Show details for a private DNS zone (record count, registration state).
     threat:
       read: remote
       write: none
@@ -375,7 +375,7 @@ tools:
         flag: --subscription
 
   az-network-private-dns-record-list:
-    description: List record sets in a private DNS zone (all record types)
+    description: List record sets in a private DNS zone (all record types).
     threat:
       read: remote
       write: none
@@ -408,7 +408,7 @@ tools:
         flag: --subscription
 
   az-network-private-dns-link-list:
-    description: List virtual network links on a private DNS zone
+    description: List virtual network links on a private DNS zone.
     threat:
       read: remote
       write: none
@@ -442,7 +442,7 @@ tools:
         flag: --subscription
 
   az-network-private-dns-link-show:
-    description: Show details for a single virtual network link on a private DNS zone
+    description: Show details for a single virtual network link on a private DNS zone.
     threat:
       read: remote
       write: none
@@ -482,7 +482,7 @@ tools:
         flag: --subscription
 
   az-network-public-ip-list:
-    description: List public IP addresses (optionally filtered by resource group)
+    description: List public IP addresses (optionally filtered by resource group).
     threat:
       read: remote
       write: none
@@ -506,7 +506,7 @@ tools:
         flag: --subscription
 
   az-network-public-ip-show:
-    description: Show details for a public IP (allocation method, IP address, associated resource)
+    description: Show details for a public IP (allocation method, IP address, associated resource).
     threat:
       read: remote
       write: none
@@ -538,7 +538,7 @@ tools:
         flag: --subscription
 
   az-network-nic-show:
-    description: Show NIC details (private IPs, subnet, NSG association)
+    description: Show NIC details (private IPs, subnet, NSG association).
     threat:
       read: remote
       write: none
@@ -570,7 +570,7 @@ tools:
         flag: --subscription
 
   az-network-route-table-show:
-    description: Show route table details (routes, associated subnets)
+    description: Show route table details (routes, associated subnets).
     threat:
       read: remote
       write: none

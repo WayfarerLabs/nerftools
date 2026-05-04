@@ -63,7 +63,7 @@ def _template_tool(
     options: dict[str, OptionSpec] | None = None,
     arguments: dict[str, ArgSpec] | None = None,
     env: dict[str, str] | None = None,
-    description: str = "A test tool",
+    description: str = "A test tool.",
     guards: tuple[GuardSpec, ...] = (),
     pre: str | None = None,
     npm_pkgrun: bool = False,
@@ -113,7 +113,7 @@ def test_generated_header_comment() -> None:
 
 def test_threat_metadata_in_header() -> None:
     tool = ToolSpec(
-        description="x",
+        description="A test tool.",
         threat=ThreatSpec(read=ThreatLevel.WORKSPACE, write=ThreatLevel.REMOTE),
         template=TemplateSpec(command=("echo",)),
     )
@@ -648,7 +648,7 @@ def test_usage_contains_tool_name() -> None:
 
 
 def test_usage_contains_description() -> None:
-    script = build_script_text("my-tool", "my-pkg", _template_tool(["echo", "hi"], description="Does the thing"))
+    script = build_script_text("my-tool", "my-pkg", _template_tool(["echo", "hi"], description="Does the thing."))
     assert "Does the thing." in script
 
 
@@ -711,7 +711,7 @@ def test_variadic_tool_bash_syntax() -> None:
 def _simple_manifest(name: str = "test-pkg") -> NerfManifest:
     return NerfManifest(
         version=1,
-        package=PackageMeta(name=name, description="Test", skill_group=name, skill_intro=""),
+        package=PackageMeta(name=name, description="Test.", skill_group=name, skill_intro=""),
         tools={"my-tool": _template_tool(["echo", "hello"])},
     )
 

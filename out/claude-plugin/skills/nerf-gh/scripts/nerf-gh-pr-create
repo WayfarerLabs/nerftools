@@ -30,7 +30,7 @@ Arguments:
 
 Maps to: gh pr create <draft> --title <title> <body> <base> <reviewer>
 
-Create a pull request from the current branch. Pushes the branch if needed..
+Create a pull request from the current branch. Pushes the branch if needed.
 EOF
   exit 1
 }

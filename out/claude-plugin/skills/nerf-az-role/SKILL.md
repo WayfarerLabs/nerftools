@@ -16,7 +16,7 @@ All tools accept --subscription to target a specific subscription.
 
 ## nerf-az-role-assignment-list
 
-List role assignments. Supports filtering by assignee, scope, role, and resource group. --all is recommended when looking up assignments by principal (catches orphaned assignments at any scope)..
+List role assignments. Supports filtering by assignee, scope, role, and resource group. --all is recommended when looking up assignments by principal (catches orphaned assignments at any scope).
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-role/scripts/nerf-az-role-assignment-list [--all] [--assignee <assignee>] [--scope <scope>] [--role <role>] [--resource-group|-g <resource_group>] [--subscription <subscription>]`
 **Maps to:** `az role assignment list <all> <assignee> <scope> <role> <resource_group> <subscription> --output json`
@@ -37,7 +37,7 @@ List role assignments. Supports filtering by assignee, scope, role, and resource
 
 ## nerf-az-role-assignment-by-id
 
-Fetch role assignments by full ID. Wraps "az role assignment list --ids" (the Azure CLI does not have a "show" subcommand for role assignments), so the result is always a JSON array -- typically with one element when the ID exists, empty when it does not..
+Fetch role assignments by full ID. Wraps "az role assignment list --ids" (the Azure CLI does not have a "show" subcommand for role assignments), so the result is always a JSON array -- typically with one element when the ID exists, empty when it does not.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-role/scripts/nerf-az-role-assignment-by-id [--subscription <subscription>] <assignment_id>`
 **Maps to:** `az role assignment list --ids <assignment_id> <subscription> --output json`

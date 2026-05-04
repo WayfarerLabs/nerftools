@@ -10,7 +10,7 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-az-boards-wi-update [--state <state>] [--title <title>] [--assigned-to <assigned_to>] [--area <area>] [--iteration <iteration>] [--discussion <discussion>] [--fields|-f <fields>] <wi_id>
+Usage: nerf-az-boards-wi-update [--state <state>] [--title <title>] [--assigned-to <assigned_to>] [--area <area>] [--iteration <iteration>] [--discussion <discussion>] [--fields|-f <fields>] [--project|-p <project>] <wi_id>
 
 Options:
   --state <state>
@@ -24,18 +24,20 @@ Options:
   --iteration <iteration>
       Iteration path (e.g. MyProject\Sprint 1)
   --discussion <discussion>
-      Comment to add to the work item discussion
+      Comment to add to the work item discussion. Stored as HTML, so HTML markup renders; plain text renders as-is.
   --fields, -f <fields>
       Custom field assignment (e.g. "System.Tags=Rock")
+  --project, -p <project>
+      Azure DevOps project name or ID (auto-detected from the git remote if omitted)
 
 Arguments:
   <wi_id> (required)
       Work item ID (numeric)
       Must match: ^[0-9]+$
 
-Maps to: az boards work-item update --id <wi_id> <state> <title> <assigned_to> <area> <iteration> <discussion> <fields> --output json
+Maps to: az boards work-item update --id <wi_id> <state> <title> <assigned_to> <area> <iteration> <discussion> <fields> <project> --output json
 
-Update fields on a work item. Supports state, title, assigned-to, area, iteration, and adding a discussion comment. Returns the updated work item as JSON..
+Update fields on a work item. Supports state, title, assigned-to, area, iteration, and adding a discussion comment. Returns the updated work item as JSON.
 EOF
   exit 1
 }
@@ -47,6 +49,7 @@ AREA=""
 ITERATION=""
 DISCUSSION=""
 FIELDS=""
+PROJECT=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -57,6 +60,7 @@ while [[ $# -gt 0 ]]; do
     --iteration) if [[ -n "${ITERATION}" ]]; then echo "error: --iteration can only be specified once" >&2; exit 1; fi; ITERATION="$2"; shift 2 ;;
     --discussion) if [[ -n "${DISCUSSION}" ]]; then echo "error: --discussion can only be specified once" >&2; exit 1; fi; DISCUSSION="$2"; shift 2 ;;
     --fields|-f) if [[ -n "${FIELDS}" ]]; then echo "error: --fields can only be specified once" >&2; exit 1; fi; FIELDS="$2"; shift 2 ;;
+    --project|-p) if [[ -n "${PROJECT}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -94,11 +98,11 @@ if [[ -n "${WI_ID}" ]] && ! [[ "${WI_ID}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az boards work-item update --id "${WI_ID}" ${STATE:+"--state"} ${STATE:+"$STATE"} ${TITLE:+"--title"} ${TITLE:+"$TITLE"} ${ASSIGNED_TO:+"--assigned-to"} ${ASSIGNED_TO:+"$ASSIGNED_TO"} ${AREA:+"--area"} ${AREA:+"$AREA"} ${ITERATION:+"--iteration"} ${ITERATION:+"$ITERATION"} ${DISCUSSION:+"--discussion"} ${DISCUSSION:+"$DISCUSSION"} ${FIELDS:+"--fields"} ${FIELDS:+"$FIELDS"} --output json)
+  _NERF_DRY_CMD=(az boards work-item update --id "${WI_ID}" ${STATE:+"--state"} ${STATE:+"$STATE"} ${TITLE:+"--title"} ${TITLE:+"$TITLE"} ${ASSIGNED_TO:+"--assigned-to"} ${ASSIGNED_TO:+"$ASSIGNED_TO"} ${AREA:+"--area"} ${AREA:+"$AREA"} ${ITERATION:+"--iteration"} ${ITERATION:+"$ITERATION"} ${DISCUSSION:+"--discussion"} ${DISCUSSION:+"$DISCUSSION"} ${FIELDS:+"--fields"} ${FIELDS:+"$FIELDS"} ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az boards work-item update --id "${WI_ID}" ${STATE:+"--state"} ${STATE:+"$STATE"} ${TITLE:+"--title"} ${TITLE:+"$TITLE"} ${ASSIGNED_TO:+"--assigned-to"} ${ASSIGNED_TO:+"$ASSIGNED_TO"} ${AREA:+"--area"} ${AREA:+"$AREA"} ${ITERATION:+"--iteration"} ${ITERATION:+"$ITERATION"} ${DISCUSSION:+"--discussion"} ${DISCUSSION:+"$DISCUSSION"} ${FIELDS:+"--fields"} ${FIELDS:+"$FIELDS"} --output json
+exec az boards work-item update --id "${WI_ID}" ${STATE:+"--state"} ${STATE:+"$STATE"} ${TITLE:+"--title"} ${TITLE:+"$TITLE"} ${ASSIGNED_TO:+"--assigned-to"} ${ASSIGNED_TO:+"$ASSIGNED_TO"} ${AREA:+"--area"} ${AREA:+"$AREA"} ${ITERATION:+"--iteration"} ${ITERATION:+"$ITERATION"} ${DISCUSSION:+"--discussion"} ${DISCUSSION:+"$DISCUSSION"} ${FIELDS:+"--fields"} ${FIELDS:+"$FIELDS"} ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json

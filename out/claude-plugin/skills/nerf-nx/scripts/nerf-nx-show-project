@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-nx-show-project -- Show configuration details for a specific Nx project (targets, source root, metadata)
+# nerf-nx-show-project -- Show configuration details for a specific Nx project (targets, source root, metadata).
 # Generated from nx manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=none

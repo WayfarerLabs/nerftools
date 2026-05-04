@@ -36,7 +36,7 @@ def _minimal_manifest(tools: dict | None = None) -> dict:
         "tools": tools
         or {
             "test-tool": {
-                "description": "A test tool",
+                "description": "A test tool.",
                 "threat": {"read": "workspace", "write": "none"},
                 "template": {"command": ["echo", "hello"]},
             },
@@ -137,7 +137,7 @@ def test_tool_threat_loaded(tmp_path: Path) -> None:
 
 def test_missing_threat_raises(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
-        "t": {"description": "x", "template": {"command": ["echo"]}},
+        "t": {"description": "A test tool.", "template": {"command": ["echo"]}},
     })
     p = _write_manifest(tmp_path, raw)
     with pytest.raises(ManifestError, match="'threat' is required"):
@@ -147,7 +147,7 @@ def test_missing_threat_raises(tmp_path: Path) -> None:
 def test_invalid_threat_level_raises(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "galaxy", "write": "none"},
             "template": {"command": ["echo"]},
         },
@@ -163,7 +163,7 @@ def test_invalid_threat_level_raises(tmp_path: Path) -> None:
 def test_template_mode(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["echo", "hello"]},
         },
@@ -178,7 +178,7 @@ def test_template_mode(tmp_path: Path) -> None:
 def test_passthrough_mode(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "workspace", "write": "none"},
             "passthrough": {"command": "find", "deny": ["-exec"], "prefix": ["."]},
         },
@@ -195,7 +195,7 @@ def test_passthrough_mode(tmp_path: Path) -> None:
 def test_script_mode(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "script": "echo hello",
         },
@@ -209,7 +209,7 @@ def test_script_mode(tmp_path: Path) -> None:
 def test_no_mode_raises(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
         },
     })
@@ -221,7 +221,7 @@ def test_no_mode_raises(tmp_path: Path) -> None:
 def test_multiple_modes_raises(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["echo"]},
             "script": "echo hello",
@@ -235,7 +235,7 @@ def test_multiple_modes_raises(tmp_path: Path) -> None:
 def test_params_in_passthrough_raises(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "passthrough": {"command": "find"},
             "switches": {"verbose": {"description": "Verbose"}},
@@ -252,7 +252,7 @@ def test_params_in_passthrough_raises(tmp_path: Path) -> None:
 def test_switch_loaded(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["cmd", "{{switches.verbose}}"]},
             "switches": {"verbose": {"description": "Enable verbose"}},
@@ -268,7 +268,7 @@ def test_switch_loaded(tmp_path: Path) -> None:
 def test_switch_short(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["cmd", "{{switches.verbose}}"]},
             "switches": {"verbose": {"description": "Verbose", "short": "-v"}},
@@ -282,7 +282,7 @@ def test_switch_short(tmp_path: Path) -> None:
 def test_invalid_switch_short_raises(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["cmd", "{{switches.verbose}}"]},
             "switches": {"verbose": {"description": "Verbose", "short": "--vv"}},
@@ -299,7 +299,7 @@ def test_invalid_switch_short_raises(tmp_path: Path) -> None:
 def test_option_loaded(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["cmd", "{{options.remote}}"]},
             "options": {
@@ -324,10 +324,10 @@ def test_option_loaded(tmp_path: Path) -> None:
 def test_option_allow_deny_conflict_raises(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["cmd", "{{options.x}}"]},
-            "options": {"x": {"description": "x", "allow": ["a"], "deny": ["b"]}},
+            "options": {"x": {"description": "A test tool.", "allow": ["a"], "deny": ["b"]}},
         },
     })
     p = _write_manifest(tmp_path, raw)
@@ -338,10 +338,10 @@ def test_option_allow_deny_conflict_raises(tmp_path: Path) -> None:
 def test_invalid_option_pattern_raises(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["cmd", "{{options.x}}"]},
-            "options": {"x": {"description": "x", "pattern": "[invalid"}},
+            "options": {"x": {"description": "A test tool.", "pattern": "[invalid"}},
         },
     })
     p = _write_manifest(tmp_path, raw)
@@ -355,7 +355,7 @@ def test_invalid_option_pattern_raises(tmp_path: Path) -> None:
 def test_argument_loaded(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["git", "fetch", "{{arguments.remote}}"]},
             "arguments": {
@@ -373,7 +373,7 @@ def test_argument_loaded(tmp_path: Path) -> None:
 def test_variadic_argument(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["git", "add", "{{arguments.files}}"]},
             "arguments": {"files": {"description": "Files", "variadic": True}},
@@ -387,10 +387,10 @@ def test_variadic_argument(tmp_path: Path) -> None:
 def test_argument_allow_deny_conflict_raises(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["cmd", "{{arguments.x}}"]},
-            "arguments": {"x": {"description": "x", "allow": ["a"], "deny": ["b"]}},
+            "arguments": {"x": {"description": "A test tool.", "allow": ["a"], "deny": ["b"]}},
         },
     })
     p = _write_manifest(tmp_path, raw)
@@ -405,7 +405,7 @@ def _path_test_manifest(tests: list[str], *, kind: str = "options") -> dict:
     if kind == "options":
         return _minimal_manifest(tools={
             "t": {
-                "description": "x",
+                "description": "A test tool.",
                 "threat": {"read": "workspace", "write": "none"},
                 "template": {"command": ["echo", "{{options.dir}}"]},
                 "options": {"dir": {"description": "d", "path_tests": tests}},
@@ -413,7 +413,7 @@ def _path_test_manifest(tests: list[str], *, kind: str = "options") -> dict:
         })
     return _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "workspace", "write": "none"},
             "template": {"command": ["echo", "{{arguments.target}}"]},
             "arguments": {
@@ -440,7 +440,7 @@ def test_path_tests_loaded_on_argument(tmp_path: Path) -> None:
 def test_path_tests_default_empty(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["echo", "{{options.dir}}"]},
             "options": {"dir": {"description": "d"}},
@@ -466,7 +466,7 @@ def test_path_tests_unknown_value_rejected(tmp_path: Path) -> None:
 def test_path_tests_must_be_list(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["echo", "{{options.dir}}"]},
             "options": {"dir": {"description": "d", "path_tests": "under_cwd"}},
@@ -519,7 +519,7 @@ def test_path_tests_not_exists_with_under_cwd_ok(tmp_path: Path) -> None:
 def test_guard_loaded(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["git", "push", "{{arguments.remote}}", "HEAD"]},
             "arguments": {"remote": {"description": "Remote", "required": True}},
@@ -537,7 +537,7 @@ def test_guard_loaded(tmp_path: Path) -> None:
 def test_pre_hook_loaded(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["echo"]},
             "pre": "echo setup",
@@ -554,7 +554,7 @@ def test_pre_hook_loaded(tmp_path: Path) -> None:
 def test_undefined_placeholder_raises(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["echo", "{{arguments.x}}"]},
         },
@@ -567,10 +567,10 @@ def test_undefined_placeholder_raises(tmp_path: Path) -> None:
 def test_unreferenced_param_raises(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["echo", "hello"]},
-            "arguments": {"x": {"description": "x"}},
+            "arguments": {"x": {"description": "A test tool."}},
         },
     })
     p = _write_manifest(tmp_path, raw)
@@ -581,16 +581,63 @@ def test_unreferenced_param_raises(tmp_path: Path) -> None:
 def test_name_overlap_raises(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["cmd", "{{arguments.x}}"]},
-            "switches": {"x": {"description": "x"}},
-            "arguments": {"x": {"description": "x"}},
+            "switches": {"x": {"description": "A test tool."}},
+            "arguments": {"x": {"description": "A test tool."}},
         },
     })
     p = _write_manifest(tmp_path, raw)
     with pytest.raises(ManifestError, match="names overlap"):
         load_manifest(p)
+
+
+def test_tool_description_must_end_with_terminal_punctuation(tmp_path: Path) -> None:
+    """Tool descriptions are rendered verbatim into usage/help and SKILL output,
+    so they must read as complete sentences with terminal punctuation. Catches
+    the no-period drift we cleaned up; prevents new tools from regressing.
+    """
+    raw = _minimal_manifest(tools={
+        "t": {
+            "description": "Show foo",  # no period
+            "threat": {"read": "none", "write": "none"},
+            "template": {"command": ["echo"]},
+        },
+    })
+    p = _write_manifest(tmp_path, raw)
+    with pytest.raises(ManifestError, match="must end with terminal punctuation"):
+        load_manifest(p)
+
+
+def test_tool_description_must_have_at_least_three_words(tmp_path: Path) -> None:
+    """Trivial descriptions like "x.", "TODO.", or "Run cspell." don't tell an
+    agent what the tool does beyond its name. Rule: at least 3 whitespace-
+    separated words after stripping terminal punctuation.
+    """
+    raw = _minimal_manifest(tools={
+        "t": {
+            "description": "Run cspell.",  # 2 words; trivial
+            "threat": {"read": "none", "write": "none"},
+            "template": {"command": ["echo"]},
+        },
+    })
+    p = _write_manifest(tmp_path, raw)
+    with pytest.raises(ManifestError, match="at least 3 words"):
+        load_manifest(p)
+
+
+def test_tool_description_question_mark_is_accepted(tmp_path: Path) -> None:
+    raw = _minimal_manifest(tools={
+        "t": {
+            "description": "Is foo bar?",
+            "threat": {"read": "none", "write": "none"},
+            "template": {"command": ["echo"]},
+        },
+    })
+    p = _write_manifest(tmp_path, raw)
+    m = load_manifest(p)
+    assert m.tools["t"].description.endswith("?")
 
 
 def test_variadic_not_last_raises(tmp_path: Path) -> None:
@@ -603,7 +650,7 @@ def test_variadic_not_last_raises(tmp_path: Path) -> None:
         "  skill_group: test-pkg\n"
         "tools:\n"
         "  t:\n"
-        "    description: x\n"
+        "    description: A test tool.\n"
         "    threat:\n"
         "      read: none\n"
         "      write: none\n"
@@ -623,10 +670,10 @@ def test_variadic_not_last_raises(tmp_path: Path) -> None:
 def test_guard_undefined_placeholder_raises(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {
-            "description": "x",
+            "description": "A test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["echo", "{{arguments.x}}"]},
-            "arguments": {"x": {"description": "x"}},
+            "arguments": {"x": {"description": "A test tool."}},
             "guards": [{"command": ["check", "{{arguments.y}}"], "fail_message": "fail"}],
         },
     })
@@ -642,7 +689,7 @@ def test_merge_last_wins(tmp_path: Path) -> None:
     first = tmp_path / "first.yaml"
     first.write_text(yaml.dump(_minimal_manifest(tools={
         "t": {
-            "description": "First version",
+            "description": "First version of the test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["echo", "first"]},
         },
@@ -650,7 +697,7 @@ def test_merge_last_wins(tmp_path: Path) -> None:
     second = tmp_path / "second.yaml"
     second.write_text(yaml.dump(_minimal_manifest(tools={
         "t": {
-            "description": "Second version",
+            "description": "Second version of the test tool.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["echo", "second"]},
         },
@@ -658,7 +705,7 @@ def test_merge_last_wins(tmp_path: Path) -> None:
 
     merged = merge_manifests([load_manifest(first), load_manifest(second)])
     assert len(merged) == 1
-    assert merged[0].tools["t"].description == "Second version"
+    assert merged[0].tools["t"].description == "Second version of the test tool."
 
 
 def test_merge_different_packages(tmp_path: Path) -> None:
@@ -667,7 +714,7 @@ def test_merge_different_packages(tmp_path: Path) -> None:
         "version": 1,
         "package": {"name": "pkg-a", "description": "A", "skill_group": "pkg-a"},
         "tools": {"t": {
-            "description": "A",
+            "description": "Test tool A.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["echo", "a"]},
         }},
@@ -677,7 +724,7 @@ def test_merge_different_packages(tmp_path: Path) -> None:
         "version": 1,
         "package": {"name": "pkg-b", "description": "B", "skill_group": "pkg-b"},
         "tools": {"t": {
-            "description": "B",
+            "description": "Test tool B.",
             "threat": {"read": "none", "write": "none"},
             "template": {"command": ["echo", "b"]},
         }},

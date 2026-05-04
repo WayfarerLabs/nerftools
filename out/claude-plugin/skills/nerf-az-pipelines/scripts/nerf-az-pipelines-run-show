@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# nerf-az-pipelines-run-show -- Show details for a single pipeline run (by run ID). Returns the run's status, result, source branch, queue/start/finish times, requesting identity, and the URL to view it in the Azure DevOps UI.
+# Generated from az-pipelines manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-pipelines-run-show [--project|-p <project>] <run_id>
+
+Options:
+  --project, -p <project>
+      Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+
+Arguments:
+  <run_id> (required)
+      Pipeline run ID (numeric, from az-pipelines-runs or az-pipelines-check)
+      Must match: ^[0-9]+$
+
+Maps to: az pipelines runs show --id <run_id> <project> --output json
+
+Show details for a single pipeline run (by run ID). Returns the run's status, result, source branch, queue/start/finish times, requesting identity, and the URL to view it in the Azure DevOps UI.
+EOF
+  exit 1
+}
+
+PROJECT=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --project|-p) if [[ -n "${PROJECT}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+RUN_ID="${1:-}"
+shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-az-pipelines-run-show: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+if [[ -n "${RUN_ID}" ]] && [[ "${RUN_ID}" == -* ]]; then
+  echo "error: nerf-az-pipelines-run-show: <run_id> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${RUN_ID}" ]]; then
+  echo "error: nerf-az-pipelines-run-show: missing required argument <run_id>" >&2
+  echo "  hint: provide a value for <run_id>" >&2
+  usage
+fi
+
+_NERF_PATTERN='^[0-9]+$'
+if [[ -n "${RUN_ID}" ]] && ! [[ "${RUN_ID}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-az-pipelines-run-show: argument <run_id> does not match required pattern" >&2
+  echo "  value:   \"${RUN_ID}\"" >&2
+  echo "  pattern: ^[0-9]+$" >&2
+  echo "  hint: value must match ^[0-9]+$" >&2
+  exit 1
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(az pipelines runs show --id "${RUN_ID}" ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec az pipelines runs show --id "${RUN_ID}" ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json

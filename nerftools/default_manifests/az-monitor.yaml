@@ -78,7 +78,7 @@ tools:
         flag: --subscription
 
   az-monitor-metrics-list:
-    description: Fetch a single metric series for a resource
+    description: Fetch a single metric series for a resource.
     threat:
       read: remote
       write: none
@@ -127,7 +127,7 @@ tools:
         flag: --subscription
 
   az-monitor-diagnostic-settings-list:
-    description: List diagnostic settings on a resource (what is wired to Log Analytics, Event Hubs, Storage)
+    description: List diagnostic settings on a resource (what is wired to Log Analytics, Event Hubs, Storage).
     threat:
       read: remote
       write: none

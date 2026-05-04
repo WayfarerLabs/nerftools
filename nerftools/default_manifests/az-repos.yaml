@@ -5,14 +5,18 @@ package:
   description: Azure Repos tools for viewing and creating pull requests
   skill_group: az-repos
   skill_intro: |
-    These tools interact with Azure Repos pull requests. The organization and
-    project are auto-detected from the git remote. Use az-repos-pr-list to
+    These tools interact with Azure Repos pull requests. The organization
+    and project are auto-detected from the git remote; pass --project to
+    target a different project in the same org. Use az-repos-pr-list to
     see open PRs, az-repos-pr-show to inspect a specific PR, and
     az-repos-pr-create to create a new PR from the current branch.
+    az-repos-pr-set-status changes a PR's lifecycle state
+    (active / abandoned / completed). az-repos-pr-vote casts or resets
+    a review vote on a PR.
 
 tools:
   az-repos-pr-list:
-    description: List pull requests in the project as JSON
+    description: List pull requests in the project as JSON.
     threat:
       read: remote
       write: none
@@ -26,6 +30,7 @@ tools:
         - "{{options.top}}"
         - "{{options.creator}}"
         - "{{options.reviewer}}"
+        - "{{options.project}}"
         - --output
         - json
     options:
@@ -43,24 +48,44 @@ tools:
       reviewer:
         description: Filter by reviewer
         flag: --reviewer
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
 
   az-repos-pr-show:
-    description: Show full details for a pull request as JSON
+    description: Show full details for a pull request as JSON.
     threat:
       read: remote
       write: none
     template:
-      command: [az, repos, pr, show, --id, "{{arguments.pr_id}}", --output, json]
+      command:
+        - az
+        - repos
+        - pr
+        - show
+        - --id
+        - "{{arguments.pr_id}}"
+        - "{{options.project}}"
+        - --output
+        - json
     arguments:
       pr_id:
         description: Pull request ID (numeric)
         required: true
         pattern: "^[0-9]+$"
+    options:
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
 
   az-repos-pr-comments:
     description: >-
-      List all comment threads on a pull request as JSON. Extracts the
-      repository name from the git remote automatically.
+      List all comment threads on a pull request as JSON. Project and
+      repository are auto-detected from the git remote (origin); pass
+      --project to override the project (the repository is always
+      taken from origin).
     threat:
       read: remote
       write: none
@@ -74,15 +99,17 @@ tools:
       # HTTPS: https://dev.azure.com/{org}/{project}/_git/{repo}
       # SSH:   git@ssh.dev.azure.com:v3/{org}/{project}/{repo}
       if echo "$REMOTE_URL" | grep -q '/_git/'; then
-        PROJECT=$(echo "$REMOTE_URL" | sed -E 's|.*dev.azure.com/[^/]+/([^/]+)/_git/.*|\1|')
+        DETECTED_PROJECT=$(echo "$REMOTE_URL" | sed -E 's|.*dev.azure.com/[^/]+/([^/]+)/_git/.*|\1|')
         REPO_NAME=$(echo "$REMOTE_URL" | sed -E 's|.*/_git/||; s|\.git$||')
       elif echo "$REMOTE_URL" | grep -q 'ssh.dev.azure.com'; then
-        PROJECT=$(echo "$REMOTE_URL" | sed -E 's|.*:v3/[^/]+/([^/]+)/.*|\1|')
+        DETECTED_PROJECT=$(echo "$REMOTE_URL" | sed -E 's|.*:v3/[^/]+/([^/]+)/.*|\1|')
         REPO_NAME=$(echo "$REMOTE_URL" | sed -E 's|.*:v3/[^/]+/[^/]+/||; s|\.git$||')
       else
         echo "error: unrecognized Azure DevOps remote URL format: '$REMOTE_URL'" >&2
         exit 1
       fi
+      # User-supplied --project overrides the auto-detected project; repo is always taken from origin.
+      PROJECT="${PROJECT:-$DETECTED_PROJECT}"
       if [ -z "$PROJECT" ] || [ -z "$REPO_NAME" ]; then
         echo "error: could not extract project/repo from remote URL '$REMOTE_URL'" >&2
         exit 1
@@ -97,6 +124,11 @@ tools:
         description: Pull request ID (numeric)
         required: true
         pattern: "^[0-9]+$"
+    options:
+      project:
+        description: Azure DevOps project name or ID (overrides auto-detection from the origin remote)
+        flag: --project
+        short: -p
 
   az-repos-pr-create:
     description: >-
@@ -117,6 +149,7 @@ tools:
         - --description
         - "{{arguments.description}}"
         - "{{switches.draft}}"
+        - "{{options.project}}"
         - --output
         - json
     arguments:
@@ -124,14 +157,92 @@ tools:
         description: PR title
         required: true
       description:
-        description: PR description (body text)
+        description: PR description (body text; supports markdown)
         required: true
     switches:
       draft:
         description: Create the PR as a draft
+    options:
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
     guards:
       - command: [git, symbolic-ref, --quiet, HEAD]
         fail_message: Cannot create a PR from detached HEAD state. Check out a feature branch first.
       - script: |
           [ "$(git symbolic-ref --short HEAD 2>/dev/null)" != "main" ]
         fail_message: Cannot create a PR from main. Check out a feature branch first.
+
+  az-repos-pr-set-status:
+    description: >-
+      Update a pull request's lifecycle status. Use "abandoned" to close
+      a PR without merging, "active" to reactivate an abandoned PR, or
+      "completed" to merge it (Azure DevOps will reject "completed" if
+      required approvals or policies are not satisfied).
+    threat:
+      read: remote
+      write: remote
+    template:
+      command:
+        - az
+        - repos
+        - pr
+        - update
+        - --id
+        - "{{arguments.pr_id}}"
+        - --status
+        - "{{arguments.status}}"
+        - "{{options.project}}"
+        - --output
+        - json
+    arguments:
+      pr_id:
+        description: Pull request ID (numeric)
+        required: true
+        pattern: "^[0-9]+$"
+      status:
+        description: New status
+        required: true
+        allow: [active, abandoned, completed]
+    options:
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
+
+  az-repos-pr-vote:
+    description: >-
+      Cast or reset a review vote on a pull request. The signed-in identity
+      must be a reviewer (or able to add itself) on the PR. Use "reset" to
+      clear an existing vote.
+    threat:
+      read: remote
+      write: remote
+    template:
+      command:
+        - az
+        - repos
+        - pr
+        - set-vote
+        - --id
+        - "{{arguments.pr_id}}"
+        - --vote
+        - "{{arguments.vote}}"
+        - "{{options.project}}"
+        - --output
+        - json
+    arguments:
+      pr_id:
+        description: Pull request ID (numeric)
+        required: true
+        pattern: "^[0-9]+$"
+      vote:
+        description: Vote to cast
+        required: true
+        allow: [approve, approve-with-suggestions, reject, reset, wait-for-author]
+    options:
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p

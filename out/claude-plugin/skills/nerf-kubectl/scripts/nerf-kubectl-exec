@@ -29,7 +29,7 @@ Arguments:
 
 Maps to: kubectl exec <pod> <namespace> <container> -- <command>
 
-Execute a command in a pod (non-interactive, no TTY). Use this for one-shot diagnostics; for cluster mutations prefer Helm/Terraform..
+Execute a command in a pod (non-interactive, no TTY). Use this for one-shot diagnostics; for cluster mutations prefer Helm/Terraform.
 EOF
   exit 1
 }

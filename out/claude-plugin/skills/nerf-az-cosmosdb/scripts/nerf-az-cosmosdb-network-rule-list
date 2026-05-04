@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-cosmosdb-network-rule-list -- List virtual network rules on a Cosmos DB account
+# nerf-az-cosmosdb-network-rule-list -- List virtual network rules on a Cosmos DB account.
 # Generated from az-cosmosdb manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

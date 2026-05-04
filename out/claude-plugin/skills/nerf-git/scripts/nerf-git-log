@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-git-log -- Show a short one-line log of recent commits
+# nerf-git-log -- Show a short one-line log of recent commits.
 # Generated from git manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=none

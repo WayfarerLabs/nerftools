@@ -37,7 +37,7 @@ Arguments:
 
 Maps to: kubectl get <resource> <name> <namespace> <all_namespaces> <selector> <field_selector> <show_labels> --output json
 
-Get kubernetes resources. Returns JSON; pipe through jq for extraction. Refuses Secrets -- use kubectl-get-secrets instead, which redacts .data and .stringData..
+Get kubernetes resources. Returns JSON; pipe through jq for extraction. Refuses Secrets -- use kubectl-get-secrets instead, which redacts .data and .stringData.
 EOF
   exit 1
 }

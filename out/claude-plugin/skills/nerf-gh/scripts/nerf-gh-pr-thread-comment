@@ -20,7 +20,7 @@ Arguments:
 
 Maps to: gh pr comment <pr> --body <body>
 
-Add a top-level conversation comment to a pull request (the issue-style comments shown in the main PR thread). For inline review comments, see gh-pr-review-comments (one review) or gh-pr-inline-comments (across all reviews)..
+Add a top-level conversation comment to a pull request (the issue-style comments shown in the main PR thread). For inline review comments, see gh-pr-review-comments (one review) or gh-pr-inline-comments (across all reviews).
 EOF
   exit 1
 }

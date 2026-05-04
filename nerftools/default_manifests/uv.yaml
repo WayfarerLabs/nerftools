@@ -12,7 +12,7 @@ package:
 
 tools:
   uv-pytest:
-    description: Run pytest with the given arguments
+    description: Run pytest with the given arguments.
     threat:
       read: workspace
       write: workspace
@@ -26,7 +26,7 @@ tools:
         allow_flags: true
 
   uv-ruff-check:
-    description: Run ruff check (lint without modifying files)
+    description: Run ruff check (lint without modifying files).
     threat:
       read: workspace
       write: none
@@ -40,7 +40,7 @@ tools:
         allow_flags: true
 
   uv-ruff-fix:
-    description: Run ruff check with --fix to auto-fix lint issues
+    description: Run ruff check with --fix to auto-fix lint issues.
     threat:
       read: workspace
       write: workspace
@@ -54,7 +54,7 @@ tools:
         allow_flags: true
 
   uv-mypy:
-    description: Run mypy type checker with the given arguments
+    description: Run mypy type checker with the given arguments.
     threat:
       read: workspace
       write: none

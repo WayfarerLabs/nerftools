@@ -321,6 +321,22 @@ def _load_tool(raw: dict[str, Any], path: Path, tool_name: str) -> ToolSpec:
     ctx = f"{path}:tools.{tool_name}"
 
     description = _require_str(raw, "description", ctx)
+    # Tool descriptions are user-facing in usage/help and SKILL.md output. They are
+    # rendered verbatim, so they must (a) end with terminal punctuation -- they read
+    # as complete sentences, and (b) have at least 3 whitespace-separated words --
+    # truly trivial placeholders like "x", "TODO", or "Run cspell" don't tell an
+    # agent what the tool does beyond its name. Option / argument / switch
+    # descriptions are NOT validated; they're typically noun phrases.
+    desc_stripped = description.rstrip()
+    if not desc_stripped.endswith((".", "?", "!")):
+        raise ManifestError(
+            f"{ctx}: 'description' must end with terminal punctuation (., ?, or !)"
+        )
+    word_count = len(desc_stripped.rstrip(".?!").split())
+    if word_count < 3:
+        raise ManifestError(
+            f"{ctx}: 'description' must contain at least 3 words (got {word_count}: {description!r})"
+        )
     threat = _load_threat(raw, path, tool_name)
 
     # Execution mode

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-kubectl-top-pods -- Show CPU and memory usage of pods
+# nerf-kubectl-top-pods -- Show CPU and memory usage of pods.
 # Generated from kubectl manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

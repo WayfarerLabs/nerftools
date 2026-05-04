@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-keyvault-show -- Show Key Vault details (network ACLs, publicNetworkAccess, RBAC mode, private endpoints)
+# nerf-az-keyvault-show -- Show Key Vault details (network ACLs, publicNetworkAccess, RBAC mode, private endpoints).
 # Generated from az-keyvault manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

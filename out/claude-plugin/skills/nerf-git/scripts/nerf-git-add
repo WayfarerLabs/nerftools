@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-git-add -- Stage files or directories for commit
+# nerf-git-add -- Stage files or directories for commit.
 # Generated from git manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=workspace

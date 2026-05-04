@@ -16,7 +16,7 @@ Maps to: find "$@"
 
 Denied patterns: -exec, -execdir, -ok, -okdir, -delete
 
-Search for files and directories. Exec-like actions are denied -- use this for discovery only, not for running commands on results..
+Search for files and directories. Exec-like actions are denied -- use this for discovery only, not for running commands on results.
 EOF
   exit 1
 }

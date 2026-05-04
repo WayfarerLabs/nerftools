@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-pipelines-runs -- List the 20 most recent pipeline runs across all pipelines
+# nerf-az-pipelines-runs -- List the 20 most recent pipeline runs across all pipelines.
 # Generated from az-pipelines manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none
@@ -10,17 +10,24 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-az-pipelines-runs
+Usage: nerf-az-pipelines-runs [--project|-p <project>]
 
-Maps to: az pipelines runs list --top 20 --output json
+Options:
+  --project, -p <project>
+      Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+
+Maps to: az pipelines runs list --top 20 <project> --output json
 
 List the 20 most recent pipeline runs across all pipelines.
 EOF
   exit 1
 }
 
+PROJECT=""
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --project|-p) if [[ -n "${PROJECT}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -29,11 +36,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az pipelines runs list --top 20 --output json)
+  _NERF_DRY_CMD=(az pipelines runs list --top 20 ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az pipelines runs list --top 20 --output json
+exec az pipelines runs list --top 20 ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json

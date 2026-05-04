@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-nx-run -- Run an Nx target on a project in project:target format (e.g. myapp:build)
+# nerf-nx-run -- Run an Nx target on a project in project:target format (e.g. myapp:build).
 # Generated from nx manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=workspace

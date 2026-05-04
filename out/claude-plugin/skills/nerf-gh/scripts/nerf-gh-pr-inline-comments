@@ -19,7 +19,7 @@ Arguments:
 
 Maps to: gh api --paginate --slurp repos/{owner}/{repo}/pulls/<pr>/comments
 
-List ALL inline review comments on a pull request, across all reviews. Each comment is tied to a specific line of code. Use gh-pr-review-comments instead when you have a specific review ID and only want that review's comments. Returns the raw GitHub API response; pipe through jq to project the fields you want..
+List ALL inline review comments on a pull request, across all reviews. Each comment is tied to a specific line of code. Use gh-pr-review-comments instead when you have a specific review ID and only want that review's comments. Returns the raw GitHub API response; pipe through jq to project the fields you want.
 EOF
   exit 1
 }

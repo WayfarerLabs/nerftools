@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-network-vnet-show -- Show details for a virtual network (address space, subnets, peerings)
+# nerf-az-network-vnet-show -- Show details for a virtual network (address space, subnets, peerings).
 # Generated from az-network manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-account-list -- List all Azure subscriptions accessible to the signed-in principal
+# nerf-az-account-list -- List all Azure subscriptions accessible to the signed-in principal.
 # Generated from az-account manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

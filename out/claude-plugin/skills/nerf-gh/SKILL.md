@@ -78,7 +78,7 @@ Show the diff for a pull request.
 
 ## nerf-gh-pr-thread-comments
 
-List top-level conversation comments on a pull request (the issue-style comments shown in the main PR thread, NOT inline review comments). Returns the raw GitHub API response; pipe through jq to project the fields you want..
+List top-level conversation comments on a pull request (the issue-style comments shown in the main PR thread, NOT inline review comments). Returns the raw GitHub API response; pipe through jq to project the fields you want.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-gh/scripts/nerf-gh-pr-thread-comments <pr>`
 **Maps to:** `gh api --paginate --slurp repos/{owner}/{repo}/issues/<pr>/comments`
@@ -91,7 +91,7 @@ List top-level conversation comments on a pull request (the issue-style comments
 
 ## nerf-gh-pr-reviews
 
-List reviews on a pull request, latest first. Each entry includes id (numeric), author, state, commit (short SHA), submitted_at, and body (the reviewer's summary text). Pass an entry's id to gh-pr-review-comments to fetch the inline comments for that specific review..
+List reviews on a pull request, latest first. Each entry includes id (numeric), author, state, commit (short SHA), submitted_at, and body (the reviewer's summary text). Pass an entry's id to gh-pr-review-comments to fetch the inline comments for that specific review.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-gh/scripts/nerf-gh-pr-reviews [--limit|-L <limit>] <pr>`
 
@@ -107,7 +107,7 @@ List reviews on a pull request, latest first. Each entry includes id (numeric), 
 
 ## nerf-gh-pr-review-comments
 
-List inline review comments for a single review (by numeric review ID). Use gh-pr-reviews to find review IDs. Returns the raw GitHub API response; pipe through jq to project the fields you want..
+List inline review comments for a single review (by numeric review ID). Use gh-pr-reviews to find review IDs. Returns the raw GitHub API response; pipe through jq to project the fields you want.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-gh/scripts/nerf-gh-pr-review-comments <pr> <review_id>`
 **Maps to:** `gh api --paginate --slurp repos/{owner}/{repo}/pulls/<pr>/reviews/<review_id>/comments`
@@ -121,7 +121,7 @@ List inline review comments for a single review (by numeric review ID). Use gh-p
 
 ## nerf-gh-pr-inline-comments
 
-List ALL inline review comments on a pull request, across all reviews. Each comment is tied to a specific line of code. Use gh-pr-review-comments instead when you have a specific review ID and only want that review's comments. Returns the raw GitHub API response; pipe through jq to project the fields you want..
+List ALL inline review comments on a pull request, across all reviews. Each comment is tied to a specific line of code. Use gh-pr-review-comments instead when you have a specific review ID and only want that review's comments. Returns the raw GitHub API response; pipe through jq to project the fields you want.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-gh/scripts/nerf-gh-pr-inline-comments <pr>`
 **Maps to:** `gh api --paginate --slurp repos/{owner}/{repo}/pulls/<pr>/comments`
@@ -134,7 +134,7 @@ List ALL inline review comments on a pull request, across all reviews. Each comm
 
 ## nerf-gh-pr-create
 
-Create a pull request from the current branch. Pushes the branch if needed..
+Create a pull request from the current branch. Pushes the branch if needed.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-gh/scripts/nerf-gh-pr-create [--draft|-d] [--body|-b <body>] [--base|-B <base>] [--reviewer|-r <reviewer>] <title>`
 **Maps to:** `gh pr create <draft> --title <title> <body> <base> <reviewer>`
@@ -157,7 +157,7 @@ Create a pull request from the current branch. Pushes the branch if needed..
 
 ## nerf-gh-pr-thread-comment
 
-Add a top-level conversation comment to a pull request (the issue-style comments shown in the main PR thread). For inline review comments, see gh-pr-review-comments (one review) or gh-pr-inline-comments (across all reviews)..
+Add a top-level conversation comment to a pull request (the issue-style comments shown in the main PR thread). For inline review comments, see gh-pr-review-comments (one review) or gh-pr-inline-comments (across all reviews).
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-gh/scripts/nerf-gh-pr-thread-comment <pr> <body>`
 **Maps to:** `gh pr comment <pr> --body <body>`

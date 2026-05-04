@@ -15,7 +15,7 @@ find-cwd and grep-recursive-cwd are pre-scoped to the current directory.
 
 ## nerf-find
 
-Search for files and directories. Exec-like actions are denied -- use this for discovery only, not for running commands on results..
+Search for files and directories. Exec-like actions are denied -- use this for discovery only, not for running commands on results.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-stdutils/scripts/nerf-find [tokens...]`
 **Maps to:** `find "$@"`
@@ -26,7 +26,7 @@ Search for files and directories. Exec-like actions are denied -- use this for d
 
 ## nerf-find-cwd
 
-Search for files and directories under the current directory. Exec-like actions are denied. The search root is always '.' (current directory)..
+Search for files and directories under the current directory. Exec-like actions are denied. The search root is always '.' (current directory).
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-stdutils/scripts/nerf-find-cwd [tokens...]`
 **Maps to:** `find . "$@"`
@@ -37,7 +37,7 @@ Search for files and directories under the current directory. Exec-like actions 
 
 ## nerf-grep-recursive-cwd
 
-Search for a pattern recursively in the current directory. Prints matching lines with filenames and line numbers..
+Search for a pattern recursively in the current directory. Prints matching lines with filenames and line numbers.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-stdutils/scripts/nerf-grep-recursive-cwd [--ignore-case|-i] [--line-regexp|-x] [--word-regexp|-w] [--count|-c] [--files-with-matches|-l] [--include <include>] [--exclude <exclude>] <pattern>`
 **Maps to:** `grep -r -n <ignore_case> <line_regexp> <word_regexp> <count> <files_with_matches> <include> <exclude> -- <pattern> .`
@@ -63,7 +63,7 @@ Search for a pattern recursively in the current directory. Prints matching lines
 
 ## nerf-grep
 
-Search for a pattern in files or directories. Supports recursive search via -r. Files and directories are specified as trailing positional arguments after the pattern..
+Search for a pattern in files or directories. Supports recursive search via -r. Files and directories are specified as trailing positional arguments after the pattern.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-stdutils/scripts/nerf-grep [--recursive|-r] [--ignore-case|-i] [--line-regexp|-x] [--word-regexp|-w] [--count|-c] [--files-with-matches|-l] [--include <include>] [--exclude <exclude>] <pattern> <paths...>`
 **Maps to:** `grep -n <recursive> <ignore_case> <line_regexp> <word_regexp> <count> <files_with_matches> <include> <exclude> -- <pattern> <paths>`

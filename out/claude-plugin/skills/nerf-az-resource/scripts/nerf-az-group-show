@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-group-show -- Show details for a single resource group
+# nerf-az-group-show -- Show details for a single resource group.
 # Generated from az-resource manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

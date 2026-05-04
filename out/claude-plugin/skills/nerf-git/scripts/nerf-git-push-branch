@@ -23,7 +23,7 @@ Arguments:
 
 Maps to: git <directory> push --follow-tags <remote> HEAD
 
-Push the current branch to a remote including annotated tags (no force push). Fails if in detached HEAD state or on main. Do not use on main -- use git-push-main instead..
+Push the current branch to a remote including annotated tags (no force push). Fails if in detached HEAD state or on main. Do not use on main -- use git-push-main instead.
 EOF
   exit 1
 }

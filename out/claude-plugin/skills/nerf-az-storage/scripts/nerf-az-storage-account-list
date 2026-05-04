@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-storage-account-list -- List storage accounts (optionally filtered by resource group)
+# nerf-az-storage-account-list -- List storage accounts (optionally filtered by resource group).
 # Generated from az-storage manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

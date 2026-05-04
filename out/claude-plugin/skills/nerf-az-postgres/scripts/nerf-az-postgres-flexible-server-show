@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-postgres-flexible-server-show -- Show PostgreSQL Flexible Server details (network block, SKU, version, HA)
+# nerf-az-postgres-flexible-server-show -- Show PostgreSQL Flexible Server details (network block, SKU, version, HA).
 # Generated from az-postgres manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

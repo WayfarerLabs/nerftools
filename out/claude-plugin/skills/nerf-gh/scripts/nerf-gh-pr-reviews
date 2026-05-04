@@ -22,7 +22,7 @@ Arguments:
       PR number
       Must match: ^[0-9]+$
 
-List reviews on a pull request, latest first. Each entry includes id (numeric), author, state, commit (short SHA), submitted_at, and body (the reviewer's summary text). Pass an entry's id to gh-pr-review-comments to fetch the inline comments for that specific review..
+List reviews on a pull request, latest first. Each entry includes id (numeric), author, state, commit (short SHA), submitted_at, and body (the reviewer's summary text). Pass an entry's id to gh-pr-review-comments to fetch the inline comments for that specific review.
 EOF
   exit 1
 }

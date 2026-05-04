@@ -53,7 +53,7 @@ No arguments.
 
 ## nerf-kubectl-config-use-context
 
-Switch to a different kubectl context. Marked admin because activating an admin-account context (e.g. one fetched via az-aks-get-credentials-admin) gives every subsequent kubectl call cluster-admin powers; the threat marker on this tool has to be at least as strict as the credential fetch that wrote the context. The harness should default-deny this tool whenever it default- denies az-aks-get-credentials-admin..
+Switch to a different kubectl context. Marked admin because activating an admin-account context (e.g. one fetched via az-aks-get-credentials-admin) gives every subsequent kubectl call cluster-admin powers; the threat marker on this tool has to be at least as strict as the credential fetch that wrote the context. The harness should default-deny this tool whenever it default- denies az-aks-get-credentials-admin.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-kubectl/scripts/nerf-kubectl-config-use-context <context>`
 **Maps to:** `kubectl config use-context <context>`
@@ -77,7 +77,7 @@ No arguments.
 
 ## nerf-kubectl-get
 
-Get kubernetes resources. Returns JSON; pipe through jq for extraction. Refuses Secrets -- use kubectl-get-secrets instead, which redacts .data and .stringData..
+Get kubernetes resources. Returns JSON; pipe through jq for extraction. Refuses Secrets -- use kubectl-get-secrets instead, which redacts .data and .stringData.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-kubectl/scripts/nerf-kubectl-get [--all-namespaces|-A] [--show-labels] [--namespace|-n <namespace>] [--selector|-l <selector>] [--field-selector <field_selector>] <resource> [<name>]`
 **Maps to:** `kubectl get <resource> <name> <namespace> <all_namespaces> <selector> <field_selector> <show_labels> --output json`
@@ -102,7 +102,7 @@ Get kubernetes resources. Returns JSON; pipe through jq for extraction. Refuses 
 
 ## nerf-kubectl-get-secrets
 
-List Secret metadata with .data, .stringData, and ALL metadata.annotations removed. Cannot reveal secret values. Annotations are dropped wholesale because kubectl apply stores the rendered manifest (including .data) in the last-applied-configuration annotation, and operator-injected annotations may carry sensitive content. Labels are preserved. For secret values, go through az-keyvault or the secret-syncing source..
+List Secret metadata with .data, .stringData, and ALL metadata.annotations removed. Cannot reveal secret values. Annotations are dropped wholesale because kubectl apply stores the rendered manifest (including .data) in the last-applied-configuration annotation, and operator-injected annotations may carry sensitive content. Labels are preserved. For secret values, go through az-keyvault or the secret-syncing source.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-kubectl/scripts/nerf-kubectl-get-secrets [--all-namespaces|-A] [--namespace|-n <namespace>] [--selector|-l <selector>] [<name>]`
 
@@ -123,7 +123,7 @@ List Secret metadata with .data, .stringData, and ALL metadata.annotations remov
 
 ## nerf-kubectl-describe
 
-Describe a kubernetes resource. Refuses Secrets because "kubectl describe" prints the metadata.annotations section verbatim, and any Secret created via "kubectl apply" carries a kubectl.kubernetes.io/last-applied-configuration annotation containing the original (base64-encoded) .data, which would bypass kubectl-get-secrets' redaction..
+Describe a kubernetes resource. Refuses Secrets because "kubectl describe" prints the metadata.annotations section verbatim, and any Secret created via "kubectl apply" carries a kubectl.kubernetes.io/last-applied-configuration annotation containing the original (base64-encoded) .data, which would bypass kubectl-get-secrets' redaction.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-kubectl/scripts/nerf-kubectl-describe [--namespace|-n <namespace>] <resource> <name>`
 **Maps to:** `kubectl describe <resource> <name> <namespace>`
@@ -141,7 +141,7 @@ Describe a kubernetes resource. Refuses Secrets because "kubectl describe" print
 
 ## nerf-kubectl-logs
 
-Fetch pod logs (no follow). Use --tail to cap the line count. Combine with kubectl-get to poll if you need updates..
+Fetch pod logs (no follow). Use --tail to cap the line count. Combine with kubectl-get to poll if you need updates.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-kubectl/scripts/nerf-kubectl-logs [--previous|-p] [--namespace|-n <namespace>] [--container|-c <container>] [--tail <tail>] <pod>`
 **Maps to:** `kubectl logs <pod> <namespace> <container> <tail> <previous>`
@@ -236,7 +236,7 @@ Show the schema documentation for a resource or field path.
 
 ## nerf-kubectl-exec
 
-Execute a command in a pod (non-interactive, no TTY). Use this for one-shot diagnostics; for cluster mutations prefer Helm/Terraform..
+Execute a command in a pod (non-interactive, no TTY). Use this for one-shot diagnostics; for cluster mutations prefer Helm/Terraform.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-kubectl/scripts/nerf-kubectl-exec [--namespace|-n <namespace>] [--container|-c <container>] <pod> <command...>`
 **Maps to:** `kubectl exec <pod> <namespace> <container> -- <command>`
@@ -255,7 +255,7 @@ Execute a command in a pod (non-interactive, no TTY). Use this for one-shot diag
 
 ## nerf-kubectl-port-forward
 
-Forward a local port to a pod or service in the cluster. Wrapped with coreutils "timeout" so unattended runs cannot hang -- the forward is terminated after --timeout-seconds (required). Note that the wrapper exits 124 (the standard "timeout" exit code) when the time bound is reached; this is the expected success path for unattended diagnostics..
+Forward a local port to a pod or service in the cluster. Wrapped with coreutils "timeout" so unattended runs cannot hang -- the forward is terminated after --timeout-seconds (required). Note that the wrapper exits 124 (the standard "timeout" exit code) when the time bound is reached; this is the expected success path for unattended diagnostics.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-kubectl/scripts/nerf-kubectl-port-forward --timeout-seconds <timeout_seconds> [--namespace|-n <namespace>] <target> <ports>`
 **Maps to:** `timeout <timeout_seconds> kubectl port-forward <namespace> <target> <ports>`

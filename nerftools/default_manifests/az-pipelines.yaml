@@ -6,37 +6,109 @@ package:
   skill_group: az-pipelines
   skill_intro: |
     These tools query Azure Pipelines. The organization and project are
-    auto-detected from the git remote. Use az-pipelines-list to see all
-    pipelines, az-pipelines-runs to see recent runs across all pipelines,
-    and az-pipelines-check to inspect a specific pipeline with its recent
-    run history.
+    auto-detected from the git remote; pass --project to target a different
+    project in the same org. Use az-pipelines-list to see all pipelines,
+    az-pipelines-runs to see recent runs across all pipelines, and
+    az-pipelines-check to inspect a specific pipeline with its recent run
+    history. Use az-pipelines-run-show to drill into a single run.
 
 tools:
   az-pipelines-list:
-    description: List all pipelines in the Azure DevOps project
+    description: List all pipelines in the Azure DevOps project.
     threat:
       read: remote
       write: none
     template:
-      command: [az, pipelines, list, --output, json]
+      command:
+        - az
+        - pipelines
+        - list
+        - "{{options.project}}"
+        - --output
+        - json
+    options:
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
 
   az-pipelines-runs:
-    description: List the 20 most recent pipeline runs across all pipelines
+    description: List the 20 most recent pipeline runs across all pipelines.
     threat:
       read: remote
       write: none
     template:
-      command: [az, pipelines, runs, list, --top, "20", --output, json]
+      command:
+        - az
+        - pipelines
+        - runs
+        - list
+        - --top
+        - "20"
+        - "{{options.project}}"
+        - --output
+        - json
+    options:
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
 
   az-pipelines-check:
-    description: Show details and the 10 most recent runs for a specific pipeline (by ID)
+    description: Show details and the 10 most recent runs for a specific pipeline (by ID).
     threat:
       read: remote
       write: none
     template:
-      command: [az, pipelines, runs, list, --pipeline-ids, "{{arguments.pipeline_id}}", --top, "10", --output, json]
+      command:
+        - az
+        - pipelines
+        - runs
+        - list
+        - --pipeline-ids
+        - "{{arguments.pipeline_id}}"
+        - --top
+        - "10"
+        - "{{options.project}}"
+        - --output
+        - json
     arguments:
       pipeline_id:
         description: Pipeline ID (numeric, from az-pipelines-list)
         required: true
         pattern: "^[0-9]+$"
+    options:
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
+
+  az-pipelines-run-show:
+    description: >-
+      Show details for a single pipeline run (by run ID). Returns the run's
+      status, result, source branch, queue/start/finish times, requesting
+      identity, and the URL to view it in the Azure DevOps UI.
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - pipelines
+        - runs
+        - show
+        - --id
+        - "{{arguments.run_id}}"
+        - "{{options.project}}"
+        - --output
+        - json
+    arguments:
+      run_id:
+        description: Pipeline run ID (numeric, from az-pipelines-runs or az-pipelines-check)
+        required: true
+        pattern: "^[0-9]+$"
+    options:
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p

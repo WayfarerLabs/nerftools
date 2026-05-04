@@ -17,7 +17,7 @@ package:
 
 tools:
   kubectl-version:
-    description: Show kubectl client and server version
+    description: Show kubectl client and server version.
     threat:
       read: remote
       write: none
@@ -25,7 +25,7 @@ tools:
       command: [kubectl, version, --output, json]
 
   kubectl-config-get-contexts:
-    description: List configured kubectl contexts
+    description: List configured kubectl contexts.
     threat:
       read: machine
       write: none
@@ -33,7 +33,7 @@ tools:
       command: [kubectl, config, get-contexts]
 
   kubectl-config-current-context:
-    description: Show the currently active kubectl context
+    description: Show the currently active kubectl context.
     threat:
       read: machine
       write: none
@@ -61,7 +61,7 @@ tools:
         pattern: "^[a-zA-Z0-9_]([a-zA-Z0-9._-]*[a-zA-Z0-9_])?$"
 
   kubectl-cluster-info:
-    description: Show cluster info (API server URL, addons)
+    description: Show cluster info (API server URL, addons).
     threat:
       read: remote
       write: none
@@ -250,7 +250,7 @@ tools:
         short: -p
 
   kubectl-top-pods:
-    description: Show CPU and memory usage of pods
+    description: Show CPU and memory usage of pods.
     threat:
       read: remote
       write: none
@@ -279,7 +279,7 @@ tools:
         short: -A
 
   kubectl-top-nodes:
-    description: Show CPU and memory usage of nodes
+    description: Show CPU and memory usage of nodes.
     threat:
       read: remote
       write: none
@@ -296,7 +296,7 @@ tools:
         short: -l
 
   kubectl-api-resources:
-    description: List API resources supported by the cluster (resource names only)
+    description: List API resources supported by the cluster (resource names only).
     threat:
       read: remote
       write: none
@@ -314,7 +314,7 @@ tools:
         pattern: "^[a-z0-9.-]*$"
 
   kubectl-api-versions:
-    description: List API group/versions supported by the cluster
+    description: List API group/versions supported by the cluster.
     threat:
       read: remote
       write: none
@@ -322,7 +322,7 @@ tools:
       command: [kubectl, api-versions]
 
   kubectl-explain:
-    description: Show the schema documentation for a resource or field path
+    description: Show the schema documentation for a resource or field path.
     threat:
       read: remote
       write: none
@@ -425,7 +425,7 @@ tools:
         pattern: "^[a-z0-9-]+$"
 
   kubectl-rollout-restart:
-    description: Trigger a rolling restart of a deployment, daemonset, or statefulset
+    description: Trigger a rolling restart of a deployment, daemonset, or statefulset.
     threat:
       read: remote
       write: remote

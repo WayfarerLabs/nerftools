@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-boards-mywi-comment -- Add a comment to a work item assigned to you
+# nerf-az-boards-mywi-comment -- Add a comment to a work item assigned to you.
 # Generated from az-boards manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=remote
@@ -10,24 +10,31 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-az-boards-mywi-comment <wi_id> <comment>
+Usage: nerf-az-boards-mywi-comment [--project|-p <project>] <wi_id> <comment>
+
+Options:
+  --project, -p <project>
+      Azure DevOps project name or ID (auto-detected from the git remote if omitted)
 
 Arguments:
   <wi_id> (required)
       Work item ID (numeric, must be assigned to you)
       Must match: ^[0-9]+$
   <comment> (required)
-      Comment text to add to the work item
+      Comment text. Stored as HTML on the work item, so HTML markup renders (e.g. "<p>See <a href='...'>this</a></p>"). Plain text is stored verbatim and renders as-is.
 
-Maps to: az boards work-item update --id <wi_id> --discussion <comment> --output none
+Maps to: az boards work-item update --id <wi_id> --discussion <comment> <project> --output none
 
 Add a comment to a work item assigned to you.
 EOF
   exit 1
 }
 
+PROJECT=""
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --project|-p) if [[ -n "${PROJECT}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -79,11 +86,11 @@ if [[ -z "${COMMENT}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az boards work-item update --id "${WI_ID}" --discussion "${COMMENT}" --output none)
+  _NERF_DRY_CMD=(az boards work-item update --id "${WI_ID}" --discussion "${COMMENT}" ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output none)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az boards work-item update --id "${WI_ID}" --discussion "${COMMENT}" --output none
+exec az boards work-item update --id "${WI_ID}" --discussion "${COMMENT}" ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output none

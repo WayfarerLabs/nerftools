@@ -16,7 +16,7 @@ Maps to: find . "$@"
 
 Denied patterns: -exec, -execdir, -ok, -okdir, -delete
 
-Search for files and directories under the current directory. Exec-like actions are denied. The search root is always '.' (current directory)..
+Search for files and directories under the current directory. Exec-like actions are denied. The search root is always '.' (current directory).
 EOF
   exit 1
 }

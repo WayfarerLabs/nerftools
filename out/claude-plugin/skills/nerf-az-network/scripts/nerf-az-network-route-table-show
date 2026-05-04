@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-network-route-table-show -- Show route table details (routes, associated subnets)
+# nerf-az-network-route-table-show -- Show route table details (routes, associated subnets).
 # Generated from az-network manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

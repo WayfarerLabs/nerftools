@@ -20,7 +20,7 @@ package:
 
 tools:
   az-account-show:
-    description: Show the currently active subscription and signed-in identity
+    description: Show the currently active subscription and signed-in identity.
     threat:
       read: remote
       write: none
@@ -28,7 +28,7 @@ tools:
       command: [az, account, show, --output, json]
 
   az-account-list:
-    description: List all Azure subscriptions accessible to the signed-in principal
+    description: List all Azure subscriptions accessible to the signed-in principal.
     threat:
       read: remote
       write: none
@@ -36,7 +36,7 @@ tools:
       command: [az, account, list, --output, json]
 
   az-account-set:
-    description: Switch the active Azure subscription for this session
+    description: Switch the active Azure subscription for this session.
     threat:
       read: remote
       write: machine

@@ -285,7 +285,7 @@ def _claude_plugin_tool_section(tool_name: str, skill_group: str, tool_spec: Too
     parts: list[str] = []
     parts.append(f"## {tool_name}")
     parts.append("")
-    parts.append(tool_spec.description + ".")
+    parts.append(tool_spec.description)
     parts.append("")
 
     script_path = f"${{CLAUDE_PLUGIN_ROOT}}/skills/{skill_group}/scripts/{tool_name}"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-network-subnet-show -- Show subnet details (delegations, private link policies, NSG/RT bindings)
+# nerf-az-network-subnet-show -- Show subnet details (delegations, private link policies, NSG/RT bindings).
 # Generated from az-network manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

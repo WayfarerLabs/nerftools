@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-account-show -- Show the currently active subscription and signed-in identity
+# nerf-az-account-show -- Show the currently active subscription and signed-in identity.
 # Generated from az-account manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

@@ -34,7 +34,7 @@ Arguments:
 
 Maps to: kubectl logs <pod> <namespace> <container> <tail> <previous>
 
-Fetch pod logs (no follow). Use --tail to cap the line count. Combine with kubectl-get to poll if you need updates..
+Fetch pod logs (no follow). Use --tail to cap the line count. Combine with kubectl-get to poll if you need updates.
 EOF
   exit 1
 }

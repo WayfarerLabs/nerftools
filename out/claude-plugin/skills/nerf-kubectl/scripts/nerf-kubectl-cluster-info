@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-kubectl-cluster-info -- Show cluster info (API server URL, addons)
+# nerf-kubectl-cluster-info -- Show cluster info (API server URL, addons).
 # Generated from kubectl manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

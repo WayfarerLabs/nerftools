@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-aks-show -- Show AKS cluster details (network profile, private cluster flag, FQDN)
+# nerf-az-aks-show -- Show AKS cluster details (network profile, private cluster flag, FQDN).
 # Generated from az-aks manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

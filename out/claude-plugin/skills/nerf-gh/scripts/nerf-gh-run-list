@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-gh-run-list -- List recent workflow runs
+# nerf-gh-run-list -- List recent workflow runs.
 # Generated from gh manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

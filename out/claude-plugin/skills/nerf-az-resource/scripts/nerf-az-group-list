@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-group-list -- List resource groups in a subscription
+# nerf-az-group-list -- List resource groups in a subscription.
 # Generated from az-resource manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

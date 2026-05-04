@@ -40,7 +40,7 @@ def _manifest(
 
 def _template_tool(command: list[str], **kwargs: object) -> ToolSpec:
     return ToolSpec(
-        description="A test tool",
+        description="A test tool.",
         threat=_THREAT_NONE,
         template=TemplateSpec(command=tuple(command)),
         **kwargs,

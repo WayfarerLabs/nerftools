@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-aks-nodepool-list -- List node pools on an AKS cluster
+# nerf-az-aks-nodepool-list -- List node pools on an AKS cluster.
 # Generated from az-aks manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

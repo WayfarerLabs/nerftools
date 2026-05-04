@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-pkgrun-markdownlint -- Run markdownlint-cli2 v0.21.0 with the given arguments (e.g. '**/*.md')
+# nerf-pkgrun-markdownlint -- Run markdownlint-cli2 v0.21.0 with the given arguments (e.g. '**/*.md').
 # Generated from pkgrun manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=none

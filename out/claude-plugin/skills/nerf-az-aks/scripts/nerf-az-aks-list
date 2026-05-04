@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-aks-list -- List AKS clusters (optionally filtered by resource group)
+# nerf-az-aks-list -- List AKS clusters (optionally filtered by resource group).
 # Generated from az-aks manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

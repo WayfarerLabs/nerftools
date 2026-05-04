@@ -14,7 +14,7 @@ package:
 
 tools:
   az-cosmosdb-list:
-    description: List Cosmos DB accounts (optionally filtered by resource group)
+    description: List Cosmos DB accounts (optionally filtered by resource group).
     threat:
       read: remote
       write: none
@@ -37,7 +37,7 @@ tools:
         flag: --subscription
 
   az-cosmosdb-show:
-    description: Show Cosmos DB account details (network access, VNet rules, private endpoints)
+    description: Show Cosmos DB account details (network access, VNet rules, private endpoints).
     threat:
       read: remote
       write: none
@@ -68,7 +68,7 @@ tools:
         flag: --subscription
 
   az-cosmosdb-database-list:
-    description: List SQL databases in a Cosmos DB account
+    description: List SQL databases in a Cosmos DB account.
     threat:
       read: remote
       write: none
@@ -101,7 +101,7 @@ tools:
         flag: --subscription
 
   az-cosmosdb-network-rule-list:
-    description: List virtual network rules on a Cosmos DB account
+    description: List virtual network rules on a Cosmos DB account.
     threat:
       read: remote
       write: none
