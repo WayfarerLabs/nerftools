@@ -349,6 +349,68 @@ def test_invalid_option_pattern_raises(tmp_path: Path) -> None:
         load_manifest(p)
 
 
+def _option_default_manifest(option_spec: dict) -> dict:
+    return _minimal_manifest(tools={
+        "t": {
+            "description": "A test tool.",
+            "threat": {"read": "none", "write": "none"},
+            "template": {"command": ["cmd", "{{options.remote}}"]},
+            "options": {"remote": {"description": "Remote name.", **option_spec}},
+        },
+    })
+
+
+def test_option_default_loaded(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _option_default_manifest({"default": "origin"}))
+    m = load_manifest(p)
+    assert m.tools["t"].options["remote"].default == "origin"
+
+
+def test_option_default_absent_is_none(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _option_default_manifest({}))
+    m = load_manifest(p)
+    assert m.tools["t"].options["remote"].default is None
+
+
+def test_option_default_with_required_raises(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _option_default_manifest({"default": "origin", "required": True}))
+    with pytest.raises(ManifestError, match="'default' and 'required: true' are mutually exclusive"):
+        load_manifest(p)
+
+
+def test_option_default_with_repeatable_raises(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _option_default_manifest({"default": "origin", "repeatable": True}))
+    with pytest.raises(ManifestError, match="'default' is not supported with 'repeatable: true'"):
+        load_manifest(p)
+
+
+def test_option_default_must_match_pattern(tmp_path: Path) -> None:
+    p = _write_manifest(
+        tmp_path,
+        _option_default_manifest({"default": "BadValue", "pattern": "^[a-z]+$"}),
+    )
+    with pytest.raises(ManifestError, match="does not match 'pattern'"):
+        load_manifest(p)
+
+
+def test_option_default_must_be_in_allow(tmp_path: Path) -> None:
+    p = _write_manifest(
+        tmp_path,
+        _option_default_manifest({"default": "github", "allow": ["origin", "upstream"]}),
+    )
+    with pytest.raises(ManifestError, match="is not in 'allow' list"):
+        load_manifest(p)
+
+
+def test_option_default_must_not_be_in_deny(tmp_path: Path) -> None:
+    p = _write_manifest(
+        tmp_path,
+        _option_default_manifest({"default": "origin", "deny": ["origin"]}),
+    )
+    with pytest.raises(ManifestError, match="is in 'deny' list"):
+        load_manifest(p)
+
+
 # -- Arguments -----------------------------------------------------------------
 
 

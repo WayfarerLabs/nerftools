@@ -157,6 +157,31 @@ def test_required_option_validation() -> None:
     assert "missing required option --remote" in script
 
 
+def test_option_default_seeds_bash_variable() -> None:
+    """An option with default should initialize its bash variable to the default,
+    so inline placeholders see the value even when the agent doesn't pass --flag.
+    """
+    options = {"remote": OptionSpec(flag="--remote", description="Remote.", default="origin")}
+    tool = _template_tool(["echo", "{{options.remote}}"], options=options)
+    script = build_script_text("t", "p", tool)
+    assert "REMOTE='origin'" in script
+    assert 'REMOTE=""' not in script
+
+
+def test_option_default_with_special_chars_is_quoted(tmp_path: Path) -> None:
+    """Defaults with shell-special characters must be safely single-quoted."""
+    options = {"x": OptionSpec(flag="--x", description="X.", default="it's tricky")}
+    tool = _template_tool(["echo", "{{options.x}}"], options=options)
+    script = build_script_text("t", "p", tool)
+    # Single-quote escaping uses '\"'\"' to embed a literal single quote
+    assert "X='it'\"'\"'s tricky'" in script
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(script)
+    script_path.chmod(0o755)
+    result = subprocess.run([str(script_path), "--nerf-dry-run"], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+
+
 def test_optional_option_no_required_check() -> None:
     options = {"remote": _option("--remote", required=False)}
     script = build_script_text("t", "p", _template_tool(["echo", "{{options.remote}}"], options=options))

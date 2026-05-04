@@ -238,6 +238,8 @@ def _var_declarations(tool_spec: ToolSpec) -> str:
         var = _var_name(name)
         if opt.repeatable:
             lines.append(f"{var}=()")
+        elif opt.default is not None:
+            lines.append(f"{var}='{_shell_escape_sq(opt.default)}'")
         else:
             lines.append(f'{var}=""')
     return "\n".join(lines)

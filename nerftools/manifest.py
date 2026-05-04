@@ -154,6 +154,7 @@ class OptionSpec:
     allow: tuple[str, ...] = field(default_factory=tuple)
     deny: tuple[str, ...] = field(default_factory=tuple)
     path_tests: tuple[PathTest, ...] = field(default_factory=tuple)
+    default: str | None = None
 
 
 @dataclass(frozen=True)
@@ -494,6 +495,7 @@ def _load_options(raw: dict[str, Any], path: Path, tool_name: str) -> dict[str, 
         allow = tuple(str(v) for v in spec_raw.get("allow", []))
         deny = tuple(str(v) for v in spec_raw.get("deny", []))
         path_tests = _load_path_tests(spec_raw, ctx)
+        default = str(spec_raw["default"]) if "default" in spec_raw else None
 
         if not re.fullmatch(r"-{1,2}[a-zA-Z][a-zA-Z0-9-]*", flag):
             raise ManifestError(f"{ctx}: 'flag' must match -<name> or --<name> pattern, got {flag!r}")
@@ -507,11 +509,29 @@ def _load_options(raw: dict[str, Any], path: Path, tool_name: str) -> dict[str, 
             except re.error as e:
                 raise ManifestError(f"{ctx}: invalid 'pattern' regex: {e}") from e
 
+        if default is not None:
+            if required:
+                raise ManifestError(f"{ctx}: 'default' and 'required: true' are mutually exclusive")
+            if repeatable:
+                raise ManifestError(f"{ctx}: 'default' is not supported with 'repeatable: true'")
+            if pattern is not None and not re.fullmatch(pattern, default):
+                raise ManifestError(
+                    f"{ctx}: 'default' value {default!r} does not match 'pattern' {pattern!r}"
+                )
+            if allow and default not in allow:
+                raise ManifestError(
+                    f"{ctx}: 'default' value {default!r} is not in 'allow' list {list(allow)}"
+                )
+            if deny and default in deny:
+                raise ManifestError(
+                    f"{ctx}: 'default' value {default!r} is in 'deny' list"
+                )
+
         options[name] = OptionSpec(
             description=description, flag=flag, short=short,
             required=required, repeatable=repeatable,
             pattern=pattern, allow=allow, deny=deny,
-            path_tests=path_tests,
+            path_tests=path_tests, default=default,
         )
 
     return options
