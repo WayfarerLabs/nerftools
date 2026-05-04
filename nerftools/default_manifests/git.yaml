@@ -14,7 +14,7 @@ package:
 
 tools:
   git-add:
-    description: Stage files or directories for commit
+    description: Stage files or directories for commit.
     threat:
       read: workspace
       write: workspace
@@ -136,7 +136,7 @@ tools:
       fi
 
   git-fetch:
-    description: Fetch all branches and tags from a remote
+    description: Fetch all branches and tags from a remote.
     threat:
       read: remote
       write: workspace
@@ -154,7 +154,7 @@ tools:
         pattern: "^[a-z0-9_-]+$"
 
   git-pull:
-    description: Pull the current branch from a remote
+    description: Pull the current branch from a remote.
     threat:
       read: remote
       write: workspace
@@ -222,7 +222,7 @@ tools:
       fi
 
   git-log:
-    description: Show a short one-line log of recent commits
+    description: Show a short one-line log of recent commits.
     threat:
       read: workspace
       write: none

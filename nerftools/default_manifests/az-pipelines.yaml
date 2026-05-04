@@ -14,7 +14,7 @@ package:
 
 tools:
   az-pipelines-list:
-    description: List all pipelines in the Azure DevOps project
+    description: List all pipelines in the Azure DevOps project.
     threat:
       read: remote
       write: none
@@ -33,7 +33,7 @@ tools:
         short: -p
 
   az-pipelines-runs:
-    description: List the 20 most recent pipeline runs across all pipelines
+    description: List the 20 most recent pipeline runs across all pipelines.
     threat:
       read: remote
       write: none
@@ -55,7 +55,7 @@ tools:
         short: -p
 
   az-pipelines-check:
-    description: Show details and the 10 most recent runs for a specific pipeline (by ID)
+    description: Show details and the 10 most recent runs for a specific pipeline (by ID).
     threat:
       read: remote
       write: none

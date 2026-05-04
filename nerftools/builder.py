@@ -201,7 +201,7 @@ def _usage_function(tool_name: str, tool_spec: ToolSpec) -> str:
         lines.append(f"Denied patterns: {denied}")
         lines.append("")
 
-    lines.append(tool_spec.description + ".")
+    lines.append(tool_spec.description)
 
     body = "\n".join(lines)
     return f"usage() {{\n  cat >&2 <<'EOF'\n{body}\nEOF\n  exit 1\n}}"

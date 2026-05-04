@@ -13,7 +13,7 @@ package:
 
 tools:
   tg-validate:
-    description: Run terragrunt validate in the current module directory
+    description: Run terragrunt validate in the current module directory.
     threat:
       read: workspace
       write: none
@@ -21,7 +21,7 @@ tools:
       command: [terragrunt, validate, --non-interactive]
 
   tg-validate-all:
-    description: Run terragrunt validate across all units under the current directory
+    description: Run terragrunt validate across all units under the current directory.
     threat:
       read: workspace
       write: none
@@ -29,7 +29,7 @@ tools:
       command: [terragrunt, run, --all, validate, --non-interactive]
 
   tg-init:
-    description: Run terragrunt init in the current module directory
+    description: Run terragrunt init in the current module directory.
     threat:
       read: remote
       write: workspace
@@ -41,7 +41,7 @@ tools:
         flag: -upgrade
 
   tg-init-all:
-    description: Run terragrunt init across all units under the current directory
+    description: Run terragrunt init across all units under the current directory.
     threat:
       read: remote
       write: workspace
@@ -53,7 +53,7 @@ tools:
         flag: -upgrade
 
   tg-plan:
-    description: Run terragrunt plan in the current module directory
+    description: Run terragrunt plan in the current module directory.
     threat:
       read: remote
       write: none
@@ -61,7 +61,7 @@ tools:
       command: [terragrunt, plan, --non-interactive, -input=false]
 
   tg-plan-all:
-    description: Run terragrunt plan across all units under the current directory
+    description: Run terragrunt plan across all units under the current directory.
     threat:
       read: remote
       write: none
@@ -69,7 +69,7 @@ tools:
       command: [terragrunt, run, --all, plan, --non-interactive, -input=false]
 
   tg-output:
-    description: Run terragrunt output in the current module directory
+    description: Run terragrunt output in the current module directory.
     threat:
       read: remote
       write: none
@@ -77,7 +77,7 @@ tools:
       command: [terragrunt, output, --non-interactive]
 
   tg-output-all:
-    description: Run terragrunt output across all units under the current directory
+    description: Run terragrunt output across all units under the current directory.
     threat:
       read: remote
       write: none
@@ -85,7 +85,7 @@ tools:
       command: [terragrunt, run, --all, output, --non-interactive]
 
   tg-fmt:
-    description: Run terragrunt HCL format in the current module directory
+    description: Run terragrunt HCL format in the current module directory.
     threat:
       read: workspace
       write: none
@@ -96,7 +96,7 @@ tools:
         description: Check formatting without modifying files (exits non-zero if files are unformatted)
 
   tg-fmt-all:
-    description: Run terragrunt HCL format across all units under the current directory
+    description: Run terragrunt HCL format across all units under the current directory.
     threat:
       read: workspace
       write: none

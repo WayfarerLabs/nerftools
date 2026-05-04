@@ -321,6 +321,14 @@ def _load_tool(raw: dict[str, Any], path: Path, tool_name: str) -> ToolSpec:
     ctx = f"{path}:tools.{tool_name}"
 
     description = _require_str(raw, "description", ctx)
+    # Tool descriptions are user-facing in usage/help and SKILL.md output. They are
+    # rendered verbatim, so they need to be complete sentences with terminal
+    # punctuation. This is intentionally not required for option/argument/switch
+    # descriptions, which are typically noun phrases.
+    if not description.rstrip().endswith((".", "?", "!")):
+        raise ManifestError(
+            f"{ctx}: 'description' must end with terminal punctuation (., ?, or !)"
+        )
     threat = _load_threat(raw, path, tool_name)
 
     # Execution mode

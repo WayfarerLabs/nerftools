@@ -13,7 +13,7 @@ package:
 
 tools:
   az-storage-account-list:
-    description: List storage accounts (optionally filtered by resource group)
+    description: List storage accounts (optionally filtered by resource group).
     threat:
       read: remote
       write: none
@@ -37,7 +37,7 @@ tools:
         flag: --subscription
 
   az-storage-account-show:
-    description: Show storage account details (network rules, public access, private endpoints)
+    description: Show storage account details (network rules, public access, private endpoints).
     threat:
       read: remote
       write: none
@@ -69,7 +69,7 @@ tools:
         flag: --subscription
 
   az-storage-account-network-rule-list:
-    description: List explicit network rules on a storage account
+    description: List explicit network rules on a storage account.
     threat:
       read: remote
       write: none

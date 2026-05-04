@@ -15,7 +15,7 @@ package:
 
 tools:
   az-aks-list:
-    description: List AKS clusters (optionally filtered by resource group)
+    description: List AKS clusters (optionally filtered by resource group).
     threat:
       read: remote
       write: none
@@ -38,7 +38,7 @@ tools:
         flag: --subscription
 
   az-aks-show:
-    description: Show AKS cluster details (network profile, private cluster flag, FQDN)
+    description: Show AKS cluster details (network profile, private cluster flag, FQDN).
     threat:
       read: remote
       write: none
@@ -69,7 +69,7 @@ tools:
         flag: --subscription
 
   az-aks-nodepool-list:
-    description: List node pools on an AKS cluster
+    description: List node pools on an AKS cluster.
     threat:
       read: remote
       write: none
@@ -101,7 +101,7 @@ tools:
         flag: --subscription
 
   az-aks-nodepool-show:
-    description: Show details for a single node pool (size, autoscaler config, taints)
+    description: Show details for a single node pool (size, autoscaler config, taints).
     threat:
       read: remote
       write: none
@@ -139,7 +139,7 @@ tools:
         flag: --subscription
 
   az-aks-get-versions:
-    description: List supported AKS Kubernetes versions in a region
+    description: List supported AKS Kubernetes versions in a region.
     threat:
       read: remote
       write: none

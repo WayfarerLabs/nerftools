@@ -44,7 +44,7 @@ def _template_tool(
     switches: dict[str, SwitchSpec] | None = None,
     options: dict[str, OptionSpec] | None = None,
     arguments: dict[str, ArgSpec] | None = None,
-    description: str = "A test tool",
+    description: str = "A test tool.",
 ) -> ToolSpec:
     return ToolSpec(
         description=description,
@@ -123,7 +123,7 @@ def test_tool_has_h2_section() -> None:
 
 
 def test_tool_description_in_skill() -> None:
-    m = _manifest(tools={"my-tool": _template_tool(["echo"], description="Does the thing")})
+    m = _manifest(tools={"my-tool": _template_tool(["echo"], description="Does the thing.")})
     skill = build_skill_text(m)
     assert "Does the thing." in skill
 

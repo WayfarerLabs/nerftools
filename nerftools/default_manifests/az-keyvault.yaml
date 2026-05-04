@@ -15,7 +15,7 @@ package:
 
 tools:
   az-keyvault-list:
-    description: List Key Vaults (optionally filtered by resource group)
+    description: List Key Vaults (optionally filtered by resource group).
     threat:
       read: remote
       write: none
@@ -38,7 +38,7 @@ tools:
         flag: --subscription
 
   az-keyvault-show:
-    description: Show Key Vault details (network ACLs, publicNetworkAccess, RBAC mode, private endpoints)
+    description: Show Key Vault details (network ACLs, publicNetworkAccess, RBAC mode, private endpoints).
     threat:
       read: remote
       write: none
@@ -67,7 +67,7 @@ tools:
         flag: --subscription
 
   az-keyvault-network-rule-list:
-    description: List explicit network rules on a Key Vault
+    description: List explicit network rules on a Key Vault.
     threat:
       read: remote
       write: none
@@ -97,7 +97,7 @@ tools:
         flag: --subscription
 
   az-keyvault-secret-list:
-    description: List secret names in a Key Vault (no values)
+    description: List secret names in a Key Vault (no values).
     threat:
       read: remote
       write: none

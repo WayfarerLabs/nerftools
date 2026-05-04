@@ -13,7 +13,7 @@ package:
 
 tools:
   az-resource-list:
-    description: List Azure resources, optionally filtered by group, type, or tag
+    description: List Azure resources, optionally filtered by group, type, or tag.
     threat:
       read: remote
       write: none
@@ -44,7 +44,7 @@ tools:
         flag: --subscription
 
   az-resource-show:
-    description: Show full details for a resource by ID
+    description: Show full details for a resource by ID.
     threat:
       read: remote
       write: none
@@ -68,7 +68,7 @@ tools:
         flag: --subscription
 
   az-group-list:
-    description: List resource groups in a subscription
+    description: List resource groups in a subscription.
     threat:
       read: remote
       write: none
@@ -86,7 +86,7 @@ tools:
         flag: --subscription
 
   az-group-show:
-    description: Show details for a single resource group
+    description: Show details for a single resource group.
     threat:
       read: remote
       write: none

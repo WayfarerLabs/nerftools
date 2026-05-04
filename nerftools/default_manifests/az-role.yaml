@@ -86,7 +86,7 @@ tools:
         flag: --subscription
 
   az-role-definition-list:
-    description: List role definitions (optionally filtered by name or scope)
+    description: List role definitions (optionally filtered by name or scope).
     threat:
       read: remote
       write: none

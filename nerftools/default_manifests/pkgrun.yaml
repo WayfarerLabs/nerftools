@@ -13,7 +13,7 @@ package:
 
 tools:
   pkgrun-cspell:
-    description: Run cspell v8.19.4 with the given arguments (e.g. '**/*.md')
+    description: Run cspell v8.19.4 with the given arguments (e.g. '**/*.md').
     threat:
       read: workspace
       write: none
@@ -28,7 +28,7 @@ tools:
         allow_flags: true
 
   pkgrun-markdownlint:
-    description: Run markdownlint-cli2 v0.21.0 with the given arguments (e.g. '**/*.md')
+    description: Run markdownlint-cli2 v0.21.0 with the given arguments (e.g. '**/*.md').
     threat:
       read: workspace
       write: none
@@ -43,7 +43,7 @@ tools:
         allow_flags: true
 
   pkgrun-prettier:
-    description: Run prettier v3.8.1 with the given arguments (e.g. --write '**/*.ts')
+    description: Run prettier v3.8.1 with the given arguments (e.g. --write '**/*.ts').
     threat:
       read: workspace
       write: workspace

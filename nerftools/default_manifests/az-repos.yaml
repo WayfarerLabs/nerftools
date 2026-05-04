@@ -16,7 +16,7 @@ package:
 
 tools:
   az-repos-pr-list:
-    description: List pull requests in the project as JSON
+    description: List pull requests in the project as JSON.
     threat:
       read: remote
       write: none
@@ -54,7 +54,7 @@ tools:
         short: -p
 
   az-repos-pr-show:
-    description: Show full details for a pull request as JSON
+    description: Show full details for a pull request as JSON.
     threat:
       read: remote
       write: none

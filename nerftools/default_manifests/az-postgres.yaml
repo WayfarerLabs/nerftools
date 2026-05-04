@@ -14,7 +14,7 @@ package:
 
 tools:
   az-postgres-flexible-server-list:
-    description: List PostgreSQL Flexible Servers (optionally filtered by resource group)
+    description: List PostgreSQL Flexible Servers (optionally filtered by resource group).
     threat:
       read: remote
       write: none
@@ -38,7 +38,7 @@ tools:
         flag: --subscription
 
   az-postgres-flexible-server-show:
-    description: Show PostgreSQL Flexible Server details (network block, SKU, version, HA)
+    description: Show PostgreSQL Flexible Server details (network block, SKU, version, HA).
     threat:
       read: remote
       write: none
@@ -70,7 +70,7 @@ tools:
         flag: --subscription
 
   az-postgres-flexible-server-firewall-rule-list:
-    description: List firewall rules on a PostgreSQL Flexible Server
+    description: List firewall rules on a PostgreSQL Flexible Server.
     threat:
       read: remote
       write: none
