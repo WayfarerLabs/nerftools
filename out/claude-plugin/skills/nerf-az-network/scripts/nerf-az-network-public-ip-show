@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# nerf-az-network-public-ip-show -- Show details for a public IP (allocation method, IP address, associated resource)
+# Generated from az-network manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-network-public-ip-show --resource-group|-g <resource_group> [--subscription <subscription>] <name>
+
+Options:
+  --resource-group, -g <resource_group> (required)
+      Resource group containing the public IP
+  --subscription <subscription>
+      Subscription name or ID (defaults to active)
+
+Arguments:
+  <name> (required)
+      Public IP resource name
+
+Maps to: az network public-ip show --resource-group <resource_group> --name <name> <subscription> --output json
+
+Show details for a public IP (allocation method, IP address, associated resource).
+EOF
+  exit 1
+}
+
+RESOURCE_GROUP=""
+SUBSCRIPTION=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --resource-group|-g) if [[ -n "${RESOURCE_GROUP}" ]]; then echo "error: --resource-group can only be specified once" >&2; exit 1; fi; RESOURCE_GROUP="$2"; shift 2 ;;
+    --subscription) if [[ -n "${SUBSCRIPTION}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+NAME="${1:-}"
+shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-az-network-public-ip-show: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+if [[ -z "${RESOURCE_GROUP}" ]]; then
+  echo "error: nerf-az-network-public-ip-show: missing required option --resource-group" >&2
+  echo "  hint: provide --resource-group <value>" >&2
+  usage
+fi
+
+if [[ -n "${NAME}" ]] && [[ "${NAME}" == -* ]]; then
+  echo "error: nerf-az-network-public-ip-show: <name> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${NAME}" ]]; then
+  echo "error: nerf-az-network-public-ip-show: missing required argument <name>" >&2
+  echo "  hint: provide a value for <name>" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(az network public-ip show --resource-group "${RESOURCE_GROUP}" --name "${NAME}" ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec az network public-ip show --resource-group "${RESOURCE_GROUP}" --name "${NAME}" ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json

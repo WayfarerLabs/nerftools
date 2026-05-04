@@ -35,6 +35,11 @@ done
 
 RUN_ID="${1:-}"
 shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-gh-run-view: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
 
 if [[ -n "${RUN_ID}" ]] && [[ "${RUN_ID}" == -* ]]; then
   echo "error: nerf-gh-run-view: <run_id> cannot start with '-'" >&2
@@ -58,7 +63,10 @@ if [[ -n "${RUN_ID}" ]] && ! [[ "${RUN_ID}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: gh run view "${RUN_ID}""
+  _NERF_DRY_CMD=(gh run view "${RUN_ID}")
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 

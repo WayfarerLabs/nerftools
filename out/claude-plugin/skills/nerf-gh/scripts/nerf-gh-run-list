@@ -67,7 +67,10 @@ if [[ -n "${LIMIT}" ]] && ! [[ "${LIMIT}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: gh run list ${WORKFLOW:+"--workflow"} ${WORKFLOW:+"$WORKFLOW"} ${BRANCH:+"--branch"} ${BRANCH:+"$BRANCH"} ${STATUS:+"--status"} ${STATUS:+"$STATUS"} ${LIMIT:+"--limit"} ${LIMIT:+"$LIMIT"}"
+  _NERF_DRY_CMD=(gh run list ${WORKFLOW:+"--workflow"} ${WORKFLOW:+"$WORKFLOW"} ${BRANCH:+"--branch"} ${BRANCH:+"$BRANCH"} ${STATUS:+"--status"} ${STATUS:+"$STATUS"} ${LIMIT:+"--limit"} ${LIMIT:+"$LIMIT"})
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 

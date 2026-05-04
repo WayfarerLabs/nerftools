@@ -34,6 +34,14 @@ done
 
 ARGS=("$@")
 
+for _v in "${ARGS[@]}"; do
+  if [[ "$_v" == "--nerf-dry-run" ]]; then
+    echo "error: nerf-pkgrun-cspell: --nerf-dry-run inside the command tokens would be a no-op (it is a wrapper flag)" >&2
+    echo "  hint: place --nerf-dry-run before the command tokens" >&2
+    exit 1
+  fi
+done
+
 if [[ ${#ARGS[@]} -eq 0 ]]; then
   echo "error: nerf-pkgrun-cspell: missing required argument <args>" >&2
   echo "  hint: provide at least one value" >&2
@@ -54,7 +62,10 @@ if [[ -z "$_PKGRUN" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: $_PKGRUN cspell@8.19.4 "${ARGS[@]}""
+  _NERF_DRY_CMD=("$_PKGRUN" cspell@8.19.4 "${ARGS[@]}")
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 

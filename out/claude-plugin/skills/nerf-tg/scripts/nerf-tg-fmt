@@ -36,7 +36,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: terragrunt hcl format --non-interactive ${CHECK:+"--check"}"
+  _NERF_DRY_CMD=(terragrunt hcl format --non-interactive ${CHECK:+"--check"})
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 

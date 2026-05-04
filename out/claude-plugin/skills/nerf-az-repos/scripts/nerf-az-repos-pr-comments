@@ -33,6 +33,11 @@ done
 
 PR_ID="${1:-}"
 shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-az-repos-pr-comments: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
 
 if [[ -n "${PR_ID}" ]] && [[ "${PR_ID}" == -* ]]; then
   echo "error: nerf-az-repos-pr-comments: <pr_id> cannot start with '-'" >&2

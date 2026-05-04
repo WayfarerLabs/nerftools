@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# nerf-az-account-show -- Show the currently active subscription and signed-in identity
+# Generated from az-account manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-account-show
+
+Maps to: az account show --output json
+
+Show the currently active subscription and signed-in identity.
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(az account show --output json)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec az account show --output json

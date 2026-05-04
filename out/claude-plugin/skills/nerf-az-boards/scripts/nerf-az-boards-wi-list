@@ -34,6 +34,11 @@ done
 
 WIQL="${1:-}"
 shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-az-boards-wi-list: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
 
 if [[ -n "${WIQL}" ]] && [[ "${WIQL}" == -* ]]; then
   echo "error: nerf-az-boards-wi-list: <wiql> cannot start with '-'" >&2
@@ -48,7 +53,10 @@ if [[ -z "${WIQL}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: az boards query --wiql "${WIQL}" --output json"
+  _NERF_DRY_CMD=(az boards query --wiql "${WIQL}" --output json)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 

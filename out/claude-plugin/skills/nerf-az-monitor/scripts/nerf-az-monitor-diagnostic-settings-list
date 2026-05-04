@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# nerf-az-monitor-diagnostic-settings-list -- List diagnostic settings on a resource (what is wired to Log Analytics, Event Hubs, Storage)
+# Generated from az-monitor manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-monitor-diagnostic-settings-list [--subscription <subscription>] <resource_id>
+
+Options:
+  --subscription <subscription>
+      Subscription name or ID (defaults to active)
+
+Arguments:
+  <resource_id> (required)
+      Full resource ID to query
+
+Maps to: az monitor diagnostic-settings list --resource <resource_id> <subscription> --output json
+
+List diagnostic settings on a resource (what is wired to Log Analytics, Event Hubs, Storage).
+EOF
+  exit 1
+}
+
+SUBSCRIPTION=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --subscription) if [[ -n "${SUBSCRIPTION}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+RESOURCE_ID="${1:-}"
+shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-az-monitor-diagnostic-settings-list: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+if [[ -n "${RESOURCE_ID}" ]] && [[ "${RESOURCE_ID}" == -* ]]; then
+  echo "error: nerf-az-monitor-diagnostic-settings-list: <resource_id> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${RESOURCE_ID}" ]]; then
+  echo "error: nerf-az-monitor-diagnostic-settings-list: missing required argument <resource_id>" >&2
+  echo "  hint: provide a value for <resource_id>" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(az monitor diagnostic-settings list --resource "${RESOURCE_ID}" ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec az monitor diagnostic-settings list --resource "${RESOURCE_ID}" ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json

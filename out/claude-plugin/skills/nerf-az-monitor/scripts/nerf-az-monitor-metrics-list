@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+# nerf-az-monitor-metrics-list -- Fetch a single metric series for a resource
+# Generated from az-monitor manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-monitor-metrics-list --resource <resource_id> [--aggregation <aggregation>] [--interval <interval>] [--start-time <start_time>] [--end-time <end_time>] [--subscription <subscription>] <metric>
+
+Options:
+  --resource <resource_id> (required)
+      Full resource ID to query
+  --aggregation <aggregation>
+      Aggregation to apply: Average, Count, Maximum, Minimum, Total
+      Allowed values: Average, Count, Maximum, Minimum, Total
+  --interval <interval>
+      ISO8601 interval supported by Azure Monitor metrics
+      Allowed values: PT1M, PT5M, PT15M, PT30M, PT1H, PT6H, PT12H, P1D, FULL
+  --start-time <start_time>
+      ISO8601 start time
+  --end-time <end_time>
+      ISO8601 end time
+  --subscription <subscription>
+      Subscription name or ID (defaults to active)
+
+Arguments:
+  <metric> (required)
+      Metric name (e.g. CpuPercent, ServerLogins)
+
+Maps to: az monitor metrics list --resource <resource_id> --metric <metric> <aggregation> <interval> <start_time> <end_time> <subscription> --output json
+
+Fetch a single metric series for a resource.
+EOF
+  exit 1
+}
+
+RESOURCE_ID=""
+AGGREGATION=""
+INTERVAL=""
+START_TIME=""
+END_TIME=""
+SUBSCRIPTION=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --resource) if [[ -n "${RESOURCE_ID}" ]]; then echo "error: --resource can only be specified once" >&2; exit 1; fi; RESOURCE_ID="$2"; shift 2 ;;
+    --aggregation) if [[ -n "${AGGREGATION}" ]]; then echo "error: --aggregation can only be specified once" >&2; exit 1; fi; AGGREGATION="$2"; shift 2 ;;
+    --interval) if [[ -n "${INTERVAL}" ]]; then echo "error: --interval can only be specified once" >&2; exit 1; fi; INTERVAL="$2"; shift 2 ;;
+    --start-time) if [[ -n "${START_TIME}" ]]; then echo "error: --start-time can only be specified once" >&2; exit 1; fi; START_TIME="$2"; shift 2 ;;
+    --end-time) if [[ -n "${END_TIME}" ]]; then echo "error: --end-time can only be specified once" >&2; exit 1; fi; END_TIME="$2"; shift 2 ;;
+    --subscription) if [[ -n "${SUBSCRIPTION}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+METRIC="${1:-}"
+shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-az-monitor-metrics-list: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+if [[ -z "${RESOURCE_ID}" ]]; then
+  echo "error: nerf-az-monitor-metrics-list: missing required option --resource" >&2
+  echo "  hint: provide --resource <value>" >&2
+  usage
+fi
+
+if [[ -n "${AGGREGATION}" ]] && [[ "${AGGREGATION}" != "Average" && "${AGGREGATION}" != "Count" && "${AGGREGATION}" != "Maximum" && "${AGGREGATION}" != "Minimum" && "${AGGREGATION}" != "Total" ]]; then
+  echo "error: nerf-az-monitor-metrics-list: option --aggregation is not an allowed value" >&2
+  echo "  value:   \"${AGGREGATION}\"" >&2
+  echo "  allowed: Average, Count, Maximum, Minimum, Total" >&2
+  echo "  hint: use one of the allowed values" >&2
+  exit 1
+fi
+
+if [[ -n "${INTERVAL}" ]] && [[ "${INTERVAL}" != "PT1M" && "${INTERVAL}" != "PT5M" && "${INTERVAL}" != "PT15M" && "${INTERVAL}" != "PT30M" && "${INTERVAL}" != "PT1H" && "${INTERVAL}" != "PT6H" && "${INTERVAL}" != "PT12H" && "${INTERVAL}" != "P1D" && "${INTERVAL}" != "FULL" ]]; then
+  echo "error: nerf-az-monitor-metrics-list: option --interval is not an allowed value" >&2
+  echo "  value:   \"${INTERVAL}\"" >&2
+  echo "  allowed: PT1M, PT5M, PT15M, PT30M, PT1H, PT6H, PT12H, P1D, FULL" >&2
+  echo "  hint: use one of the allowed values" >&2
+  exit 1
+fi
+
+if [[ -n "${METRIC}" ]] && [[ "${METRIC}" == -* ]]; then
+  echo "error: nerf-az-monitor-metrics-list: <metric> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${METRIC}" ]]; then
+  echo "error: nerf-az-monitor-metrics-list: missing required argument <metric>" >&2
+  echo "  hint: provide a value for <metric>" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(az monitor metrics list --resource "${RESOURCE_ID}" --metric "${METRIC}" ${AGGREGATION:+"--aggregation"} ${AGGREGATION:+"$AGGREGATION"} ${INTERVAL:+"--interval"} ${INTERVAL:+"$INTERVAL"} ${START_TIME:+"--start-time"} ${START_TIME:+"$START_TIME"} ${END_TIME:+"--end-time"} ${END_TIME:+"$END_TIME"} ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec az monitor metrics list --resource "${RESOURCE_ID}" --metric "${METRIC}" ${AGGREGATION:+"--aggregation"} ${AGGREGATION:+"$AGGREGATION"} ${INTERVAL:+"--interval"} ${INTERVAL:+"$INTERVAL"} ${START_TIME:+"--start-time"} ${START_TIME:+"$START_TIME"} ${END_TIME:+"--end-time"} ${END_TIME:+"$END_TIME"} ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json

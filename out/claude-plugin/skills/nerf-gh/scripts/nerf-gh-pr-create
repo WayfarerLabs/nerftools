@@ -55,6 +55,11 @@ done
 
 TITLE="${1:-}"
 shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-gh-pr-create: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
 
 if [[ -n "${TITLE}" ]] && [[ "${TITLE}" == -* ]]; then
   echo "error: nerf-gh-pr-create: <title> cannot start with '-'" >&2
@@ -69,7 +74,10 @@ if [[ -z "${TITLE}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: gh pr create ${DRAFT:+"--draft"} --title "${TITLE}" ${BODY:+"--body"} ${BODY:+"$BODY"} ${BASE:+"--base"} ${BASE:+"$BASE"} ${REVIEWER:+"--reviewer"} ${REVIEWER:+"$REVIEWER"}"
+  _NERF_DRY_CMD=(gh pr create ${DRAFT:+"--draft"} --title "${TITLE}" ${BODY:+"--body"} ${BODY:+"$BODY"} ${BASE:+"--base"} ${BASE:+"$BASE"} ${REVIEWER:+"--reviewer"} ${REVIEWER:+"$REVIEWER"})
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 

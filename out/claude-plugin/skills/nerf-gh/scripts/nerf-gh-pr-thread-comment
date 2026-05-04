@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# nerf-gh-pr-thread-comment -- Add a top-level conversation comment to a pull request (the issue-style comments shown in the main PR thread). For inline review comments, see gh-pr-review-comments (one review) or gh-pr-inline-comments (across all reviews).
+# Generated from gh manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=remote
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-gh-pr-thread-comment <pr> <body>
+
+Arguments:
+  <pr> (required)
+      PR number, URL, or branch name
+  <body> (required)
+      Comment text
+
+Maps to: gh pr comment <pr> --body <body>
+
+Add a top-level conversation comment to a pull request (the issue-style comments shown in the main PR thread). For inline review comments, see gh-pr-review-comments (one review) or gh-pr-inline-comments (across all reviews)..
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+PR="${1:-}"
+shift 2>/dev/null || true
+BODY="${1:-}"
+shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-gh-pr-thread-comment: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+if [[ -n "${PR}" ]] && [[ "${PR}" == -* ]]; then
+  echo "error: nerf-gh-pr-thread-comment: <pr> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${PR}" ]]; then
+  echo "error: nerf-gh-pr-thread-comment: missing required argument <pr>" >&2
+  echo "  hint: provide a value for <pr>" >&2
+  usage
+fi
+
+if [[ -n "${BODY}" ]] && [[ "${BODY}" == -* ]]; then
+  echo "error: nerf-gh-pr-thread-comment: <body> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${BODY}" ]]; then
+  echo "error: nerf-gh-pr-thread-comment: missing required argument <body>" >&2
+  echo "  hint: provide a value for <body>" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(gh pr comment "${PR}" --body "${BODY}")
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec gh pr comment "${PR}" --body "${BODY}"

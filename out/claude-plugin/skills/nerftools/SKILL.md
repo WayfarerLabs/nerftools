@@ -14,11 +14,22 @@ Each tool's usage line shows the full absolute path to call it. Use that path di
 
 ## Available tool packages
 
+- **nerf-az-account**: Azure subscription and identity context tools
+- **nerf-az-aks**: Azure Kubernetes Service inspection and access tools
 - **nerf-az-boards**: Azure Boards work item tools for querying, viewing, creating, and updating work items
+- **nerf-az-cosmosdb**: Azure Cosmos DB account inspection tools (network access, VNet rules, databases)
+- **nerf-az-keyvault**: Azure Key Vault inspection tools (network ACLs, secret metadata)
+- **nerf-az-monitor**: Azure Monitor inspection tools (activity log, metrics, diagnostic settings)
+- **nerf-az-network**: Azure networking inspection tools (VNets, peerings, NSGs, private endpoints, DNS zones)
 - **nerf-az-pipelines**: Azure Pipelines tools for viewing pipeline status and run history
+- **nerf-az-postgres**: Azure Database for PostgreSQL Flexible Server inspection tools
 - **nerf-az-repos**: Azure Repos tools for viewing and creating pull requests
+- **nerf-az-resource**: Generic Azure resource and resource group inspection tools
+- **nerf-az-role**: Azure RBAC inspection tools (role assignments, role definitions)
+- **nerf-az-storage**: Azure Storage Account inspection tools (network rules, public access, private endpoints)
 - **nerf-gh**: GitHub CLI tools for pull requests, issues, and workflow runs
 - **nerf-git**: Git workflow tools for safe, scoped git operations
+- **nerf-kubectl**: kubectl tools for inspecting and operating on Kubernetes clusters
 - **nerf-nx**: Nx workspace tools for building, testing, and inspecting projects
 - **nerf-pkgrun**: Package runner tools for cspell, markdownlint, and prettier at locked versions
 - **nerf-stdutils**: Safe wrappers for common Unix utilities

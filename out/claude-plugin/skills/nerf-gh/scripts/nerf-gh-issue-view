@@ -34,6 +34,11 @@ done
 
 ISSUE="${1:-}"
 shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-gh-issue-view: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
 
 if [[ -n "${ISSUE}" ]] && [[ "${ISSUE}" == -* ]]; then
   echo "error: nerf-gh-issue-view: <issue> cannot start with '-'" >&2
@@ -48,7 +53,10 @@ if [[ -z "${ISSUE}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: gh issue view "${ISSUE}" --json title,body,state,author,comments,labels,assignees,milestone,createdAt,updatedAt,closedAt"
+  _NERF_DRY_CMD=(gh issue view "${ISSUE}" --json title,body,state,author,comments,labels,assignees,milestone,createdAt,updatedAt,closedAt)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 

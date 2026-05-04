@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# nerf-kubectl-config-use-context -- Switch to a different kubectl context. Marked admin because activating an admin-account context (e.g. one fetched via az-aks-get-credentials-admin) gives every subsequent kubectl call cluster-admin powers; the threat marker on this tool has to be at least as strict as the credential fetch that wrote the context. The harness should default-deny this tool whenever it default- denies az-aks-get-credentials-admin.
+# Generated from kubectl manifest. Do not edit directly.
+# nerf:threat:read=machine
+# nerf:threat:write=admin
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-kubectl-config-use-context <context>
+
+Arguments:
+  <context> (required)
+      Context name (from kubectl-config-get-contexts)
+      Must match: ^[a-zA-Z0-9_]([a-zA-Z0-9._-]*[a-zA-Z0-9_])?$
+
+Maps to: kubectl config use-context <context>
+
+Switch to a different kubectl context. Marked admin because activating an admin-account context (e.g. one fetched via az-aks-get-credentials-admin) gives every subsequent kubectl call cluster-admin powers; the threat marker on this tool has to be at least as strict as the credential fetch that wrote the context. The harness should default-deny this tool whenever it default- denies az-aks-get-credentials-admin..
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+CONTEXT="${1:-}"
+shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-kubectl-config-use-context: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+if [[ -n "${CONTEXT}" ]] && [[ "${CONTEXT}" == -* ]]; then
+  echo "error: nerf-kubectl-config-use-context: <context> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${CONTEXT}" ]]; then
+  echo "error: nerf-kubectl-config-use-context: missing required argument <context>" >&2
+  echo "  hint: provide a value for <context>" >&2
+  usage
+fi
+
+_NERF_PATTERN='^[a-zA-Z0-9_]([a-zA-Z0-9._-]*[a-zA-Z0-9_])?$'
+if [[ -n "${CONTEXT}" ]] && ! [[ "${CONTEXT}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-kubectl-config-use-context: argument <context> does not match required pattern" >&2
+  echo "  value:   \"${CONTEXT}\"" >&2
+  echo "  pattern: ^[a-zA-Z0-9_]([a-zA-Z0-9._-]*[a-zA-Z0-9_])?$" >&2
+  echo "  hint: value must match ^[a-zA-Z0-9_]([a-zA-Z0-9._-]*[a-zA-Z0-9_])?$" >&2
+  exit 1
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(kubectl config use-context "${CONTEXT}")
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec kubectl config use-context "${CONTEXT}"

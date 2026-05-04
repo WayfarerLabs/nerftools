@@ -67,6 +67,11 @@ done
 
 PATTERN="${1:-}"
 shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-grep-recursive-cwd: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
 
 if [[ -n "${PATTERN}" ]] && [[ "${PATTERN}" == -* ]]; then
   echo "error: nerf-grep-recursive-cwd: <pattern> cannot start with '-'" >&2
@@ -81,7 +86,10 @@ if [[ -z "${PATTERN}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: grep -r -n ${IGNORE_CASE:+"--ignore-case"} ${LINE_REGEXP:+"--line-regexp"} ${WORD_REGEXP:+"--word-regexp"} ${COUNT:+"--count"} ${FILES_WITH_MATCHES:+"--files-with-matches"} ${INCLUDE[@]+"${INCLUDE[@]}"} ${EXCLUDE[@]+"${EXCLUDE[@]}"} -- "${PATTERN}" ."
+  _NERF_DRY_CMD=(grep -r -n ${IGNORE_CASE:+"--ignore-case"} ${LINE_REGEXP:+"--line-regexp"} ${WORD_REGEXP:+"--word-regexp"} ${COUNT:+"--count"} ${FILES_WITH_MATCHES:+"--files-with-matches"} ${INCLUDE[@]+"${INCLUDE[@]}"} ${EXCLUDE[@]+"${EXCLUDE[@]}"} -- "${PATTERN}" .)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 

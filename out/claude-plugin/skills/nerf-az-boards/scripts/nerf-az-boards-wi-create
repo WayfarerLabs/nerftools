@@ -65,6 +65,11 @@ TYPE="${1:-}"
 shift 2>/dev/null || true
 TITLE="${1:-}"
 shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-az-boards-wi-create: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
 
 if [[ -n "${TYPE}" ]] && [[ "${TYPE}" == -* ]]; then
   echo "error: nerf-az-boards-wi-create: <type> cannot start with '-'" >&2
@@ -91,7 +96,10 @@ if [[ -z "${TITLE}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: az boards work-item create --type "${TYPE}" --title "${TITLE}" ${ASSIGNED_TO:+"--assigned-to"} ${ASSIGNED_TO:+"$ASSIGNED_TO"} ${AREA:+"--area"} ${AREA:+"$AREA"} ${ITERATION:+"--iteration"} ${ITERATION:+"$ITERATION"} ${DESCRIPTION:+"--description"} ${DESCRIPTION:+"$DESCRIPTION"} ${DISCUSSION:+"--discussion"} ${DISCUSSION:+"$DISCUSSION"} ${FIELDS:+"--fields"} ${FIELDS:+"$FIELDS"} --output json"
+  _NERF_DRY_CMD=(az boards work-item create --type "${TYPE}" --title "${TITLE}" ${ASSIGNED_TO:+"--assigned-to"} ${ASSIGNED_TO:+"$ASSIGNED_TO"} ${AREA:+"--area"} ${AREA:+"$AREA"} ${ITERATION:+"--iteration"} ${ITERATION:+"$ITERATION"} ${DESCRIPTION:+"--description"} ${DESCRIPTION:+"$DESCRIPTION"} ${DISCUSSION:+"--discussion"} ${DISCUSSION:+"$DISCUSSION"} ${FIELDS:+"--fields"} ${FIELDS:+"$FIELDS"} --output json)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 

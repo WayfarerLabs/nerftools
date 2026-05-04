@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# nerf-az-aks-command-invoke -- Run a kubectl/shell command on the cluster via the AKS run-command API. The command runs server-side as a managed pod with cluster-admin service-account bindings, so this is full RCE on whichever cluster --resource-group / --name (and --subscription if set) resolve to. Marked admin: ensure the harness only allows it for clusters the agent is intentionally authorized to operate on.
+# Generated from az-aks manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=admin
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-aks-command-invoke --resource-group|-g <resource_group> --name|-n <cluster_name> [--subscription <subscription>] <command...>
+
+Options:
+  --resource-group, -g <resource_group> (required)
+      Resource group containing the cluster
+  --name, -n <cluster_name> (required)
+      AKS cluster name
+  --subscription <subscription>
+      Subscription name or ID (defaults to active)
+
+Arguments:
+  <command...> (required)
+      Command and args to run on the cluster (e.g. kubectl get pods -A)
+
+Run a kubectl/shell command on the cluster via the AKS run-command API. The command runs server-side as a managed pod with cluster-admin service-account bindings, so this is full RCE on whichever cluster --resource-group / --name (and --subscription if set) resolve to. Marked admin: ensure the harness only allows it for clusters the agent is intentionally authorized to operate on..
+EOF
+  exit 1
+}
+
+RESOURCE_GROUP=""
+CLUSTER_NAME=""
+SUBSCRIPTION=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --resource-group|-g) if [[ -n "${RESOURCE_GROUP}" ]]; then echo "error: --resource-group can only be specified once" >&2; exit 1; fi; RESOURCE_GROUP="$2"; shift 2 ;;
+    --name|-n) if [[ -n "${CLUSTER_NAME}" ]]; then echo "error: --name can only be specified once" >&2; exit 1; fi; CLUSTER_NAME="$2"; shift 2 ;;
+    --subscription) if [[ -n "${SUBSCRIPTION}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+COMMAND=("$@")
+
+if [[ -z "${RESOURCE_GROUP}" ]]; then
+  echo "error: nerf-az-aks-command-invoke: missing required option --resource-group" >&2
+  echo "  hint: provide --resource-group <value>" >&2
+  usage
+fi
+
+if [[ -z "${CLUSTER_NAME}" ]]; then
+  echo "error: nerf-az-aks-command-invoke: missing required option --name" >&2
+  echo "  hint: provide --name <value>" >&2
+  usage
+fi
+
+for _v in "${COMMAND[@]}"; do
+  if [[ "$_v" == "--nerf-dry-run" ]]; then
+    echo "error: nerf-az-aks-command-invoke: --nerf-dry-run inside the command tokens would be a no-op (it is a wrapper flag)" >&2
+    echo "  hint: place --nerf-dry-run before the command tokens" >&2
+    exit 1
+  fi
+done
+
+if [[ ${#COMMAND[@]} -eq 0 ]]; then
+  echo "error: nerf-az-aks-command-invoke: missing required argument <command>" >&2
+  echo "  hint: provide at least one value" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: nerf-az-aks-command-invoke would run inline script"
+  exit 0
+fi
+
+# Shell-quote each token so argv boundaries survive the inner shell on the cluster.
+# Plain "${COMMAND[*]}" would join with space and lose quoting around tokens that
+# contain spaces or shell metacharacters.
+COMMAND_STR=""
+for _t in "${COMMAND[@]}"; do
+  COMMAND_STR+=" $(printf '%q' "$_t")"
+done
+COMMAND_STR="${COMMAND_STR# }"
+ARGS=(az aks command invoke
+  --resource-group "${RESOURCE_GROUP}"
+  --name "${CLUSTER_NAME}"
+  --command "${COMMAND_STR}"
+  --output json)
+if [[ -n "${SUBSCRIPTION}" ]]; then
+  ARGS+=(--subscription "${SUBSCRIPTION}")
+fi
+exec "${ARGS[@]}"

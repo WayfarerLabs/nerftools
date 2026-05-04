@@ -102,7 +102,10 @@ if [[ ${#PATHS[@]} -eq 0 ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: grep -n ${RECURSIVE:+"--recursive"} ${IGNORE_CASE:+"--ignore-case"} ${LINE_REGEXP:+"--line-regexp"} ${WORD_REGEXP:+"--word-regexp"} ${COUNT:+"--count"} ${FILES_WITH_MATCHES:+"--files-with-matches"} ${INCLUDE[@]+"${INCLUDE[@]}"} ${EXCLUDE[@]+"${EXCLUDE[@]}"} -- "${PATTERN}" "${PATHS[@]}""
+  _NERF_DRY_CMD=(grep -n ${RECURSIVE:+"--recursive"} ${IGNORE_CASE:+"--ignore-case"} ${LINE_REGEXP:+"--line-regexp"} ${WORD_REGEXP:+"--word-regexp"} ${COUNT:+"--count"} ${FILES_WITH_MATCHES:+"--files-with-matches"} ${INCLUDE[@]+"${INCLUDE[@]}"} ${EXCLUDE[@]+"${EXCLUDE[@]}"} -- "${PATTERN}" "${PATHS[@]}")
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 

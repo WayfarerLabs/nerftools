@@ -29,7 +29,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: az pipelines list --output json"
+  _NERF_DRY_CMD=(az pipelines list --output json)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 

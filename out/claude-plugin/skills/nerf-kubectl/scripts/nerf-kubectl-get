@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+# nerf-kubectl-get -- Get kubernetes resources. Returns JSON; pipe through jq for extraction. Refuses Secrets -- use kubectl-get-secrets instead, which redacts .data and .stringData.
+# Generated from kubectl manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-kubectl-get [--all-namespaces|-A] [--show-labels] [--namespace|-n <namespace>] [--selector|-l <selector>] [--field-selector <field_selector>] <resource> [<name>]
+
+Switches:
+  --all-namespaces, -A
+      List across all namespaces
+  --show-labels
+      Include labels in the output
+
+Options:
+  --namespace, -n <namespace>
+      Namespace
+      Must match: ^[a-z0-9-]+$
+  --selector, -l <selector>
+      Label selector (e.g. app=foo,env!=prod)
+  --field-selector <field_selector>
+      Field selector (e.g. status.phase=Running)
+
+Arguments:
+  <resource> (required)
+      Resource type (e.g. pods, services, deployments) or "kind/name"
+      Must match: ^[a-z][a-zA-Z0-9.-]*(/[a-zA-Z0-9._-]+)?$
+  <name>
+      Specific resource name (optional)
+      Must match: ^[a-zA-Z0-9._-]+$
+
+Maps to: kubectl get <resource> <name> <namespace> <all_namespaces> <selector> <field_selector> <show_labels> --output json
+
+Get kubernetes resources. Returns JSON; pipe through jq for extraction. Refuses Secrets -- use kubectl-get-secrets instead, which redacts .data and .stringData..
+EOF
+  exit 1
+}
+
+ALL_NAMESPACES=""
+SHOW_LABELS=""
+NAMESPACE=""
+SELECTOR=""
+FIELD_SELECTOR=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --all-namespaces|-A) if [[ -n "${ALL_NAMESPACES}" ]]; then echo "error: --all-namespaces can only be specified once" >&2; exit 1; fi; ALL_NAMESPACES="true"; shift 1 ;;
+    --show-labels) if [[ -n "${SHOW_LABELS}" ]]; then echo "error: --show-labels can only be specified once" >&2; exit 1; fi; SHOW_LABELS="true"; shift 1 ;;
+    --namespace|-n) if [[ -n "${NAMESPACE}" ]]; then echo "error: --namespace can only be specified once" >&2; exit 1; fi; NAMESPACE="$2"; shift 2 ;;
+    --selector|-l) if [[ -n "${SELECTOR}" ]]; then echo "error: --selector can only be specified once" >&2; exit 1; fi; SELECTOR="$2"; shift 2 ;;
+    --field-selector) if [[ -n "${FIELD_SELECTOR}" ]]; then echo "error: --field-selector can only be specified once" >&2; exit 1; fi; FIELD_SELECTOR="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+RESOURCE="${1:-}"
+shift 2>/dev/null || true
+NAME="${1:-}"
+shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-kubectl-get: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+_NERF_PATTERN='^[a-z0-9-]+$'
+if [[ -n "${NAMESPACE}" ]] && ! [[ "${NAMESPACE}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-kubectl-get: option --namespace does not match required pattern" >&2
+  echo "  value:   \"${NAMESPACE}\"" >&2
+  echo "  pattern: ^[a-z0-9-]+$" >&2
+  echo "  hint: value must match ^[a-z0-9-]+$" >&2
+  exit 1
+fi
+
+if [[ -n "${RESOURCE}" ]] && [[ "${RESOURCE}" == -* ]]; then
+  echo "error: nerf-kubectl-get: <resource> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${RESOURCE}" ]]; then
+  echo "error: nerf-kubectl-get: missing required argument <resource>" >&2
+  echo "  hint: provide a value for <resource>" >&2
+  usage
+fi
+
+_NERF_PATTERN='^[a-z][a-zA-Z0-9.-]*(/[a-zA-Z0-9._-]+)?$'
+if [[ -n "${RESOURCE}" ]] && ! [[ "${RESOURCE}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-kubectl-get: argument <resource> does not match required pattern" >&2
+  echo "  value:   \"${RESOURCE}\"" >&2
+  echo "  pattern: ^[a-z][a-zA-Z0-9.-]*(/[a-zA-Z0-9._-]+)?$" >&2
+  echo "  hint: value must match ^[a-z][a-zA-Z0-9.-]*(/[a-zA-Z0-9._-]+)?$" >&2
+  exit 1
+fi
+
+if [[ -n "${NAME}" ]] && [[ "${NAME}" == -* ]]; then
+  echo "error: nerf-kubectl-get: <name> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+_NERF_PATTERN='^[a-zA-Z0-9._-]+$'
+if [[ -n "${NAME}" ]] && ! [[ "${NAME}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-kubectl-get: argument <name> does not match required pattern" >&2
+  echo "  value:   \"${NAME}\"" >&2
+  echo "  pattern: ^[a-zA-Z0-9._-]+$" >&2
+  echo "  hint: value must match ^[a-zA-Z0-9._-]+$" >&2
+  exit 1
+fi
+
+( [[ ! "$(echo "${RESOURCE}" | tr '[:upper:]' '[:lower:]')" =~ ^secrets?($|\.|/) ]] ) || { echo 'error: nerf-kubectl-get: kubectl-get refuses secrets. Use kubectl-get-secrets which redacts .data / .stringData.' >&2; exit 1; }
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(kubectl get "${RESOURCE}" ${NAME:+"$NAME"} ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} ${ALL_NAMESPACES:+"--all-namespaces"} ${SELECTOR:+"--selector"} ${SELECTOR:+"$SELECTOR"} ${FIELD_SELECTOR:+"--field-selector"} ${FIELD_SELECTOR:+"$FIELD_SELECTOR"} ${SHOW_LABELS:+"--show-labels"} --output json)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec kubectl get "${RESOURCE}" ${NAME:+"$NAME"} ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} ${ALL_NAMESPACES:+"--all-namespaces"} ${SELECTOR:+"--selector"} ${SELECTOR:+"$SELECTOR"} ${FIELD_SELECTOR:+"--field-selector"} ${FIELD_SELECTOR:+"$FIELD_SELECTOR"} ${SHOW_LABELS:+"--show-labels"} --output json

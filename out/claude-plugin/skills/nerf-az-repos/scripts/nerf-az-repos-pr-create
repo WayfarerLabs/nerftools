@@ -45,6 +45,11 @@ TITLE="${1:-}"
 shift 2>/dev/null || true
 DESCRIPTION="${1:-}"
 shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-az-repos-pr-create: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
 
 if [[ -n "${TITLE}" ]] && [[ "${TITLE}" == -* ]]; then
   echo "error: nerf-az-repos-pr-create: <title> cannot start with '-'" >&2
@@ -74,7 +79,10 @@ git symbolic-ref --quiet HEAD > /dev/null 2>&1 || { echo 'error: nerf-az-repos-p
 ( [ "$(git symbolic-ref --short HEAD 2>/dev/null)" != "main" ] ) || { echo 'error: nerf-az-repos-pr-create: Cannot create a PR from main. Check out a feature branch first.' >&2; exit 1; }
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: az repos pr create --title "${TITLE}" --description "${DESCRIPTION}" ${DRAFT:+"--draft"} --output json"
+  _NERF_DRY_CMD=(az repos pr create --title "${TITLE}" --description "${DESCRIPTION}" ${DRAFT:+"--draft"} --output json)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 

@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# nerf-az-network-public-ip-list -- List public IP addresses (optionally filtered by resource group)
+# Generated from az-network manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-network-public-ip-list [--resource-group|-g <resource_group>] [--subscription <subscription>]
+
+Options:
+  --resource-group, -g <resource_group>
+      Filter to a specific resource group
+  --subscription <subscription>
+      Subscription name or ID (defaults to active)
+
+Maps to: az network public-ip list <resource_group> <subscription> --output json
+
+List public IP addresses (optionally filtered by resource group).
+EOF
+  exit 1
+}
+
+RESOURCE_GROUP=""
+SUBSCRIPTION=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --resource-group|-g) if [[ -n "${RESOURCE_GROUP}" ]]; then echo "error: --resource-group can only be specified once" >&2; exit 1; fi; RESOURCE_GROUP="$2"; shift 2 ;;
+    --subscription) if [[ -n "${SUBSCRIPTION}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(az network public-ip list ${RESOURCE_GROUP:+"--resource-group"} ${RESOURCE_GROUP:+"$RESOURCE_GROUP"} ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec az network public-ip list ${RESOURCE_GROUP:+"--resource-group"} ${RESOURCE_GROUP:+"$RESOURCE_GROUP"} ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json

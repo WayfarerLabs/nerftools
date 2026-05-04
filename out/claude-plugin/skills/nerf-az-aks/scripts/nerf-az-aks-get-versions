@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# nerf-az-aks-get-versions -- List supported AKS Kubernetes versions in a region
+# Generated from az-aks manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-aks-get-versions [--subscription <subscription>] <location>
+
+Options:
+  --subscription <subscription>
+      Subscription name or ID (defaults to active)
+
+Arguments:
+  <location> (required)
+      Azure region (e.g. eastus2)
+
+Maps to: az aks get-versions --location <location> <subscription> --output json
+
+List supported AKS Kubernetes versions in a region.
+EOF
+  exit 1
+}
+
+SUBSCRIPTION=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --subscription) if [[ -n "${SUBSCRIPTION}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+LOCATION="${1:-}"
+shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-az-aks-get-versions: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+if [[ -n "${LOCATION}" ]] && [[ "${LOCATION}" == -* ]]; then
+  echo "error: nerf-az-aks-get-versions: <location> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${LOCATION}" ]]; then
+  echo "error: nerf-az-aks-get-versions: missing required argument <location>" >&2
+  echo "  hint: provide a value for <location>" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(az aks get-versions --location "${LOCATION}" ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec az aks get-versions --location "${LOCATION}" ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json
