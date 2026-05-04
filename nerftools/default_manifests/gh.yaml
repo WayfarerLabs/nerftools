@@ -113,6 +113,7 @@ tools:
         - gh
         - api
         - --paginate
+        - --slurp
         - "repos/{owner}/{repo}/issues/{{arguments.pr}}/comments"
     arguments:
       pr:
@@ -132,10 +133,12 @@ tools:
       write: none
     script: |
       LIMIT=${LIMIT:-10}
-      # --paginate ensures we get all reviews even on busy PRs; the GitHub API
-      # returns reviews chronologically (oldest first), so without pagination
-      # the latest reviews would be silently missing on PRs with >30 reviews.
-      exec gh api --paginate "repos/{owner}/{repo}/pulls/${PR}/reviews" \
+      # --paginate fetches all pages; --slurp collapses them into a single
+      # JSON array so the jq sort+limit operates over the whole result set
+      # rather than per page (which would only sort within each page).
+      # Without these, the latest reviews would be silently missing on PRs
+      # with >30 reviews because the GitHub API returns them oldest first.
+      exec gh api --paginate --slurp "repos/{owner}/{repo}/pulls/${PR}/reviews" \
         --jq "sort_by(.submitted_at) | reverse | .[:${LIMIT}] | map({id, author: .user.login, state, commit: .commit_id[0:7], submitted_at, body})"
     arguments:
       pr:
@@ -162,6 +165,7 @@ tools:
         - gh
         - api
         - --paginate
+        - --slurp
         - "repos/{owner}/{repo}/pulls/{{arguments.pr}}/reviews/{{arguments.review_id}}/comments"
     arguments:
       pr:
@@ -188,6 +192,7 @@ tools:
         - gh
         - api
         - --paginate
+        - --slurp
         - "repos/{owner}/{repo}/pulls/{{arguments.pr}}/comments"
     arguments:
       pr:
