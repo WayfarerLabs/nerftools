@@ -22,6 +22,11 @@ package:
       review on the PR. Use gh-pr-inline-comments when you want a
       flat list of all line-level comments without iterating reviews.
 
+    Note: inline-comment thread resolution state (resolved /
+    unresolved, set via the "Resolve conversation" button in the UI)
+    is a GraphQL-only field on the GitHub API and is not exposed by
+    this manifest. Use the GitHub UI to verify resolution state.
+
 tools:
   gh-pr-list:
     description: List open pull requests in the current repository

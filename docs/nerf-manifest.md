@@ -235,12 +235,14 @@ Rules:
 - A variadic argument's `{{kind.name}}` must be the last element of `command`.
 - The generated script ends with `exec`, replacing the process.
 
-**Literal command tokens are passed unquoted to bash.** This works for simple words, flags, and
-comma-separated lists (e.g. `--json title,body,state`), which is the vast majority of cases. It
-does *not* work for tokens containing shell metacharacters like `{`, `(`, `[`, `*`, `?`, `~`, `;`,
-`&`, or `|`. If you need such a token (a `jq` expression, a glob pattern that bash should not
+**Literal command tokens are passed unquoted to bash.** The codegen lays each literal token down
+unquoted in the generated `exec` line, so bash sees them raw. This works for simple words, flags,
+and comma-separated lists (e.g. `--json title,body,state`), which covers the vast majority of
+cases. It does *not* work for tokens containing shell-special characters -- braces, parens,
+brackets, glob characters (`*`, `?`), tilde, redirects, pipes, dollar signs, backticks, quotes,
+whitespace, etc. If you need such a token (a `jq` expression, a glob pattern that bash should not
 expand, etc.), or if you need any pipe / redirection / transformation logic, use `script` mode
-instead. Templates are deliberately dumb: one tool, one exec, no shell behind the scenes.
+instead.
 
 Example:
 
