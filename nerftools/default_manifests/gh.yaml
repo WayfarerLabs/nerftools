@@ -112,6 +112,7 @@ tools:
       command:
         - gh
         - api
+        - --paginate
         - "repos/{owner}/{repo}/issues/{{arguments.pr}}/comments"
     arguments:
       pr:
@@ -160,6 +161,7 @@ tools:
       command:
         - gh
         - api
+        - --paginate
         - "repos/{owner}/{repo}/pulls/{{arguments.pr}}/reviews/{{arguments.review_id}}/comments"
     arguments:
       pr:
@@ -185,6 +187,7 @@ tools:
       command:
         - gh
         - api
+        - --paginate
         - "repos/{owner}/{repo}/pulls/{{arguments.pr}}/comments"
     arguments:
       pr:
@@ -237,7 +240,8 @@ tools:
     description: >-
       Add a top-level conversation comment to a pull request (the
       issue-style comments shown in the main PR thread). For inline
-      review comments, use gh-pr-review-* tools.
+      review comments, see gh-pr-review-comments (one review) or
+      gh-pr-inline-comments (across all reviews).
     threat:
       read: remote
       write: remote
