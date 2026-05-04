@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-aks-get-versions -- List supported AKS Kubernetes versions in a region
+# nerf-az-aks-get-versions -- List supported AKS Kubernetes versions in a region.
 # Generated from az-aks manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

@@ -21,7 +21,7 @@ Arguments:
       Pull request ID (numeric)
       Must match: ^[0-9]+$
 
-List all comment threads on a pull request as JSON. Project and repository are auto-detected from the git remote (origin); pass --project to override the project (the repository is always taken from origin)..
+List all comment threads on a pull request as JSON. Project and repository are auto-detected from the git remote (origin); pass --project to override the project (the repository is always taken from origin).
 EOF
   exit 1
 }

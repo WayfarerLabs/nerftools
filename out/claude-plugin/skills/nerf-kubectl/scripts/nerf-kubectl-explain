@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-kubectl-explain -- Show the schema documentation for a resource or field path
+# nerf-kubectl-explain -- Show the schema documentation for a resource or field path.
 # Generated from kubectl manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

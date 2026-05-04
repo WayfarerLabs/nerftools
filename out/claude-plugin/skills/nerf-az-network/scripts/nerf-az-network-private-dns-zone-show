@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-network-private-dns-zone-show -- Show details for a private DNS zone (record count, registration state)
+# nerf-az-network-private-dns-zone-show -- Show details for a private DNS zone (record count, registration state).
 # Generated from az-network manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

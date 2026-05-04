@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-resource-list -- List Azure resources, optionally filtered by group, type, or tag
+# nerf-az-resource-list -- List Azure resources, optionally filtered by group, type, or tag.
 # Generated from az-resource manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

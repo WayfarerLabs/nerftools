@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-pipelines-check -- Show details and the 10 most recent runs for a specific pipeline (by ID)
+# nerf-az-pipelines-check -- Show details and the 10 most recent runs for a specific pipeline (by ID).
 # Generated from az-pipelines manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

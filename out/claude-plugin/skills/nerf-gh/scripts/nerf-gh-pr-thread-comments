@@ -19,7 +19,7 @@ Arguments:
 
 Maps to: gh api --paginate --slurp repos/{owner}/{repo}/issues/<pr>/comments
 
-List top-level conversation comments on a pull request (the issue-style comments shown in the main PR thread, NOT inline review comments). Returns the raw GitHub API response; pipe through jq to project the fields you want..
+List top-level conversation comments on a pull request (the issue-style comments shown in the main PR thread, NOT inline review comments). Returns the raw GitHub API response; pipe through jq to project the fields you want.
 EOF
   exit 1
 }

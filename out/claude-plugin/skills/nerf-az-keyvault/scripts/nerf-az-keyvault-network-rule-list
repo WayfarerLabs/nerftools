@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-keyvault-network-rule-list -- List explicit network rules on a Key Vault
+# nerf-az-keyvault-network-rule-list -- List explicit network rules on a Key Vault.
 # Generated from az-keyvault manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

@@ -23,7 +23,7 @@ Arguments:
 
 Maps to: az pipelines runs show --id <run_id> <project> --output json
 
-Show details for a single pipeline run (by run ID). Returns the run's status, result, source branch, queue/start/finish times, requesting identity, and the URL to view it in the Azure DevOps UI..
+Show details for a single pipeline run (by run ID). Returns the run's status, result, source branch, queue/start/finish times, requesting identity, and the URL to view it in the Azure DevOps UI.
 EOF
   exit 1
 }

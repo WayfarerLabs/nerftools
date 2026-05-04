@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-gh-pr-view -- View full details of a pull request as JSON, including metadata, comments, reviews, and file list
+# nerf-gh-pr-view -- View full details of a pull request as JSON, including metadata, comments, reviews, and file list.
 # Generated from gh manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

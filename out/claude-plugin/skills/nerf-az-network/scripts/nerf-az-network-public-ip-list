@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-network-public-ip-list -- List public IP addresses (optionally filtered by resource group)
+# nerf-az-network-public-ip-list -- List public IP addresses (optionally filtered by resource group).
 # Generated from az-network manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

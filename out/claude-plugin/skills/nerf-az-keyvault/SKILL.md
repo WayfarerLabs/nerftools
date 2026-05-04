@@ -85,7 +85,7 @@ List secret names in a Key Vault (no values).
 
 ## nerf-az-keyvault-secret-stats
 
-Show metadata for a secret value (length, content type, last modified) without revealing any characters. Use last_modified to detect rotation. No content-derived fingerprint is emitted: a deterministic fingerprint would let an agent verify guessed values offline..
+Show metadata for a secret value (length, content type, last modified) without revealing any characters. Use last_modified to detect rotation. No content-derived fingerprint is emitted: a deterministic fingerprint would let an agent verify guessed values offline.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-keyvault/scripts/nerf-az-keyvault-secret-stats [--subscription <subscription>] <vault_name> <name>`
 

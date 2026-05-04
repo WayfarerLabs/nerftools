@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-nx-affected -- List Nx projects affected by current changes compared to main
+# nerf-nx-affected -- List Nx projects affected by current changes compared to main.
 # Generated from nx manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=none

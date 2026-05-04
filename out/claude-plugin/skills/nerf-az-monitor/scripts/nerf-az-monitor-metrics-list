@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-monitor-metrics-list -- Fetch a single metric series for a resource
+# nerf-az-monitor-metrics-list -- Fetch a single metric series for a resource.
 # Generated from az-monitor manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

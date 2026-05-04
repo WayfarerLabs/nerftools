@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-network-private-dns-record-list -- List record sets in a private DNS zone (all record types)
+# nerf-az-network-private-dns-record-list -- List record sets in a private DNS zone (all record types).
 # Generated from az-network manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

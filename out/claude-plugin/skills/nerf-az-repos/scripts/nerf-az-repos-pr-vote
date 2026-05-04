@@ -26,7 +26,7 @@ Arguments:
 
 Maps to: az repos pr set-vote --id <pr_id> --vote <vote> <project> --output json
 
-Cast or reset a review vote on a pull request. The signed-in identity must be a reviewer (or able to add itself) on the PR. Use "reset" to clear an existing vote..
+Cast or reset a review vote on a pull request. The signed-in identity must be a reviewer (or able to add itself) on the PR. Use "reset" to clear an existing vote.
 EOF
   exit 1
 }

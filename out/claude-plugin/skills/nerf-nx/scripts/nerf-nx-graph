@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-nx-graph -- Print the Nx project dependency graph as JSON
+# nerf-nx-graph -- Print the Nx project dependency graph as JSON.
 # Generated from nx manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=none

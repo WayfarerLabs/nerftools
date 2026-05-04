@@ -34,7 +34,7 @@ Stage files or directories for commit.
 
 ## nerf-git-commit
 
-Create a git commit with a Conventional Commits message (changes must already be staged). Format: type[(scope)][!]: description. Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert. Must not contain Co-Authored-By trailers..
+Create a git commit with a Conventional Commits message (changes must already be staged). Format: type[(scope)][!]: description. Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert. Must not contain Co-Authored-By trailers.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-commit [-C <directory>] <message>`
 **Maps to:** `git <directory> commit -m <message>`
@@ -51,7 +51,7 @@ Create a git commit with a Conventional Commits message (changes must already be
 
 ## nerf-git-commit-amend
 
-Amend the most recent commit with a new message. Fails if the commit has already been pushed to any remote. Use only to fix the last local commit..
+Amend the most recent commit with a new message. Fails if the commit has already been pushed to any remote. Use only to fix the last local commit.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-commit-amend [-C <directory>] <message>`
 **Maps to:** `git <directory> commit --amend -m <message>`
@@ -68,7 +68,7 @@ Amend the most recent commit with a new message. Fails if the commit has already
 
 ## nerf-git-revert
 
-Create a new commit that undoes a previous commit. Does not rewrite history -- safe to use on pushed commits..
+Create a new commit that undoes a previous commit. Does not rewrite history -- safe to use on pushed commits.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-revert [-C <directory>] <ref>`
 **Maps to:** `git <directory> revert --no-edit <ref>`
@@ -85,7 +85,7 @@ Create a new commit that undoes a previous commit. Does not rewrite history -- s
 
 ## nerf-git-reset-hard-last
 
-Drop the most recent commit entirely, discarding its changes. Fails if the commit has already been pushed to any remote..
+Drop the most recent commit entirely, discarding its changes. Fails if the commit has already been pushed to any remote.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-reset-hard-last [-C <directory>]`
 **Maps to:** `git <directory> reset --hard HEAD~1`
@@ -132,7 +132,7 @@ Pull the current branch from a remote.
 
 ## nerf-git-push-main
 
-Push the local main branch to a remote including annotated tags (no force push). Use only when the local main branch is ready to publish..
+Push the local main branch to a remote including annotated tags (no force push). Use only when the local main branch is ready to publish.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-push-main [-C <directory>] <remote>`
 **Maps to:** `git <directory> push --follow-tags <remote> main`
@@ -149,7 +149,7 @@ Push the local main branch to a remote including annotated tags (no force push).
 
 ## nerf-git-push-branch
 
-Push the current branch to a remote including annotated tags (no force push). Fails if in detached HEAD state or on main. Do not use on main -- use git-push-main instead..
+Push the current branch to a remote including annotated tags (no force push). Fails if in detached HEAD state or on main. Do not use on main -- use git-push-main instead.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-push-branch [-C <directory>] <remote>`
 **Maps to:** `git <directory> push --follow-tags <remote> HEAD`
@@ -179,7 +179,7 @@ Show a short one-line log of recent commits.
 
 ## nerf-git-tag
 
-Create a new annotated git tag at HEAD. Fails if the tag already exists. No force, delete, or other destructive operations..
+Create a new annotated git tag at HEAD. Fails if the tag already exists. No force, delete, or other destructive operations.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-tag [-C <directory>] <tag>`
 **Maps to:** `git <directory> tag -a <tag> -m <tag>`

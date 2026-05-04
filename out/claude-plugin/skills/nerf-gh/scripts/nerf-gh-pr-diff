@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-gh-pr-diff -- Show the diff for a pull request
+# nerf-gh-pr-diff -- Show the diff for a pull request.
 # Generated from gh manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-nx-show-projects -- List all projects in the Nx workspace (one per line)
+# nerf-nx-show-projects -- List all projects in the Nx workspace (one per line).
 # Generated from nx manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=none

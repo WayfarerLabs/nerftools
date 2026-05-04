@@ -22,7 +22,7 @@ Arguments:
 
 Maps to: gh api --paginate --slurp repos/{owner}/{repo}/pulls/<pr>/reviews/<review_id>/comments
 
-List inline review comments for a single review (by numeric review ID). Use gh-pr-reviews to find review IDs. Returns the raw GitHub API response; pipe through jq to project the fields you want..
+List inline review comments for a single review (by numeric review ID). Use gh-pr-reviews to find review IDs. Returns the raw GitHub API response; pipe through jq to project the fields you want.
 EOF
   exit 1
 }

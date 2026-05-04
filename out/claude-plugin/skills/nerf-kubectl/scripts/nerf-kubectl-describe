@@ -27,7 +27,7 @@ Arguments:
 
 Maps to: kubectl describe <resource> <name> <namespace>
 
-Describe a kubernetes resource. Refuses Secrets because "kubectl describe" prints the metadata.annotations section verbatim, and any Secret created via "kubectl apply" carries a kubectl.kubernetes.io/last-applied-configuration annotation containing the original (base64-encoded) .data, which would bypass kubectl-get-secrets' redaction..
+Describe a kubernetes resource. Refuses Secrets because "kubectl describe" prints the metadata.annotations section verbatim, and any Secret created via "kubectl apply" carries a kubectl.kubernetes.io/last-applied-configuration annotation containing the original (base64-encoded) .data, which would bypass kubectl-get-secrets' redaction.
 EOF
   exit 1
 }

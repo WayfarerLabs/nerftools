@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-tg-init -- Run terragrunt init in the current module directory
+# nerf-tg-init -- Run terragrunt init in the current module directory.
 # Generated from tg manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=workspace

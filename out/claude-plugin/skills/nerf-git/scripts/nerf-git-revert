@@ -22,7 +22,7 @@ Arguments:
 
 Maps to: git <directory> revert --no-edit <ref>
 
-Create a new commit that undoes a previous commit. Does not rewrite history -- safe to use on pushed commits..
+Create a new commit that undoes a previous commit. Does not rewrite history -- safe to use on pushed commits.
 EOF
   exit 1
 }

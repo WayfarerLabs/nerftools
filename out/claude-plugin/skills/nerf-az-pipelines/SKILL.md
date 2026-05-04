@@ -60,7 +60,7 @@ Show details and the 10 most recent runs for a specific pipeline (by ID).
 
 ## nerf-az-pipelines-run-show
 
-Show details for a single pipeline run (by run ID). Returns the run's status, result, source branch, queue/start/finish times, requesting identity, and the URL to view it in the Azure DevOps UI..
+Show details for a single pipeline run (by run ID). Returns the run's status, result, source branch, queue/start/finish times, requesting identity, and the URL to view it in the Azure DevOps UI.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-pipelines/scripts/nerf-az-pipelines-run-show [--project|-p <project>] <run_id>`
 **Maps to:** `az pipelines runs show --id <run_id> <project> --output json`

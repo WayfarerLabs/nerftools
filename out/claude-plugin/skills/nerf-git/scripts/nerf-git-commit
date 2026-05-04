@@ -23,7 +23,7 @@ Arguments:
 
 Maps to: git <directory> commit -m <message>
 
-Create a git commit with a Conventional Commits message (changes must already be staged). Format: type[(scope)][!]: description. Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert. Must not contain Co-Authored-By trailers..
+Create a git commit with a Conventional Commits message (changes must already be staged). Format: type[(scope)][!]: description. Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert. Must not contain Co-Authored-By trailers.
 EOF
   exit 1
 }

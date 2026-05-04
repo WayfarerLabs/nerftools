@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-uv-pytest -- Run pytest with the given arguments
+# nerf-uv-pytest -- Run pytest with the given arguments.
 # Generated from uv manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=workspace

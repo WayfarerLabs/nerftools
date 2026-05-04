@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-gh-run-view -- View details of a workflow run
+# nerf-gh-run-view -- View details of a workflow run.
 # Generated from gh manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

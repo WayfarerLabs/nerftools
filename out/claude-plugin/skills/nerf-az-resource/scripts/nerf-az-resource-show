@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-resource-show -- Show full details for a resource by ID
+# nerf-az-resource-show -- Show full details for a resource by ID.
 # Generated from az-resource manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

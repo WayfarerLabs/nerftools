@@ -36,7 +36,7 @@ Arguments:
 
 Maps to: grep -r -n <ignore_case> <line_regexp> <word_regexp> <count> <files_with_matches> <include> <exclude> -- <pattern> .
 
-Search for a pattern recursively in the current directory. Prints matching lines with filenames and line numbers..
+Search for a pattern recursively in the current directory. Prints matching lines with filenames and line numbers.
 EOF
   exit 1
 }

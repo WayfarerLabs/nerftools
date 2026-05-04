@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-kubectl-config-get-contexts -- List configured kubectl contexts
+# nerf-kubectl-config-get-contexts -- List configured kubectl contexts.
 # Generated from kubectl manifest. Do not edit directly.
 # nerf:threat:read=machine
 # nerf:threat:write=none

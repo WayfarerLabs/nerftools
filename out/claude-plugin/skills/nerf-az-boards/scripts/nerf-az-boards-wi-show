@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-boards-wi-show -- Show details and comments for any work item
+# nerf-az-boards-wi-show -- Show details and comments for any work item.
 # Generated from az-boards manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

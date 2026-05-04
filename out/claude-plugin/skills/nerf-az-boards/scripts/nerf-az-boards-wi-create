@@ -36,7 +36,7 @@ Arguments:
 
 Maps to: az boards work-item create --type <type> --title <title> <assigned_to> <area> <iteration> <description> <discussion> <fields> <project> --output json
 
-Create a new work item. Requires a type and title. Optionally set assigned-to, area, iteration, description, and a discussion comment. Returns the created work item as JSON..
+Create a new work item. Requires a type and title. Optionally set assigned-to, area, iteration, description, and a discussion comment. Returns the created work item as JSON.
 EOF
   exit 1
 }

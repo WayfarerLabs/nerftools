@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-pkgrun-cspell -- Run cspell v8.19.4 with the given arguments (e.g. '**/*.md')
+# nerf-pkgrun-cspell -- Run cspell v8.19.4 with the given arguments (e.g. '**/*.md').
 # Generated from pkgrun manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=none

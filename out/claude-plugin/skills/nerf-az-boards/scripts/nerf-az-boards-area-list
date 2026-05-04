@@ -18,7 +18,7 @@ Options:
 
 Maps to: az boards area project list <project> --output json
 
-List area paths configured in a project. Returns the hierarchical area tree as JSON. Useful for setting --area on az-boards-wi-create or az-boards-wi-update..
+List area paths configured in a project. Returns the hierarchical area tree as JSON. Useful for setting --area on az-boards-wi-create or az-boards-wi-update.
 EOF
   exit 1
 }

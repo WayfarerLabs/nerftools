@@ -30,7 +30,7 @@ Options:
 
 Maps to: az role assignment list <all> <assignee> <scope> <role> <resource_group> <subscription> --output json
 
-List role assignments. Supports filtering by assignee, scope, role, and resource group. --all is recommended when looking up assignments by principal (catches orphaned assignments at any scope)..
+List role assignments. Supports filtering by assignee, scope, role, and resource group. --all is recommended when looking up assignments by principal (catches orphaned assignments at any scope).
 EOF
   exit 1
 }

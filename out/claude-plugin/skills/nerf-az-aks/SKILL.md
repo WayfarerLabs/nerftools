@@ -104,7 +104,7 @@ List supported AKS Kubernetes versions in a region.
 
 ## nerf-az-aks-get-credentials
 
-Merge AKS cluster credentials into ~/.kube/config so kubectl can target the cluster. Uses Azure AD/Entra; subsequent kubectl calls are scoped by the principal's Azure RBAC. Use az-aks-get-credentials-admin (separate tool, admin threat) when you need the local-account cluster-admin kubeconfig..
+Merge AKS cluster credentials into ~/.kube/config so kubectl can target the cluster. Uses Azure AD/Entra; subsequent kubectl calls are scoped by the principal's Azure RBAC. Use az-aks-get-credentials-admin (separate tool, admin threat) when you need the local-account cluster-admin kubeconfig.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-aks/scripts/nerf-az-aks-get-credentials [--overwrite-existing] --resource-group|-g <resource_group> [--subscription <subscription>] <name>`
 **Maps to:** `az aks get-credentials --resource-group <resource_group> --name <name> <overwrite_existing> <subscription>`
@@ -126,7 +126,7 @@ Merge AKS cluster credentials into ~/.kube/config so kubectl can target the clus
 
 ## nerf-az-aks-get-credentials-admin
 
-Fetch the cluster-admin (local accounts) kubeconfig for an AKS cluster. The fetched credentials grant cluster-admin via static client cert and bypass Azure RBAC entirely, so subsequent kubectl calls operate at the cluster-admin level. Marked admin so the harness can default-deny; only use for clusters where local accounts are intentionally enabled and admin access is required..
+Fetch the cluster-admin (local accounts) kubeconfig for an AKS cluster. The fetched credentials grant cluster-admin via static client cert and bypass Azure RBAC entirely, so subsequent kubectl calls operate at the cluster-admin level. Marked admin so the harness can default-deny; only use for clusters where local accounts are intentionally enabled and admin access is required.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-aks/scripts/nerf-az-aks-get-credentials-admin [--overwrite-existing] --resource-group|-g <resource_group> [--subscription <subscription>] <name>`
 **Maps to:** `az aks get-credentials --admin --resource-group <resource_group> --name <name> <overwrite_existing> <subscription>`
@@ -148,7 +148,7 @@ Fetch the cluster-admin (local accounts) kubeconfig for an AKS cluster. The fetc
 
 ## nerf-az-aks-command-invoke
 
-Run a kubectl/shell command on the cluster via the AKS run-command API. The command runs server-side as a managed pod with cluster-admin service-account bindings, so this is full RCE on whichever cluster --resource-group / --name (and --subscription if set) resolve to. Marked admin: ensure the harness only allows it for clusters the agent is intentionally authorized to operate on..
+Run a kubectl/shell command on the cluster via the AKS run-command API. The command runs server-side as a managed pod with cluster-admin service-account bindings, so this is full RCE on whichever cluster --resource-group / --name (and --subscription if set) resolve to. Marked admin: ensure the harness only allows it for clusters the agent is intentionally authorized to operate on.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-aks/scripts/nerf-az-aks-command-invoke --resource-group|-g <resource_group> --name|-n <cluster_name> [--subscription <subscription>] <command...>`
 

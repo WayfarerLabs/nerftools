@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-pipelines-list -- List all pipelines in the Azure DevOps project
+# nerf-az-pipelines-list -- List all pipelines in the Azure DevOps project.
 # Generated from az-pipelines manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

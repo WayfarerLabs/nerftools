@@ -17,7 +17,7 @@ useful for setting --area on create/update.
 
 ## nerf-az-boards-wi-list
 
-Query work items using WIQL (Work Item Query Language). Returns matching work items as JSON. The organization and project are auto-detected from the git remote; pass --project to override..
+Query work items using WIQL (Work Item Query Language). Returns matching work items as JSON. The organization and project are auto-detected from the git remote; pass --project to override.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-boards/scripts/nerf-az-boards-wi-list [--project|-p <project>] <wiql>`
 **Maps to:** `az boards query --wiql <wiql> <project> --output json`
@@ -69,7 +69,7 @@ Add a comment to any work item.
 
 ## nerf-az-boards-wi-update
 
-Update fields on a work item. Supports state, title, assigned-to, area, iteration, and adding a discussion comment. Returns the updated work item as JSON..
+Update fields on a work item. Supports state, title, assigned-to, area, iteration, and adding a discussion comment. Returns the updated work item as JSON.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-boards/scripts/nerf-az-boards-wi-update [--state <state>] [--title <title>] [--assigned-to <assigned_to>] [--area <area>] [--iteration <iteration>] [--discussion <discussion>] [--fields|-f <fields>] [--project|-p <project>] <wi_id>`
 **Maps to:** `az boards work-item update --id <wi_id> <state> <title> <assigned_to> <area> <iteration> <discussion> <fields> <project> --output json`
@@ -93,7 +93,7 @@ Update fields on a work item. Supports state, title, assigned-to, area, iteratio
 
 ## nerf-az-boards-wi-create
 
-Create a new work item. Requires a type and title. Optionally set assigned-to, area, iteration, description, and a discussion comment. Returns the created work item as JSON..
+Create a new work item. Requires a type and title. Optionally set assigned-to, area, iteration, description, and a discussion comment. Returns the created work item as JSON.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-boards/scripts/nerf-az-boards-wi-create [--assigned-to <assigned_to>] [--area <area>] [--iteration <iteration>] [--description|-d <description>] [--discussion <discussion>] [--fields|-f <fields>] [--project|-p <project>] <type> <title>`
 **Maps to:** `az boards work-item create --type <type> --title <title> <assigned_to> <area> <iteration> <description> <discussion> <fields> <project> --output json`
@@ -117,7 +117,7 @@ Create a new work item. Requires a type and title. Optionally set assigned-to, a
 
 ## nerf-az-boards-wi-add-parent
 
-Set the parent of a work item. Takes the child ID and parent ID as positional arguments. Idempotent if the link already exists..
+Set the parent of a work item. Takes the child ID and parent ID as positional arguments. Idempotent if the link already exists.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-boards/scripts/nerf-az-boards-wi-add-parent [--project|-p <project>] <child_id> <parent_id>`
 **Maps to:** `az boards work-item relation add --id <child_id> --relation-type parent --target-id <parent_id> <project> --output json`
@@ -170,7 +170,7 @@ Add a comment to a work item assigned to you.
 
 ## nerf-az-boards-area-list
 
-List area paths configured in a project. Returns the hierarchical area tree as JSON. Useful for setting --area on az-boards-wi-create or az-boards-wi-update..
+List area paths configured in a project. Returns the hierarchical area tree as JSON. Useful for setting --area on az-boards-wi-create or az-boards-wi-update.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-boards/scripts/nerf-az-boards-area-list [--project|-p <project>]`
 **Maps to:** `az boards area project list <project> --output json`

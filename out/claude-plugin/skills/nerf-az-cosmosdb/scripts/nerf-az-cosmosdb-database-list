@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-cosmosdb-database-list -- List SQL databases in a Cosmos DB account
+# nerf-az-cosmosdb-database-list -- List SQL databases in a Cosmos DB account.
 # Generated from az-cosmosdb manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

@@ -30,7 +30,7 @@ Arguments:
 
 Maps to: timeout <timeout_seconds> kubectl port-forward <namespace> <target> <ports>
 
-Forward a local port to a pod or service in the cluster. Wrapped with coreutils "timeout" so unattended runs cannot hang -- the forward is terminated after --timeout-seconds (required). Note that the wrapper exits 124 (the standard "timeout" exit code) when the time bound is reached; this is the expected success path for unattended diagnostics..
+Forward a local port to a pod or service in the cluster. Wrapped with coreutils "timeout" so unattended runs cannot hang -- the forward is terminated after --timeout-seconds (required). Note that the wrapper exits 124 (the standard "timeout" exit code) when the time bound is reached; this is the expected success path for unattended diagnostics.
 EOF
   exit 1
 }

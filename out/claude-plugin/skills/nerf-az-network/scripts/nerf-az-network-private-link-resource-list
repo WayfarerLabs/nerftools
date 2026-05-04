@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-network-private-link-resource-list -- List groupIds a resource exposes for private endpoints (e.g. vault, sqlServer)
+# nerf-az-network-private-link-resource-list -- List groupIds a resource exposes for private endpoints (e.g. vault, sqlServer).
 # Generated from az-network manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

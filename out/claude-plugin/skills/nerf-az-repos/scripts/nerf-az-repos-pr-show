@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-repos-pr-show -- Show full details for a pull request as JSON
+# nerf-az-repos-pr-show -- Show full details for a pull request as JSON.
 # Generated from az-repos manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

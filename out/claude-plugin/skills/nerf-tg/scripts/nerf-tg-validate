@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-tg-validate -- Run terragrunt validate in the current module directory
+# nerf-tg-validate -- Run terragrunt validate in the current module directory.
 # Generated from tg manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=none

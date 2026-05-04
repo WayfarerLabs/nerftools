@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-keyvault-list -- List Key Vaults (optionally filtered by resource group)
+# nerf-az-keyvault-list -- List Key Vaults (optionally filtered by resource group).
 # Generated from az-keyvault manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

@@ -37,7 +37,7 @@ Arguments:
 
 Maps to: az boards work-item update --id <wi_id> <state> <title> <assigned_to> <area> <iteration> <discussion> <fields> <project> --output json
 
-Update fields on a work item. Supports state, title, assigned-to, area, iteration, and adding a discussion comment. Returns the updated work item as JSON..
+Update fields on a work item. Supports state, title, assigned-to, area, iteration, and adding a discussion comment. Returns the updated work item as JSON.
 EOF
   exit 1
 }

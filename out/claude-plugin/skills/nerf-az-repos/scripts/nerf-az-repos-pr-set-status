@@ -26,7 +26,7 @@ Arguments:
 
 Maps to: az repos pr update --id <pr_id> --status <status> <project> --output json
 
-Update a pull request's lifecycle status. Use "abandoned" to close a PR without merging, "active" to reactivate an abandoned PR, or "completed" to merge it (Azure DevOps will reject "completed" if required approvals or policies are not satisfied)..
+Update a pull request's lifecycle status. Use "abandoned" to close a PR without merging, "active" to reactivate an abandoned PR, or "completed" to merge it (Azure DevOps will reject "completed" if required approvals or policies are not satisfied).
 EOF
   exit 1
 }

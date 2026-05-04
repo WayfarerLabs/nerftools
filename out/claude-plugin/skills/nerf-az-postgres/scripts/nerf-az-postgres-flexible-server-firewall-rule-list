@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-postgres-flexible-server-firewall-rule-list -- List firewall rules on a PostgreSQL Flexible Server
+# nerf-az-postgres-flexible-server-firewall-rule-list -- List firewall rules on a PostgreSQL Flexible Server.
 # Generated from az-postgres manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

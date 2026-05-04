@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-kubectl-config-current-context -- Show the currently active kubectl context
+# nerf-kubectl-config-current-context -- Show the currently active kubectl context.
 # Generated from kubectl manifest. Do not edit directly.
 # nerf:threat:read=machine
 # nerf:threat:write=none

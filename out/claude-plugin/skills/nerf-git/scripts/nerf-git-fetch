@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-git-fetch -- Fetch all branches and tags from a remote
+# nerf-git-fetch -- Fetch all branches and tags from a remote.
 # Generated from git manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=workspace

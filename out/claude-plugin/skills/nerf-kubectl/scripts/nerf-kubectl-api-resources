@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-kubectl-api-resources -- List API resources supported by the cluster (resource names only)
+# nerf-kubectl-api-resources -- List API resources supported by the cluster (resource names only).
 # Generated from kubectl manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

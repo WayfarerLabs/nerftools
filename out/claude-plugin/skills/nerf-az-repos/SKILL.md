@@ -53,7 +53,7 @@ Show full details for a pull request as JSON.
 
 ## nerf-az-repos-pr-comments
 
-List all comment threads on a pull request as JSON. Project and repository are auto-detected from the git remote (origin); pass --project to override the project (the repository is always taken from origin)..
+List all comment threads on a pull request as JSON. Project and repository are auto-detected from the git remote (origin); pass --project to override the project (the repository is always taken from origin).
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-repos/scripts/nerf-az-repos-pr-comments [--project|-p <project>] <pr_id>`
 
@@ -69,7 +69,7 @@ List all comment threads on a pull request as JSON. Project and repository are a
 
 ## nerf-az-repos-pr-create
 
-Create a pull request from the current branch to the default target branch. Source branch is auto-detected from HEAD. Cannot be run from detached HEAD or from main..
+Create a pull request from the current branch to the default target branch. Source branch is auto-detected from HEAD. Cannot be run from detached HEAD or from main.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-repos/scripts/nerf-az-repos-pr-create [--draft] [--project|-p <project>] <title> <description>`
 **Maps to:** `az repos pr create --title <title> --description <description> <draft> <project> --output json`
@@ -91,7 +91,7 @@ Create a pull request from the current branch to the default target branch. Sour
 
 ## nerf-az-repos-pr-set-status
 
-Update a pull request's lifecycle status. Use "abandoned" to close a PR without merging, "active" to reactivate an abandoned PR, or "completed" to merge it (Azure DevOps will reject "completed" if required approvals or policies are not satisfied)..
+Update a pull request's lifecycle status. Use "abandoned" to close a PR without merging, "active" to reactivate an abandoned PR, or "completed" to merge it (Azure DevOps will reject "completed" if required approvals or policies are not satisfied).
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-repos/scripts/nerf-az-repos-pr-set-status [--project|-p <project>] <pr_id> <status>`
 **Maps to:** `az repos pr update --id <pr_id> --status <status> <project> --output json`
@@ -109,7 +109,7 @@ Update a pull request's lifecycle status. Use "abandoned" to close a PR without 
 
 ## nerf-az-repos-pr-vote
 
-Cast or reset a review vote on a pull request. The signed-in identity must be a reviewer (or able to add itself) on the PR. Use "reset" to clear an existing vote..
+Cast or reset a review vote on a pull request. The signed-in identity must be a reviewer (or able to add itself) on the PR. Use "reset" to clear an existing vote.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-repos/scripts/nerf-az-repos-pr-vote [--project|-p <project>] <pr_id> <vote>`
 **Maps to:** `az repos pr set-vote --id <pr_id> --vote <vote> <project> --output json`

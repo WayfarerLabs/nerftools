@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-uv-mypy -- Run mypy type checker with the given arguments
+# nerf-uv-mypy -- Run mypy type checker with the given arguments.
 # Generated from uv manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=none

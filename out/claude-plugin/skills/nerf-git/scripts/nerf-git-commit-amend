@@ -23,7 +23,7 @@ Arguments:
 
 Maps to: git <directory> commit --amend -m <message>
 
-Amend the most recent commit with a new message. Fails if the commit has already been pushed to any remote. Use only to fix the last local commit..
+Amend the most recent commit with a new message. Fails if the commit has already been pushed to any remote. Use only to fix the last local commit.
 EOF
   exit 1
 }

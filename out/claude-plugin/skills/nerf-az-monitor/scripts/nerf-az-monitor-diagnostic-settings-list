@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-monitor-diagnostic-settings-list -- List diagnostic settings on a resource (what is wired to Log Analytics, Event Hubs, Storage)
+# nerf-az-monitor-diagnostic-settings-list -- List diagnostic settings on a resource (what is wired to Log Analytics, Event Hubs, Storage).
 # Generated from az-monitor manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

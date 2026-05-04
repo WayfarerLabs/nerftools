@@ -22,7 +22,7 @@ Arguments:
 
 Maps to: az boards query --wiql <wiql> <project> --output json
 
-Query work items using WIQL (Work Item Query Language). Returns matching work items as JSON. The organization and project are auto-detected from the git remote; pass --project to override..
+Query work items using WIQL (Work Item Query Language). Returns matching work items as JSON. The organization and project are auto-detected from the git remote; pass --project to override.
 EOF
   exit 1
 }

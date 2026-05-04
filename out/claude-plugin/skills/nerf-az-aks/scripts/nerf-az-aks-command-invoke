@@ -24,7 +24,7 @@ Arguments:
   <command...> (required)
       Command and args to run on the cluster (e.g. kubectl get pods -A)
 
-Run a kubectl/shell command on the cluster via the AKS run-command API. The command runs server-side as a managed pod with cluster-admin service-account bindings, so this is full RCE on whichever cluster --resource-group / --name (and --subscription if set) resolve to. Marked admin: ensure the harness only allows it for clusters the agent is intentionally authorized to operate on..
+Run a kubectl/shell command on the cluster via the AKS run-command API. The command runs server-side as a managed pod with cluster-admin service-account bindings, so this is full RCE on whichever cluster --resource-group / --name (and --subscription if set) resolve to. Marked admin: ensure the harness only allows it for clusters the agent is intentionally authorized to operate on.
 EOF
   exit 1
 }

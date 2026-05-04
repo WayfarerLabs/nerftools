@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-pkgrun-prettier -- Run prettier v3.8.1 with the given arguments (e.g. --write '**/*.ts')
+# nerf-pkgrun-prettier -- Run prettier v3.8.1 with the given arguments (e.g. --write '**/*.ts').
 # Generated from pkgrun manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=workspace

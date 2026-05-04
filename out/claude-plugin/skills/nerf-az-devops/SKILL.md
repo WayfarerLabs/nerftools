@@ -15,7 +15,7 @@ is not the one you want to operate on by default.
 
 ## nerf-az-devops-set-default-project
 
-Set the default Azure DevOps project for subsequent az boards, az pipelines, and az repos commands. Persists to the user's az config (~/.azure). Useful when the git remote's project is not the project you want to operate on by default..
+Set the default Azure DevOps project for subsequent az boards, az pipelines, and az repos commands. Persists to the user's az config (~/.azure). Useful when the git remote's project is not the project you want to operate on by default.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-devops/scripts/nerf-az-devops-set-default-project <project>`
 **Maps to:** `az devops configure --defaults project=<project>`

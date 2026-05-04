@@ -28,7 +28,7 @@ Arguments:
 
 Maps to: az repos pr create --title <title> --description <description> <draft> <project> --output json
 
-Create a pull request from the current branch to the default target branch. Source branch is auto-detected from HEAD. Cannot be run from detached HEAD or from main..
+Create a pull request from the current branch to the default target branch. Source branch is auto-detected from HEAD. Cannot be run from detached HEAD or from main.
 EOF
   exit 1
 }

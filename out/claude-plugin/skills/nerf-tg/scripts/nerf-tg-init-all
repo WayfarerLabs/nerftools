@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-tg-init-all -- Run terragrunt init across all units under the current directory
+# nerf-tg-init-all -- Run terragrunt init across all units under the current directory.
 # Generated from tg manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=workspace

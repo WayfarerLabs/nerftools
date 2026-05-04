@@ -26,7 +26,7 @@ Arguments:
 
 Maps to: az boards work-item relation add --id <child_id> --relation-type parent --target-id <parent_id> <project> --output json
 
-Set the parent of a work item. Takes the child ID and parent ID as positional arguments. Idempotent if the link already exists..
+Set the parent of a work item. Takes the child ID and parent ID as positional arguments. Idempotent if the link already exists.
 EOF
   exit 1
 }

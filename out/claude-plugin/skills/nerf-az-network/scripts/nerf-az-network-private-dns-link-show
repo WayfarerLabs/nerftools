@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-network-private-dns-link-show -- Show details for a single virtual network link on a private DNS zone
+# nerf-az-network-private-dns-link-show -- Show details for a single virtual network link on a private DNS zone.
 # Generated from az-network manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

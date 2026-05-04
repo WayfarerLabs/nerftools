@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-pipelines-runs -- List the 20 most recent pipeline runs across all pipelines
+# nerf-az-pipelines-runs -- List the 20 most recent pipeline runs across all pipelines.
 # Generated from az-pipelines manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

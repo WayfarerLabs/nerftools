@@ -23,7 +23,7 @@ Arguments:
 
 Maps to: git <directory> tag -a <tag> -m <tag>
 
-Create a new annotated git tag at HEAD. Fails if the tag already exists. No force, delete, or other destructive operations..
+Create a new annotated git tag at HEAD. Fails if the tag already exists. No force, delete, or other destructive operations.
 EOF
   exit 1
 }

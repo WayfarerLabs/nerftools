@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-network-public-ip-show -- Show details for a public IP (allocation method, IP address, associated resource)
+# nerf-az-network-public-ip-show -- Show details for a public IP (allocation method, IP address, associated resource).
 # Generated from az-network manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

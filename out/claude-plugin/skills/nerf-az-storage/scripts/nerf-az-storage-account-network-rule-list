@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-storage-account-network-rule-list -- List explicit network rules on a storage account
+# nerf-az-storage-account-network-rule-list -- List explicit network rules on a storage account.
 # Generated from az-storage manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

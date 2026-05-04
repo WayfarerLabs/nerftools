@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-network-nsg-show -- Show NSG details including all security rules
+# nerf-az-network-nsg-show -- Show NSG details including all security rules.
 # Generated from az-network manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

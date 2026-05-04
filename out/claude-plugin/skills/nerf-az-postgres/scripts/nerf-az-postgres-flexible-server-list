@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-postgres-flexible-server-list -- List PostgreSQL Flexible Servers (optionally filtered by resource group)
+# nerf-az-postgres-flexible-server-list -- List PostgreSQL Flexible Servers (optionally filtered by resource group).
 # Generated from az-postgres manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none

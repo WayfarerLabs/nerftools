@@ -19,7 +19,7 @@ Arguments:
 
 Maps to: kubectl config use-context <context>
 
-Switch to a different kubectl context. Marked admin because activating an admin-account context (e.g. one fetched via az-aks-get-credentials-admin) gives every subsequent kubectl call cluster-admin powers; the threat marker on this tool has to be at least as strict as the credential fetch that wrote the context. The harness should default-deny this tool whenever it default- denies az-aks-get-credentials-admin..
+Switch to a different kubectl context. Marked admin because activating an admin-account context (e.g. one fetched via az-aks-get-credentials-admin) gives every subsequent kubectl call cluster-admin powers; the threat marker on this tool has to be at least as strict as the credential fetch that wrote the context. The harness should default-deny this tool whenever it default- denies az-aks-get-credentials-admin.
 EOF
   exit 1
 }
