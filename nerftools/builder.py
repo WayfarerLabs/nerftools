@@ -240,6 +240,9 @@ def _var_declarations(tool_spec: ToolSpec) -> str:
             lines.append(f"{var}=()")
         elif opt.default is not None:
             lines.append(f"{var}='{_shell_escape_sq(opt.default)}'")
+            # Separate "user-set" marker so the duplicate-check distinguishes
+            # the default value from a user-provided value.
+            lines.append(f'_{var}_SET=""')
         else:
             lines.append(f'{var}=""')
     return "\n".join(lines)
@@ -265,6 +268,14 @@ def _flag_parser(tool_spec: ToolSpec, *, has_positional: bool, is_passthrough: b
         pattern = f"{opt.flag}|{opt.short}" if opt.short else opt.flag
         if opt.repeatable:
             cases.append(f'    {pattern}) {var}+=("{opt.flag}" "$2"); shift 2 ;;')
+        elif opt.default is not None:
+            # Use the separate "user-set" marker so the default seed value
+            # doesn't trip the duplicate-check on the first --flag invocation.
+            dup_check = (
+                f'if [[ -n "${{_{var}_SET}}" ]]; then '
+                f'echo "error: {opt.flag} can only be specified once" >&2; exit 1; fi; '
+            )
+            cases.append(f'    {pattern}) {dup_check}{var}="$2"; _{var}_SET=true; shift 2 ;;')
         else:
             dup_check = (
                 f'if [[ -n "${{{var}}}" ]]; then '

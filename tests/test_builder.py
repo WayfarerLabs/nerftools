@@ -168,6 +168,32 @@ def test_option_default_seeds_bash_variable() -> None:
     assert 'REMOTE=""' not in script
 
 
+def test_option_default_does_not_trigger_dup_check_on_first_use(tmp_path: Path) -> None:
+    """Regression: when an option has a default, the bash variable is initialized
+    non-empty, but the duplicate-detection check must still allow the user to
+    pass --flag once. Uses a separate "_<VAR>_SET" marker.
+    """
+    options = {"remote": OptionSpec(flag="--remote", description="Remote.", default="origin")}
+    tool = _template_tool(["echo", "{{options.remote}}"], options=options)
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+    # First use of the flag with a non-default value must succeed
+    result = subprocess.run(
+        [str(script_path), "--nerf-dry-run", "--remote", "upstream"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "upstream" in result.stdout
+    # But passing the flag twice must still be rejected
+    result = subprocess.run(
+        [str(script_path), "--remote", "a", "--remote", "b"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode != 0
+    assert "can only be specified once" in result.stderr
+
+
 def test_option_default_with_special_chars_is_quoted(tmp_path: Path) -> None:
     """Defaults with shell-special characters must be safely single-quoted."""
     options = {"x": OptionSpec(flag="--x", description="X.", default="it's tricky")}
