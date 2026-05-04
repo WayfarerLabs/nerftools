@@ -113,7 +113,7 @@ def test_generated_header_comment() -> None:
 
 def test_threat_metadata_in_header() -> None:
     tool = ToolSpec(
-        description="x.",
+        description="A test tool.",
         threat=ThreatSpec(read=ThreatLevel.WORKSPACE, write=ThreatLevel.REMOTE),
         template=TemplateSpec(command=("echo",)),
     )
