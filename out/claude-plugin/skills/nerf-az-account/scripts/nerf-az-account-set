@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# nerf-az-account-set -- Switch the active Azure subscription for this session
+# Generated from az-account manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=machine
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-account-set <subscription>
+
+Arguments:
+  <subscription> (required)
+      Subscription name or ID
+
+Maps to: az account set --subscription <subscription>
+
+Switch the active Azure subscription for this session.
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+SUBSCRIPTION="${1:-}"
+shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-az-account-set: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+if [[ -n "${SUBSCRIPTION}" ]] && [[ "${SUBSCRIPTION}" == -* ]]; then
+  echo "error: nerf-az-account-set: <subscription> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${SUBSCRIPTION}" ]]; then
+  echo "error: nerf-az-account-set: missing required argument <subscription>" >&2
+  echo "  hint: provide a value for <subscription>" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(az account set --subscription "${SUBSCRIPTION}")
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec az account set --subscription "${SUBSCRIPTION}"

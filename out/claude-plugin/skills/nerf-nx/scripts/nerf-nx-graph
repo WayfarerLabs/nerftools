@@ -31,7 +31,10 @@ done
 test -f nx.json > /dev/null 2>&1 || { echo 'error: nerf-nx-graph: Not in an Nx workspace root (nx.json not found). Run from the repo root.' >&2; exit 1; }
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: npx nx graph --print-affected"
+  _NERF_DRY_CMD=(npx nx graph --print-affected)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 

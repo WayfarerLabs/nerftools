@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# nerf-az-role-assignment-list -- List role assignments. Supports filtering by assignee, scope, role, and resource group. --all is recommended when looking up assignments by principal (catches orphaned assignments at any scope).
+# Generated from az-role manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-role-assignment-list [--all] [--assignee <assignee>] [--scope <scope>] [--role <role>] [--resource-group|-g <resource_group>] [--subscription <subscription>]
+
+Switches:
+  --all
+      Show assignments at all scopes (recommended with --assignee)
+
+Options:
+  --assignee <assignee>
+      User UPN, group object ID, or service principal object ID
+  --scope <scope>
+      Scope to filter by (full Azure resource ID)
+  --role <role>
+      Role name or definition ID to filter by
+  --resource-group, -g <resource_group>
+      Filter to a specific resource group
+  --subscription <subscription>
+      Subscription name or ID (defaults to active)
+
+Maps to: az role assignment list <all> <assignee> <scope> <role> <resource_group> <subscription> --output json
+
+List role assignments. Supports filtering by assignee, scope, role, and resource group. --all is recommended when looking up assignments by principal (catches orphaned assignments at any scope)..
+EOF
+  exit 1
+}
+
+ALL=""
+ASSIGNEE=""
+SCOPE=""
+ROLE=""
+RESOURCE_GROUP=""
+SUBSCRIPTION=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --all) if [[ -n "${ALL}" ]]; then echo "error: --all can only be specified once" >&2; exit 1; fi; ALL="true"; shift 1 ;;
+    --assignee) if [[ -n "${ASSIGNEE}" ]]; then echo "error: --assignee can only be specified once" >&2; exit 1; fi; ASSIGNEE="$2"; shift 2 ;;
+    --scope) if [[ -n "${SCOPE}" ]]; then echo "error: --scope can only be specified once" >&2; exit 1; fi; SCOPE="$2"; shift 2 ;;
+    --role) if [[ -n "${ROLE}" ]]; then echo "error: --role can only be specified once" >&2; exit 1; fi; ROLE="$2"; shift 2 ;;
+    --resource-group|-g) if [[ -n "${RESOURCE_GROUP}" ]]; then echo "error: --resource-group can only be specified once" >&2; exit 1; fi; RESOURCE_GROUP="$2"; shift 2 ;;
+    --subscription) if [[ -n "${SUBSCRIPTION}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(az role assignment list ${ALL:+"--all"} ${ASSIGNEE:+"--assignee"} ${ASSIGNEE:+"$ASSIGNEE"} ${SCOPE:+"--scope"} ${SCOPE:+"$SCOPE"} ${ROLE:+"--role"} ${ROLE:+"$ROLE"} ${RESOURCE_GROUP:+"--resource-group"} ${RESOURCE_GROUP:+"$RESOURCE_GROUP"} ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec az role assignment list ${ALL:+"--all"} ${ASSIGNEE:+"--assignee"} ${ASSIGNEE:+"$ASSIGNEE"} ${SCOPE:+"--scope"} ${SCOPE:+"$SCOPE"} ${ROLE:+"--role"} ${ROLE:+"$ROLE"} ${RESOURCE_GROUP:+"--resource-group"} ${RESOURCE_GROUP:+"$RESOURCE_GROUP"} ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json

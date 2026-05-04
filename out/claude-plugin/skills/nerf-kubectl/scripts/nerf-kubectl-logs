@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# nerf-kubectl-logs -- Fetch pod logs (no follow). Use --tail to cap the line count. Combine with kubectl-get to poll if you need updates.
+# Generated from kubectl manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-kubectl-logs [--previous|-p] [--namespace|-n <namespace>] [--container|-c <container>] [--tail <tail>] <pod>
+
+Switches:
+  --previous, -p
+      Get logs from a previous container instance (after a crash/restart)
+
+Options:
+  --namespace, -n <namespace>
+      Namespace
+      Must match: ^[a-z0-9-]+$
+  --container, -c <container>
+      Container name (when the pod has multiple)
+      Must match: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+  --tail <tail>
+      Number of recent lines to fetch
+      Must match: ^[0-9]+$
+
+Arguments:
+  <pod> (required)
+      Pod name (or "pod/<name>" form)
+      Must match: ^(pod/)?[a-z0-9]([-a-z0-9.]*[a-z0-9])?$
+
+Maps to: kubectl logs <pod> <namespace> <container> <tail> <previous>
+
+Fetch pod logs (no follow). Use --tail to cap the line count. Combine with kubectl-get to poll if you need updates..
+EOF
+  exit 1
+}
+
+PREVIOUS=""
+NAMESPACE=""
+CONTAINER=""
+TAIL=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --previous|-p) if [[ -n "${PREVIOUS}" ]]; then echo "error: --previous can only be specified once" >&2; exit 1; fi; PREVIOUS="true"; shift 1 ;;
+    --namespace|-n) if [[ -n "${NAMESPACE}" ]]; then echo "error: --namespace can only be specified once" >&2; exit 1; fi; NAMESPACE="$2"; shift 2 ;;
+    --container|-c) if [[ -n "${CONTAINER}" ]]; then echo "error: --container can only be specified once" >&2; exit 1; fi; CONTAINER="$2"; shift 2 ;;
+    --tail) if [[ -n "${TAIL}" ]]; then echo "error: --tail can only be specified once" >&2; exit 1; fi; TAIL="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+POD="${1:-}"
+shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-kubectl-logs: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+_NERF_PATTERN='^[a-z0-9-]+$'
+if [[ -n "${NAMESPACE}" ]] && ! [[ "${NAMESPACE}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-kubectl-logs: option --namespace does not match required pattern" >&2
+  echo "  value:   \"${NAMESPACE}\"" >&2
+  echo "  pattern: ^[a-z0-9-]+$" >&2
+  echo "  hint: value must match ^[a-z0-9-]+$" >&2
+  exit 1
+fi
+
+_NERF_PATTERN='^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+if [[ -n "${CONTAINER}" ]] && ! [[ "${CONTAINER}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-kubectl-logs: option --container does not match required pattern" >&2
+  echo "  value:   \"${CONTAINER}\"" >&2
+  echo "  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" >&2
+  echo "  hint: value must match ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" >&2
+  exit 1
+fi
+
+_NERF_PATTERN='^[0-9]+$'
+if [[ -n "${TAIL}" ]] && ! [[ "${TAIL}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-kubectl-logs: option --tail does not match required pattern" >&2
+  echo "  value:   \"${TAIL}\"" >&2
+  echo "  pattern: ^[0-9]+$" >&2
+  echo "  hint: value must match ^[0-9]+$" >&2
+  exit 1
+fi
+
+if [[ -n "${POD}" ]] && [[ "${POD}" == -* ]]; then
+  echo "error: nerf-kubectl-logs: <pod> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${POD}" ]]; then
+  echo "error: nerf-kubectl-logs: missing required argument <pod>" >&2
+  echo "  hint: provide a value for <pod>" >&2
+  usage
+fi
+
+_NERF_PATTERN='^(pod/)?[a-z0-9]([-a-z0-9.]*[a-z0-9])?$'
+if [[ -n "${POD}" ]] && ! [[ "${POD}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-kubectl-logs: argument <pod> does not match required pattern" >&2
+  echo "  value:   \"${POD}\"" >&2
+  echo "  pattern: ^(pod/)?[a-z0-9]([-a-z0-9.]*[a-z0-9])?$" >&2
+  echo "  hint: value must match ^(pod/)?[a-z0-9]([-a-z0-9.]*[a-z0-9])?$" >&2
+  exit 1
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(kubectl logs "${POD}" ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} ${CONTAINER:+"--container"} ${CONTAINER:+"$CONTAINER"} ${TAIL:+"--tail"} ${TAIL:+"$TAIL"} ${PREVIOUS:+"--previous"})
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec kubectl logs "${POD}" ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} ${CONTAINER:+"--container"} ${CONTAINER:+"$CONTAINER"} ${TAIL:+"--tail"} ${TAIL:+"$TAIL"} ${PREVIOUS:+"--previous"}

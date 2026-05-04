@@ -10,22 +10,29 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-git-tag <tag>
+Usage: nerf-git-tag [-C <directory>] <tag>
+
+Options:
+  -C <directory>
+      Subdirectory of the workspace to run git in (must be under cwd)
 
 Arguments:
   <tag> (required)
       Tag name to create (e.g. v1.2.3)
       Must match: ^[a-zA-Z0-9._/-]+$
 
-Maps to: git tag -a <tag> -m <tag>
+Maps to: git <directory> tag -a <tag> -m <tag>
 
 Create a new annotated git tag at HEAD. Fails if the tag already exists. No force, delete, or other destructive operations..
 EOF
   exit 1
 }
 
+DIRECTORY=""
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    -C) if [[ -n "${DIRECTORY}" ]]; then echo "error: -C can only be specified once" >&2; exit 1; fi; DIRECTORY="$2"; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -35,6 +42,92 @@ done
 
 TAG="${1:-}"
 shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-git-tag: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+_nerf_check_path() {
+  local _label=$1 _input=$2 _tests=$3
+  local _cwd _canonical
+  case "$_input" in
+    *$'\n'*|*$'\r'*|*$'\t'*)
+      echo "error: nerf-git-tag: ${_label}: contains illegal control character" >&2
+      echo "  hint: paths must not contain newlines, carriage returns, or tabs" >&2
+      return 1 ;;
+  esac
+  _cwd=$(realpath -- "$PWD") || {
+    echo "error: nerf-git-tag: failed to canonicalize cwd '$PWD'" >&2
+    echo "  hint: invoke from a valid directory" >&2
+    return 1
+  }
+  _canonical=$(realpath -m -- "$_input") || {
+    echo "error: nerf-git-tag: ${_label}: failed to canonicalize '${_input}'" >&2
+    echo "  hint: pass a syntactically valid path" >&2
+    return 1
+  }
+  if [[ ",$_tests," == *",under_cwd,"* ]]; then
+    # Skip the prefix check when cwd is root: every absolute path qualifies, and the
+    # naive prefix comparison would build "//" and reject otherwise-valid paths.
+    if [[ "$_cwd" != "/" && "$_canonical" != "$_cwd" && "$_canonical" != "$_cwd"/* ]]; then
+      echo "error: nerf-git-tag: ${_label}: 'under_cwd' failed: '${_input}'" >&2
+      echo "  resolves to '${_canonical}', not under '${_cwd}'" >&2
+      echo "  hint: pass a path inside the current workspace" >&2
+      echo "  hint: symlinks are followed -- if the link's target is outside the workspace it is rejected" >&2
+      return 1
+    fi
+  fi
+  if [[ ",$_tests," == *",exists,"* ]] && [[ ! -e "$_input" ]]; then
+    echo "error: nerf-git-tag: ${_label}: 'exists' failed: '${_input}' does not exist" >&2
+    echo "  hint: create the path or pass an existing one" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",not_exists,"* ]] && [[ -e "$_input" ]]; then
+    echo "error: nerf-git-tag: ${_label}: 'not_exists' failed: '${_input}' already exists" >&2
+    echo "  hint: choose a different path or remove the existing one first" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",file,"* ]] && [[ ! -f "$_input" ]]; then
+    echo "error: nerf-git-tag: ${_label}: 'file' failed: '${_input}' is not a regular file" >&2
+    echo "  hint: pass a regular file path (not a directory, symlink-to-dir, device, or missing path)" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",dir,"* ]] && [[ ! -d "$_input" ]]; then
+    echo "error: nerf-git-tag: ${_label}: 'dir' failed: '${_input}' is not a directory" >&2
+    echo "  hint: pass a directory path (not a regular file or missing path)" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",symlink,"* ]] && [[ ! -L "$_input" ]]; then
+    echo "error: nerf-git-tag: ${_label}: 'symlink' failed: '${_input}' is not a symlink" >&2
+    echo "  hint: pass a symbolic link (the test does not follow the link)" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",not_symlink,"* ]] && [[ -L "$_input" ]]; then
+    echo "error: nerf-git-tag: ${_label}: 'not_symlink' failed: '${_input}' is a symlink" >&2
+    echo "  hint: pass a real path, not a symlink (the test does not follow the link)" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",readable,"* ]] && [[ ! -r "$_input" ]]; then
+    echo "error: nerf-git-tag: ${_label}: 'readable' failed: '${_input}' is not readable" >&2
+    echo "  hint: check filesystem permissions for the current user" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",writable,"* ]] && [[ ! -w "$_input" ]]; then
+    echo "error: nerf-git-tag: ${_label}: 'writable' failed: '${_input}' is not writable" >&2
+    echo "  hint: check filesystem permissions for the current user" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",executable,"* ]] && [[ ! -x "$_input" ]]; then
+    echo "error: nerf-git-tag: ${_label}: 'executable' failed: '${_input}' is not executable" >&2
+    echo "  hint: check filesystem permissions for the current user" >&2
+    return 1
+  fi
+}
+
+if [[ -n "${DIRECTORY}" ]]; then
+  _nerf_check_path 'option -C' "${DIRECTORY}" 'under_cwd' || exit 1
+fi
 
 if [[ -n "${TAG}" ]] && [[ "${TAG}" == -* ]]; then
   echo "error: nerf-git-tag: <tag> cannot start with '-'" >&2
@@ -57,11 +150,14 @@ if [[ -n "${TAG}" ]] && ! [[ "${TAG}" =~ $_NERF_PATTERN ]]; then
   exit 1
 fi
 
-( ! git rev-parse "refs/tags/${TAG}" > /dev/null 2>&1 ) || { echo 'error: nerf-git-tag: Tag already exists. Use a different version.' >&2; exit 1; }
+( ! git ${DIRECTORY:+-C "${DIRECTORY}"} rev-parse "refs/tags/${TAG}" > /dev/null 2>&1 ) || { echo 'error: nerf-git-tag: Tag already exists. Use a different version.' >&2; exit 1; }
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: git tag -a "${TAG}" -m "${TAG}""
+  _NERF_DRY_CMD=(git ${DIRECTORY:+"-C"} ${DIRECTORY:+"$DIRECTORY"} tag -a "${TAG}" -m "${TAG}")
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 
-exec git tag -a "${TAG}" -m "${TAG}"
+exec git ${DIRECTORY:+"-C"} ${DIRECTORY:+"$DIRECTORY"} tag -a "${TAG}" -m "${TAG}"

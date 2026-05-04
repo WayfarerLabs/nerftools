@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# nerf-kubectl-top-nodes -- Show CPU and memory usage of nodes
+# Generated from kubectl manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-kubectl-top-nodes [--selector|-l <selector>]
+
+Options:
+  --selector, -l <selector>
+      Label selector
+
+Maps to: kubectl top nodes <selector>
+
+Show CPU and memory usage of nodes.
+EOF
+  exit 1
+}
+
+SELECTOR=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --selector|-l) if [[ -n "${SELECTOR}" ]]; then echo "error: --selector can only be specified once" >&2; exit 1; fi; SELECTOR="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(kubectl top nodes ${SELECTOR:+"--selector"} ${SELECTOR:+"$SELECTOR"})
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec kubectl top nodes ${SELECTOR:+"--selector"} ${SELECTOR:+"$SELECTOR"}

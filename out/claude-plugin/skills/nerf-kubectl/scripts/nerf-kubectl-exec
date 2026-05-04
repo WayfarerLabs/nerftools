@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+# nerf-kubectl-exec -- Execute a command in a pod (non-interactive, no TTY). Use this for one-shot diagnostics; for cluster mutations prefer Helm/Terraform.
+# Generated from kubectl manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=remote
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-kubectl-exec [--namespace|-n <namespace>] [--container|-c <container>] <pod> <command...>
+
+Options:
+  --namespace, -n <namespace>
+      Namespace
+      Must match: ^[a-z0-9-]+$
+  --container, -c <container>
+      Container name (when the pod has multiple containers)
+      Must match: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+
+Arguments:
+  <pod> (required)
+      Pod name
+      Must match: ^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$
+  <command...> (required)
+      Command and args to run in the pod
+
+Maps to: kubectl exec <pod> <namespace> <container> -- <command>
+
+Execute a command in a pod (non-interactive, no TTY). Use this for one-shot diagnostics; for cluster mutations prefer Helm/Terraform..
+EOF
+  exit 1
+}
+
+NAMESPACE=""
+CONTAINER=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --namespace|-n) if [[ -n "${NAMESPACE}" ]]; then echo "error: --namespace can only be specified once" >&2; exit 1; fi; NAMESPACE="$2"; shift 2 ;;
+    --container|-c) if [[ -n "${CONTAINER}" ]]; then echo "error: --container can only be specified once" >&2; exit 1; fi; CONTAINER="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+POD="${1:-}"
+shift 2>/dev/null || true
+COMMAND=("$@")
+
+_NERF_PATTERN='^[a-z0-9-]+$'
+if [[ -n "${NAMESPACE}" ]] && ! [[ "${NAMESPACE}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-kubectl-exec: option --namespace does not match required pattern" >&2
+  echo "  value:   \"${NAMESPACE}\"" >&2
+  echo "  pattern: ^[a-z0-9-]+$" >&2
+  echo "  hint: value must match ^[a-z0-9-]+$" >&2
+  exit 1
+fi
+
+_NERF_PATTERN='^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+if [[ -n "${CONTAINER}" ]] && ! [[ "${CONTAINER}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-kubectl-exec: option --container does not match required pattern" >&2
+  echo "  value:   \"${CONTAINER}\"" >&2
+  echo "  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" >&2
+  echo "  hint: value must match ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" >&2
+  exit 1
+fi
+
+if [[ -n "${POD}" ]] && [[ "${POD}" == -* ]]; then
+  echo "error: nerf-kubectl-exec: <pod> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${POD}" ]]; then
+  echo "error: nerf-kubectl-exec: missing required argument <pod>" >&2
+  echo "  hint: provide a value for <pod>" >&2
+  usage
+fi
+
+_NERF_PATTERN='^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$'
+if [[ -n "${POD}" ]] && ! [[ "${POD}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-kubectl-exec: argument <pod> does not match required pattern" >&2
+  echo "  value:   \"${POD}\"" >&2
+  echo "  pattern: ^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$" >&2
+  echo "  hint: value must match ^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$" >&2
+  exit 1
+fi
+
+for _v in "${COMMAND[@]}"; do
+  if [[ "$_v" == "--nerf-dry-run" ]]; then
+    echo "error: nerf-kubectl-exec: --nerf-dry-run inside the command tokens would be a no-op (it is a wrapper flag)" >&2
+    echo "  hint: place --nerf-dry-run before the command tokens" >&2
+    exit 1
+  fi
+done
+
+if [[ ${#COMMAND[@]} -eq 0 ]]; then
+  echo "error: nerf-kubectl-exec: missing required argument <command>" >&2
+  echo "  hint: provide at least one value" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(kubectl exec "${POD}" ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} ${CONTAINER:+"--container"} ${CONTAINER:+"$CONTAINER"} -- "${COMMAND[@]}")
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec kubectl exec "${POD}" ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} ${CONTAINER:+"--container"} ${CONTAINER:+"$CONTAINER"} -- "${COMMAND[@]}"

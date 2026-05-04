@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# nerf-kubectl-top-pods -- Show CPU and memory usage of pods
+# Generated from kubectl manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-kubectl-top-pods [--all-namespaces|-A] [--namespace|-n <namespace>] [--selector|-l <selector>]
+
+Switches:
+  --all-namespaces, -A
+      List across all namespaces
+
+Options:
+  --namespace, -n <namespace>
+      Namespace
+      Must match: ^[a-z0-9-]+$
+  --selector, -l <selector>
+      Label selector
+
+Maps to: kubectl top pods <namespace> <all_namespaces> <selector>
+
+Show CPU and memory usage of pods.
+EOF
+  exit 1
+}
+
+ALL_NAMESPACES=""
+NAMESPACE=""
+SELECTOR=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --all-namespaces|-A) if [[ -n "${ALL_NAMESPACES}" ]]; then echo "error: --all-namespaces can only be specified once" >&2; exit 1; fi; ALL_NAMESPACES="true"; shift 1 ;;
+    --namespace|-n) if [[ -n "${NAMESPACE}" ]]; then echo "error: --namespace can only be specified once" >&2; exit 1; fi; NAMESPACE="$2"; shift 2 ;;
+    --selector|-l) if [[ -n "${SELECTOR}" ]]; then echo "error: --selector can only be specified once" >&2; exit 1; fi; SELECTOR="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+_NERF_PATTERN='^[a-z0-9-]+$'
+if [[ -n "${NAMESPACE}" ]] && ! [[ "${NAMESPACE}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-kubectl-top-pods: option --namespace does not match required pattern" >&2
+  echo "  value:   \"${NAMESPACE}\"" >&2
+  echo "  pattern: ^[a-z0-9-]+$" >&2
+  echo "  hint: value must match ^[a-z0-9-]+$" >&2
+  exit 1
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(kubectl top pods ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} ${ALL_NAMESPACES:+"--all-namespaces"} ${SELECTOR:+"--selector"} ${SELECTOR:+"$SELECTOR"})
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec kubectl top pods ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} ${ALL_NAMESPACES:+"--all-namespaces"} ${SELECTOR:+"--selector"} ${SELECTOR:+"$SELECTOR"}

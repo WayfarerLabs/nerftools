@@ -235,6 +235,18 @@ Rules:
 - A variadic argument's `{{kind.name}}` must be the last element of `command`.
 - The generated script ends with `exec`, replacing the process.
 
+**Literal command tokens are passed unquoted to bash.** Placeholder substitutions
+(`{{switches.x}}`, `{{options.x}}`, `{{arguments.x}}`) emit shell-quoted variable references and
+are always safe -- a value like `*.md` passed via `{{arguments.target}}` reaches the wrapped tool
+verbatim, with no glob expansion. The unquoted-token concern applies *only* to the static literal
+strings you put in `template.command`. The codegen lays each literal token down unquoted in the
+generated `exec` line, so bash sees them raw. This works for simple words, flags, and
+comma-separated lists (e.g. `--json title,body,state`), which covers the vast majority of cases.
+It does *not* work for literal tokens containing shell-special characters -- braces, parens,
+brackets, glob characters (`*`, `?`), tilde, redirects, pipes, dollar signs, backticks, quotes,
+whitespace, etc. If you need a literal token like that (a `jq` expression, etc.), or if you need
+any pipe / redirection / transformation logic, use `script` mode instead.
+
 Example:
 
 ```yaml

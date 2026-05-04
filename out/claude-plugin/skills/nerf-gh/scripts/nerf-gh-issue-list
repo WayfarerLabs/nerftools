@@ -67,7 +67,10 @@ if [[ -n "${LIMIT}" ]] && ! [[ "${LIMIT}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: gh issue list ${STATE:+"--state"} ${STATE:+"$STATE"} ${ASSIGNEE:+"--assignee"} ${ASSIGNEE:+"$ASSIGNEE"} ${LABEL:+"--label"} ${LABEL:+"$LABEL"} ${LIMIT:+"--limit"} ${LIMIT:+"$LIMIT"}"
+  _NERF_DRY_CMD=(gh issue list ${STATE:+"--state"} ${STATE:+"$STATE"} ${ASSIGNEE:+"--assignee"} ${ASSIGNEE:+"$ASSIGNEE"} ${LABEL:+"--label"} ${LABEL:+"$LABEL"} ${LIMIT:+"--limit"} ${LIMIT:+"$LIMIT"})
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 

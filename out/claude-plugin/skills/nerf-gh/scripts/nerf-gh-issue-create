@@ -49,6 +49,11 @@ done
 
 TITLE="${1:-}"
 shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-gh-issue-create: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
 
 if [[ -n "${TITLE}" ]] && [[ "${TITLE}" == -* ]]; then
   echo "error: nerf-gh-issue-create: <title> cannot start with '-'" >&2
@@ -63,7 +68,10 @@ if [[ -z "${TITLE}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: gh issue create --title "${TITLE}" ${BODY:+"--body"} ${BODY:+"$BODY"} ${LABEL:+"--label"} ${LABEL:+"$LABEL"} ${ASSIGNEE:+"--assignee"} ${ASSIGNEE:+"$ASSIGNEE"}"
+  _NERF_DRY_CMD=(gh issue create --title "${TITLE}" ${BODY:+"--body"} ${BODY:+"$BODY"} ${LABEL:+"--label"} ${LABEL:+"$LABEL"} ${ASSIGNEE:+"--assignee"} ${ASSIGNEE:+"$ASSIGNEE"})
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 

@@ -34,6 +34,11 @@ done
 
 PR="${1:-}"
 shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-gh-pr-diff: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
 
 if [[ -n "${PR}" ]] && [[ "${PR}" == -* ]]; then
   echo "error: nerf-gh-pr-diff: <pr> cannot start with '-'" >&2
@@ -48,7 +53,10 @@ if [[ -z "${PR}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: gh pr diff "${PR}""
+  _NERF_DRY_CMD=(gh pr diff "${PR}")
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 

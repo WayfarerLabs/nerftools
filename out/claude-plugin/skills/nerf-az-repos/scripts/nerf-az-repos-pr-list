@@ -67,7 +67,10 @@ if [[ -n "${TOP}" ]] && ! [[ "${TOP}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: az repos pr list ${STATUS:+"--status"} ${STATUS:+"$STATUS"} ${TOP:+"--top"} ${TOP:+"$TOP"} ${CREATOR:+"--creator"} ${CREATOR:+"$CREATOR"} ${REVIEWER:+"--reviewer"} ${REVIEWER:+"$REVIEWER"} --output json"
+  _NERF_DRY_CMD=(az repos pr list ${STATUS:+"--status"} ${STATUS:+"$STATUS"} ${TOP:+"--top"} ${TOP:+"$TOP"} ${CREATOR:+"--creator"} ${CREATOR:+"$CREATOR"} ${REVIEWER:+"--reviewer"} ${REVIEWER:+"$REVIEWER"} --output json)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 

@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# nerf-az-resource-list -- List Azure resources, optionally filtered by group, type, or tag
+# Generated from az-resource manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-resource-list [--resource-group|-g <resource_group>] [--resource-type <resource_type>] [--tag <tag>] [--subscription <subscription>]
+
+Options:
+  --resource-group, -g <resource_group>
+      Filter to a specific resource group
+  --resource-type <resource_type>
+      Filter by resource type (e.g. Microsoft.KeyVault/vaults)
+  --tag <tag>
+      Filter by tag (e.g. env=staging)
+  --subscription <subscription>
+      Subscription name or ID (defaults to active)
+
+Maps to: az resource list <resource_group> <resource_type> <tag> <subscription> --output json
+
+List Azure resources, optionally filtered by group, type, or tag.
+EOF
+  exit 1
+}
+
+RESOURCE_GROUP=""
+RESOURCE_TYPE=""
+TAG=""
+SUBSCRIPTION=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --resource-group|-g) if [[ -n "${RESOURCE_GROUP}" ]]; then echo "error: --resource-group can only be specified once" >&2; exit 1; fi; RESOURCE_GROUP="$2"; shift 2 ;;
+    --resource-type) if [[ -n "${RESOURCE_TYPE}" ]]; then echo "error: --resource-type can only be specified once" >&2; exit 1; fi; RESOURCE_TYPE="$2"; shift 2 ;;
+    --tag) if [[ -n "${TAG}" ]]; then echo "error: --tag can only be specified once" >&2; exit 1; fi; TAG="$2"; shift 2 ;;
+    --subscription) if [[ -n "${SUBSCRIPTION}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(az resource list ${RESOURCE_GROUP:+"--resource-group"} ${RESOURCE_GROUP:+"$RESOURCE_GROUP"} ${RESOURCE_TYPE:+"--resource-type"} ${RESOURCE_TYPE:+"$RESOURCE_TYPE"} ${TAG:+"--tag"} ${TAG:+"$TAG"} ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec az resource list ${RESOURCE_GROUP:+"--resource-group"} ${RESOURCE_GROUP:+"$RESOURCE_GROUP"} ${RESOURCE_TYPE:+"--resource-type"} ${RESOURCE_TYPE:+"$RESOURCE_TYPE"} ${TAG:+"--tag"} ${TAG:+"$TAG"} ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json

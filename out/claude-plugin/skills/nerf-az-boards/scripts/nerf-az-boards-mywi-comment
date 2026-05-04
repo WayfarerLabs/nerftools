@@ -39,6 +39,11 @@ WI_ID="${1:-}"
 shift 2>/dev/null || true
 COMMENT="${1:-}"
 shift 2>/dev/null || true
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-az-boards-mywi-comment: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
 
 if [[ -n "${WI_ID}" ]] && [[ "${WI_ID}" == -* ]]; then
   echo "error: nerf-az-boards-mywi-comment: <wi_id> cannot start with '-'" >&2
@@ -74,7 +79,10 @@ if [[ -z "${COMMENT}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: az boards work-item update --id "${WI_ID}" --discussion "${COMMENT}" --output none"
+  _NERF_DRY_CMD=(az boards work-item update --id "${WI_ID}" --discussion "${COMMENT}" --output none)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 

@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# nerf-kubectl-api-resources -- List API resources supported by the cluster (resource names only)
+# Generated from kubectl manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-kubectl-api-resources [--api-group <api_group>]
+
+Options:
+  --api-group <api_group>
+      Filter by API group (e.g. apps, batch)
+      Must match: ^[a-z0-9.-]*$
+
+Maps to: kubectl api-resources --output name <api_group>
+
+List API resources supported by the cluster (resource names only).
+EOF
+  exit 1
+}
+
+API_GROUP=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --api-group) if [[ -n "${API_GROUP}" ]]; then echo "error: --api-group can only be specified once" >&2; exit 1; fi; API_GROUP="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+_NERF_PATTERN='^[a-z0-9.-]*$'
+if [[ -n "${API_GROUP}" ]] && ! [[ "${API_GROUP}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-kubectl-api-resources: option --api-group does not match required pattern" >&2
+  echo "  value:   \"${API_GROUP}\"" >&2
+  echo "  pattern: ^[a-z0-9.-]*$" >&2
+  echo "  hint: value must match ^[a-z0-9.-]*$" >&2
+  exit 1
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(kubectl api-resources --output name ${API_GROUP:+"--api-group"} ${API_GROUP:+"$API_GROUP"})
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec kubectl api-resources --output name ${API_GROUP:+"--api-group"} ${API_GROUP:+"$API_GROUP"}

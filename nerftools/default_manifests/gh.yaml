@@ -9,6 +9,24 @@ package:
     requests, issues, and workflow runs. The repository is auto-detected
     from the current git remote.
 
+    A pull request has four distinct comment surfaces, each with its own
+    tool:
+    - "thread comments" -- top-level conversation in the main PR view.
+      Read via gh-pr-thread-comments, written via gh-pr-thread-comment.
+    - "reviews" -- the high-level Approved / Changes requested /
+      Commented wrappers, each with a body summary. List the latest
+      via gh-pr-reviews.
+    - "review comments" -- inline comments scoped to one review. Fetch
+      with gh-pr-review-comments using a review id from gh-pr-reviews.
+    - "inline comments" -- all inline review comments across every
+      review on the PR. Use gh-pr-inline-comments when you want a
+      flat list of all line-level comments without iterating reviews.
+
+    Note: inline-comment thread resolution state (resolved /
+    unresolved, set via the "Resolve conversation" button in the UI)
+    is a GraphQL-only field on the GitHub API and is not exposed by
+    this manifest. Use the GitHub UI to verify resolution state.
+
 tools:
   gh-pr-list:
     description: List open pull requests in the current repository
@@ -81,10 +99,12 @@ tools:
         description: PR number, URL, or branch name
         required: true
 
-  gh-pr-review-comments:
+  gh-pr-thread-comments:
     description: >-
-      List inline review comments on a pull request as JSON. These are
-      comments attached to specific lines of code (e.g. from code review).
+      List top-level conversation comments on a pull request (the
+      issue-style comments shown in the main PR thread, NOT inline
+      review comments). Returns the raw GitHub API response; pipe
+      through jq to project the fields you want.
     threat:
       read: remote
       write: none
@@ -92,6 +112,87 @@ tools:
       command:
         - gh
         - api
+        - --paginate
+        - --slurp
+        - "repos/{owner}/{repo}/issues/{{arguments.pr}}/comments"
+    arguments:
+      pr:
+        description: PR number
+        required: true
+        pattern: "^[0-9]+$"
+
+  gh-pr-reviews:
+    description: >-
+      List reviews on a pull request, latest first. Each entry includes
+      id (numeric), author, state, commit (short SHA), submitted_at,
+      and body (the reviewer's summary text). Pass an entry's id to
+      gh-pr-review-comments to fetch the inline comments for that
+      specific review.
+    threat:
+      read: remote
+      write: none
+    script: |
+      LIMIT=${LIMIT:-10}
+      # --paginate fetches all pages; --slurp collapses them into a single
+      # JSON array so the jq sort+limit operates over the whole result set
+      # rather than per page (which would only sort within each page).
+      # Without these, the latest reviews would be silently missing on PRs
+      # with >30 reviews because the GitHub API returns them oldest first.
+      exec gh api --paginate --slurp "repos/{owner}/{repo}/pulls/${PR}/reviews" \
+        --jq "sort_by(.submitted_at) | reverse | .[:${LIMIT}] | map({id, author: .user.login, state, commit: .commit_id[0:7], submitted_at, body})"
+    arguments:
+      pr:
+        description: PR number
+        required: true
+        pattern: "^[0-9]+$"
+    options:
+      limit:
+        description: Maximum number of reviews to return (default 10, latest first)
+        flag: --limit
+        short: -L
+        pattern: "^[1-9][0-9]*$"
+
+  gh-pr-review-comments:
+    description: >-
+      List inline review comments for a single review (by numeric review
+      ID). Use gh-pr-reviews to find review IDs. Returns the raw GitHub
+      API response; pipe through jq to project the fields you want.
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - gh
+        - api
+        - --paginate
+        - --slurp
+        - "repos/{owner}/{repo}/pulls/{{arguments.pr}}/reviews/{{arguments.review_id}}/comments"
+    arguments:
+      pr:
+        description: PR number
+        required: true
+        pattern: "^[0-9]+$"
+      review_id:
+        description: Numeric review ID (from gh-pr-reviews)
+        required: true
+        pattern: "^[0-9]+$"
+
+  gh-pr-inline-comments:
+    description: >-
+      List ALL inline review comments on a pull request, across all
+      reviews. Each comment is tied to a specific line of code. Use
+      gh-pr-review-comments instead when you have a specific review ID
+      and only want that review's comments. Returns the raw GitHub API
+      response; pipe through jq to project the fields you want.
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - gh
+        - api
+        - --paginate
+        - --slurp
         - "repos/{owner}/{repo}/pulls/{{arguments.pr}}/comments"
     arguments:
       pr:
@@ -140,8 +241,12 @@ tools:
         flag: --reviewer
         short: -r
 
-  gh-pr-comment:
-    description: Add a comment to a pull request
+  gh-pr-thread-comment:
+    description: >-
+      Add a top-level conversation comment to a pull request (the
+      issue-style comments shown in the main PR thread). For inline
+      review comments, see gh-pr-review-comments (one review) or
+      gh-pr-inline-comments (across all reviews).
     threat:
       read: remote
       write: remote

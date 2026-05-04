@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+# nerf-az-monitor-activity-log -- Fetch recent Azure Monitor activity-log entries. Requires either --resource-group or --resource-id (mutually exclusive). Defaults to the last 1 hour; --hours-back can be raised up to 168 (7 days).
+# Generated from az-monitor manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-monitor-activity-log [--resource-group|-g <resource_group>] [--resource-id <resource_id>] [--hours-back <hours_back>] [--subscription <subscription>]
+
+Options:
+  --resource-group, -g <resource_group>
+      Filter to a resource group (mutually exclusive with --resource-id)
+  --resource-id <resource_id>
+      Filter to a single resource (mutually exclusive with --resource-group)
+  --hours-back <hours_back>
+      How many hours back to query (default 1, max 168)
+      Must match: ^[0-9]+$
+  --subscription <subscription>
+      Subscription name or ID (defaults to active)
+
+Fetch recent Azure Monitor activity-log entries. Requires either --resource-group or --resource-id (mutually exclusive). Defaults to the last 1 hour; --hours-back can be raised up to 168 (7 days)..
+EOF
+  exit 1
+}
+
+RESOURCE_GROUP=""
+RESOURCE_ID=""
+HOURS_BACK=""
+SUBSCRIPTION=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --resource-group|-g) if [[ -n "${RESOURCE_GROUP}" ]]; then echo "error: --resource-group can only be specified once" >&2; exit 1; fi; RESOURCE_GROUP="$2"; shift 2 ;;
+    --resource-id) if [[ -n "${RESOURCE_ID}" ]]; then echo "error: --resource-id can only be specified once" >&2; exit 1; fi; RESOURCE_ID="$2"; shift 2 ;;
+    --hours-back) if [[ -n "${HOURS_BACK}" ]]; then echo "error: --hours-back can only be specified once" >&2; exit 1; fi; HOURS_BACK="$2"; shift 2 ;;
+    --subscription) if [[ -n "${SUBSCRIPTION}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+_NERF_PATTERN='^[0-9]+$'
+if [[ -n "${HOURS_BACK}" ]] && ! [[ "${HOURS_BACK}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-az-monitor-activity-log: option --hours-back does not match required pattern" >&2
+  echo "  value:   \"${HOURS_BACK}\"" >&2
+  echo "  pattern: ^[0-9]+$" >&2
+  echo "  hint: value must match ^[0-9]+$" >&2
+  exit 1
+fi
+
+_nerf_pre() {
+  if [[ -z "${RESOURCE_GROUP}" && -z "${RESOURCE_ID}" ]]; then
+    echo "error: must specify either --resource-group or --resource-id" >&2
+    return 1
+  fi
+  if [[ -n "${RESOURCE_GROUP}" && -n "${RESOURCE_ID}" ]]; then
+    echo "error: --resource-group and --resource-id are mutually exclusive" >&2
+    return 1
+  fi
+  HOURS=$((10#${HOURS_BACK:-1}))
+  if (( HOURS < 1 )); then
+    echo "error: --hours-back must be at least 1" >&2
+    return 1
+  fi
+  if (( HOURS > 168 )); then
+    echo "error: --hours-back cannot exceed 168 (7 days)" >&2
+    return 1
+  fi
+  # GNU date (Linux) accepts -d "<duration> ago"; BSD date (macOS) uses -v.
+  if date -u -d "1 hour ago" > /dev/null 2>&1; then
+    START_TIME=$(date -u -d "${HOURS} hours ago" +"%Y-%m-%dT%H:%M:%SZ")
+  elif date -u -v -1H > /dev/null 2>&1; then
+    START_TIME=$(date -u -v -"${HOURS}"H +"%Y-%m-%dT%H:%M:%SZ")
+  else
+    echo "error: neither GNU 'date -d' nor BSD 'date -v' is available" >&2
+    return 1
+  fi
+}
+
+_nerf_pre_rc=0
+_nerf_pre || _nerf_pre_rc=$?
+if [ $_nerf_pre_rc -ne 0 ]; then
+  echo "error: nerf-az-monitor-activity-log: pre-hook failed (exit code $_nerf_pre_rc)" >&2
+  exit $_nerf_pre_rc
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: nerf-az-monitor-activity-log would run inline script"
+  exit 0
+fi
+
+ARGS=(az monitor activity-log list --start-time "${START_TIME}" --output json)
+if [[ -n "${RESOURCE_GROUP}" ]]; then
+  ARGS+=(--resource-group "${RESOURCE_GROUP}")
+fi
+if [[ -n "${RESOURCE_ID}" ]]; then
+  ARGS+=(--resource-id "${RESOURCE_ID}")
+fi
+if [[ -n "${SUBSCRIPTION}" ]]; then
+  ARGS+=(--subscription "${SUBSCRIPTION}")
+fi
+exec "${ARGS[@]}"

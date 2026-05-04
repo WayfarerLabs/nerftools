@@ -29,7 +29,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: terragrunt run --all plan --non-interactive -input=false"
+  _NERF_DRY_CMD=(terragrunt run --all plan --non-interactive -input=false)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 
