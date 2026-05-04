@@ -98,8 +98,8 @@ tools:
     description: >-
       List top-level conversation comments on a pull request (the
       issue-style comments shown in the main PR thread, NOT inline
-      review comments). Returns curated JSON: id, author, body,
-      created_at.
+      review comments). Returns the raw GitHub API response; pipe
+      through jq to project the fields you want.
     threat:
       read: remote
       write: none
@@ -108,8 +108,6 @@ tools:
         - gh
         - api
         - "repos/{owner}/{repo}/issues/{{arguments.pr}}/comments"
-        - --jq
-        - "'map({id, author: .user.login, body, created_at})'"
     arguments:
       pr:
         description: PR number
@@ -145,8 +143,8 @@ tools:
   gh-pr-review-comments:
     description: >-
       List inline review comments for a single review (by numeric review
-      ID). Use gh-pr-reviews to find review IDs. Returns curated JSON:
-      id, author, path, line, body, created_at.
+      ID). Use gh-pr-reviews to find review IDs. Returns the raw GitHub
+      API response; pipe through jq to project the fields you want.
     threat:
       read: remote
       write: none
@@ -155,8 +153,6 @@ tools:
         - gh
         - api
         - "repos/{owner}/{repo}/pulls/{{arguments.pr}}/reviews/{{arguments.review_id}}/comments"
-        - --jq
-        - "'map({id, author: .user.login, path, line: (.line // .original_line), body, created_at})'"
     arguments:
       pr:
         description: PR number
@@ -172,8 +168,8 @@ tools:
       List ALL inline review comments on a pull request, across all
       reviews. Each comment is tied to a specific line of code. Use
       gh-pr-review-comments instead when you have a specific review ID
-      and only want that review's comments. Returns curated JSON: id,
-      author, path, line, body, created_at.
+      and only want that review's comments. Returns the raw GitHub API
+      response; pipe through jq to project the fields you want.
     threat:
       read: remote
       write: none
@@ -182,8 +178,6 @@ tools:
         - gh
         - api
         - "repos/{owner}/{repo}/pulls/{{arguments.pr}}/comments"
-        - --jq
-        - "'map({id, author: .user.login, path, line: (.line // .original_line), body, created_at})'"
     arguments:
       pr:
         description: PR number
