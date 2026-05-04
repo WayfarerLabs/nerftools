@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-repos-pr-comments -- List all comment threads on a pull request as JSON. Extracts the repository name from the git remote automatically.
+# nerf-az-repos-pr-comments -- List all comment threads on a pull request as JSON. Project and repository are auto-detected from the git remote (origin); pass --project to override the project (the repository is always taken from origin).
 # Generated from az-repos manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none
@@ -10,20 +10,27 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-az-repos-pr-comments <pr_id>
+Usage: nerf-az-repos-pr-comments [--project|-p <project>] <pr_id>
+
+Options:
+  --project, -p <project>
+      Azure DevOps project name or ID (overrides auto-detection from the origin remote)
 
 Arguments:
   <pr_id> (required)
       Pull request ID (numeric)
       Must match: ^[0-9]+$
 
-List all comment threads on a pull request as JSON. Extracts the repository name from the git remote automatically..
+List all comment threads on a pull request as JSON. Project and repository are auto-detected from the git remote (origin); pass --project to override the project (the repository is always taken from origin)..
 EOF
   exit 1
 }
 
+PROJECT=""
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --project|-p) if [[ -n "${PROJECT}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -74,15 +81,17 @@ fi
 # HTTPS: https://dev.azure.com/{org}/{project}/_git/{repo}
 # SSH:   git@ssh.dev.azure.com:v3/{org}/{project}/{repo}
 if echo "$REMOTE_URL" | grep -q '/_git/'; then
-  PROJECT=$(echo "$REMOTE_URL" | sed -E 's|.*dev.azure.com/[^/]+/([^/]+)/_git/.*|\1|')
+  DETECTED_PROJECT=$(echo "$REMOTE_URL" | sed -E 's|.*dev.azure.com/[^/]+/([^/]+)/_git/.*|\1|')
   REPO_NAME=$(echo "$REMOTE_URL" | sed -E 's|.*/_git/||; s|\.git$||')
 elif echo "$REMOTE_URL" | grep -q 'ssh.dev.azure.com'; then
-  PROJECT=$(echo "$REMOTE_URL" | sed -E 's|.*:v3/[^/]+/([^/]+)/.*|\1|')
+  DETECTED_PROJECT=$(echo "$REMOTE_URL" | sed -E 's|.*:v3/[^/]+/([^/]+)/.*|\1|')
   REPO_NAME=$(echo "$REMOTE_URL" | sed -E 's|.*:v3/[^/]+/[^/]+/||; s|\.git$||')
 else
   echo "error: unrecognized Azure DevOps remote URL format: '$REMOTE_URL'" >&2
   exit 1
 fi
+# User-supplied --project overrides the auto-detected project; repo is always taken from origin.
+PROJECT="${PROJECT:-$DETECTED_PROJECT}"
 if [ -z "$PROJECT" ] || [ -z "$REPO_NAME" ]; then
   echo "error: could not extract project/repo from remote URL '$REMOTE_URL'" >&2
   exit 1

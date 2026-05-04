@@ -10,7 +10,11 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-az-boards-wi-add-parent <child_id> <parent_id>
+Usage: nerf-az-boards-wi-add-parent [--project|-p <project>] <child_id> <parent_id>
+
+Options:
+  --project, -p <project>
+      Azure DevOps project name or ID (auto-detected from the git remote if omitted)
 
 Arguments:
   <child_id> (required)
@@ -20,15 +24,18 @@ Arguments:
       Work item ID of the parent (numeric)
       Must match: ^[0-9]+$
 
-Maps to: az boards work-item relation add --id <child_id> --relation-type parent --target-id <parent_id> --output json
+Maps to: az boards work-item relation add --id <child_id> --relation-type parent --target-id <parent_id> <project> --output json
 
 Set the parent of a work item. Takes the child ID and parent ID as positional arguments. Idempotent if the link already exists..
 EOF
   exit 1
 }
 
+PROJECT=""
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --project|-p) if [[ -n "${PROJECT}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -89,11 +96,11 @@ if [[ -n "${PARENT_ID}" ]] && ! [[ "${PARENT_ID}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az boards work-item relation add --id "${CHILD_ID}" --relation-type parent --target-id "${PARENT_ID}" --output json)
+  _NERF_DRY_CMD=(az boards work-item relation add --id "${CHILD_ID}" --relation-type parent --target-id "${PARENT_ID}" ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az boards work-item relation add --id "${CHILD_ID}" --relation-type parent --target-id "${PARENT_ID}" --output json
+exec az boards work-item relation add --id "${CHILD_ID}" --relation-type parent --target-id "${PARENT_ID}" ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json

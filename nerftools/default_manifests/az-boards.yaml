@@ -6,21 +6,31 @@ package:
   skill_group: az-boards
   skill_intro: |
     These tools interact with Azure Boards work items. The organization and
-    project are auto-detected from the git remote. The az-boards-wi-*
-    tools operate on any work item. The az-boards-mywi-* tools are
-    scoped to work items assigned to you.
+    project are auto-detected from the git remote; pass --project to target
+    a different project in the same org. The az-boards-wi-* tools operate
+    on any work item. The az-boards-mywi-* tools are scoped to work items
+    assigned to you. az-boards-area-list lists area paths in a project,
+    useful for setting --area on create/update.
 
 tools:
   az-boards-wi-list:
     description: >-
       Query work items using WIQL (Work Item Query Language). Returns matching
       work items as JSON. The organization and project are auto-detected from
-      the git remote.
+      the git remote; pass --project to override.
     threat:
       read: remote
       write: none
     template:
-      command: [az, boards, query, --wiql, "{{arguments.wiql}}", --output, json]
+      command:
+        - az
+        - boards
+        - query
+        - --wiql
+        - "{{arguments.wiql}}"
+        - "{{options.project}}"
+        - --output
+        - json
     arguments:
       wiql:
         description: >-
@@ -28,6 +38,11 @@ tools:
           [System.State] FROM WorkItems WHERE [System.AssignedTo] = @Me
           AND [System.State] <> 'Closed' ORDER BY [System.ChangedDate] DESC")
         required: true
+    options:
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
 
   az-boards-wi-show:
     description: Show details and comments for any work item
@@ -35,12 +50,26 @@ tools:
       read: remote
       write: none
     template:
-      command: [az, boards, work-item, show, --id, "{{arguments.wi_id}}", --output, json]
+      command:
+        - az
+        - boards
+        - work-item
+        - show
+        - --id
+        - "{{arguments.wi_id}}"
+        - "{{options.project}}"
+        - --output
+        - json
     arguments:
       wi_id:
         description: Work item ID (numeric)
         required: true
         pattern: "^[0-9]+$"
+    options:
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
 
   az-boards-wi-comment:
     description: Add a comment to any work item
@@ -48,15 +77,34 @@ tools:
       read: remote
       write: remote
     template:
-      command: [az, boards, work-item, update, --id, "{{arguments.wi_id}}", --discussion, "{{arguments.comment}}", --output, none]
+      command:
+        - az
+        - boards
+        - work-item
+        - update
+        - --id
+        - "{{arguments.wi_id}}"
+        - --discussion
+        - "{{arguments.comment}}"
+        - "{{options.project}}"
+        - --output
+        - none
     arguments:
       wi_id:
         description: Work item ID (numeric)
         required: true
         pattern: "^[0-9]+$"
       comment:
-        description: Comment text to add to the work item
+        description: >-
+          Comment text. Stored as HTML on the work item, so HTML markup
+          renders (e.g. "<p>See <a href='...'>this</a></p>"). Plain text
+          is stored verbatim and renders as-is.
         required: true
+    options:
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
 
   az-boards-wi-update:
     description: >-
@@ -81,6 +129,7 @@ tools:
         - "{{options.iteration}}"
         - "{{options.discussion}}"
         - "{{options.fields}}"
+        - "{{options.project}}"
         - --output
         - json
     arguments:
@@ -105,12 +154,18 @@ tools:
         description: Iteration path (e.g. MyProject\Sprint 1)
         flag: --iteration
       discussion:
-        description: Comment to add to the work item discussion
+        description: >-
+          Comment to add to the work item discussion. Stored as HTML, so
+          HTML markup renders; plain text renders as-is.
         flag: --discussion
       fields:
         description: "Custom field assignment (e.g. \"System.Tags=Rock\")"
         flag: --fields
         short: -f
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
 
   az-boards-wi-create:
     description: >-
@@ -136,6 +191,7 @@ tools:
         - "{{options.description}}"
         - "{{options.discussion}}"
         - "{{options.fields}}"
+        - "{{options.project}}"
         - --output
         - json
     arguments:
@@ -156,16 +212,25 @@ tools:
         description: Iteration path (e.g. MyProject\Sprint 1)
         flag: --iteration
       description:
-        description: Description of the work item
+        description: >-
+          Description of the work item. Stored as HTML, so HTML markup
+          renders (e.g. "<p>Steps:</p><ol><li>...</li></ol>"). Plain
+          text is stored verbatim and renders as-is.
         flag: --description
         short: -d
       discussion:
-        description: Comment to add to the work item discussion
+        description: >-
+          Comment to add to the work item discussion. Stored as HTML, so
+          HTML markup renders; plain text renders as-is.
         flag: --discussion
       fields:
         description: "Custom field assignment (e.g. \"System.Tags=Rock\")"
         flag: --fields
         short: -f
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
 
   az-boards-wi-add-parent:
     description: >-
@@ -187,6 +252,7 @@ tools:
         - parent
         - --target-id
         - "{{arguments.parent_id}}"
+        - "{{options.project}}"
         - --output
         - json
     arguments:
@@ -198,6 +264,11 @@ tools:
         description: Work item ID of the parent (numeric)
         required: true
         pattern: "^[0-9]+$"
+    options:
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
 
   az-boards-mywi-show:
     description: Show details and comments for a work item assigned to you
@@ -205,12 +276,26 @@ tools:
       read: remote
       write: none
     template:
-      command: [az, boards, work-item, show, --id, "{{arguments.wi_id}}", --output, json]
+      command:
+        - az
+        - boards
+        - work-item
+        - show
+        - --id
+        - "{{arguments.wi_id}}"
+        - "{{options.project}}"
+        - --output
+        - json
     arguments:
       wi_id:
         description: Work item ID (numeric, must be assigned to you)
         required: true
         pattern: "^[0-9]+$"
+    options:
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
 
   az-boards-mywi-comment:
     description: Add a comment to a work item assigned to you
@@ -218,12 +303,55 @@ tools:
       read: remote
       write: remote
     template:
-      command: [az, boards, work-item, update, --id, "{{arguments.wi_id}}", --discussion, "{{arguments.comment}}", --output, none]
+      command:
+        - az
+        - boards
+        - work-item
+        - update
+        - --id
+        - "{{arguments.wi_id}}"
+        - --discussion
+        - "{{arguments.comment}}"
+        - "{{options.project}}"
+        - --output
+        - none
     arguments:
       wi_id:
         description: Work item ID (numeric, must be assigned to you)
         required: true
         pattern: "^[0-9]+$"
       comment:
-        description: Comment text to add to the work item
+        description: >-
+          Comment text. Stored as HTML on the work item, so HTML markup
+          renders (e.g. "<p>See <a href='...'>this</a></p>"). Plain text
+          is stored verbatim and renders as-is.
         required: true
+    options:
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
+
+  az-boards-area-list:
+    description: >-
+      List area paths configured in a project. Returns the hierarchical area
+      tree as JSON. Useful for setting --area on az-boards-wi-create or
+      az-boards-wi-update.
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - az
+        - boards
+        - area
+        - project
+        - list
+        - "{{options.project}}"
+        - --output
+        - json
+    options:
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p

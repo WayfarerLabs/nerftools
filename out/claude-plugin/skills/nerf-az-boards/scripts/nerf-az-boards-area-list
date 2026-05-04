@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# nerf-az-pipelines-list -- List all pipelines in the Azure DevOps project
-# Generated from az-pipelines manifest. Do not edit directly.
+# nerf-az-boards-area-list -- List area paths configured in a project. Returns the hierarchical area tree as JSON. Useful for setting --area on az-boards-wi-create or az-boards-wi-update.
+# Generated from az-boards manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none
 
@@ -10,15 +10,15 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-az-pipelines-list [--project|-p <project>]
+Usage: nerf-az-boards-area-list [--project|-p <project>]
 
 Options:
   --project, -p <project>
       Azure DevOps project name or ID (auto-detected from the git remote if omitted)
 
-Maps to: az pipelines list <project> --output json
+Maps to: az boards area project list <project> --output json
 
-List all pipelines in the Azure DevOps project.
+List area paths configured in a project. Returns the hierarchical area tree as JSON. Useful for setting --area on az-boards-wi-create or az-boards-wi-update..
 EOF
   exit 1
 }
@@ -36,11 +36,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az pipelines list ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json)
+  _NERF_DRY_CMD=(az boards area project list ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az pipelines list ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json
+exec az boards area project list ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json

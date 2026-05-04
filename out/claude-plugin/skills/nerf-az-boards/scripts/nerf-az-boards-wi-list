@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-boards-wi-list -- Query work items using WIQL (Work Item Query Language). Returns matching work items as JSON. The organization and project are auto-detected from the git remote.
+# nerf-az-boards-wi-list -- Query work items using WIQL (Work Item Query Language). Returns matching work items as JSON. The organization and project are auto-detected from the git remote; pass --project to override.
 # Generated from az-boards manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none
@@ -10,21 +10,28 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-az-boards-wi-list <wiql>
+Usage: nerf-az-boards-wi-list [--project|-p <project>] <wiql>
+
+Options:
+  --project, -p <project>
+      Azure DevOps project name or ID (auto-detected from the git remote if omitted)
 
 Arguments:
   <wiql> (required)
       WIQL query string (e.g. "SELECT [System.Id], [System.Title], [System.State] FROM WorkItems WHERE [System.AssignedTo] = @Me AND [System.State] <> 'Closed' ORDER BY [System.ChangedDate] DESC")
 
-Maps to: az boards query --wiql <wiql> --output json
+Maps to: az boards query --wiql <wiql> <project> --output json
 
-Query work items using WIQL (Work Item Query Language). Returns matching work items as JSON. The organization and project are auto-detected from the git remote..
+Query work items using WIQL (Work Item Query Language). Returns matching work items as JSON. The organization and project are auto-detected from the git remote; pass --project to override..
 EOF
   exit 1
 }
 
+PROJECT=""
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --project|-p) if [[ -n "${PROJECT}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -53,11 +60,11 @@ if [[ -z "${WIQL}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az boards query --wiql "${WIQL}" --output json)
+  _NERF_DRY_CMD=(az boards query --wiql "${WIQL}" ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az boards query --wiql "${WIQL}" --output json
+exec az boards query --wiql "${WIQL}" ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json

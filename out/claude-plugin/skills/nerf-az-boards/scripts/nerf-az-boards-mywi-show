@@ -10,22 +10,29 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-az-boards-mywi-show <wi_id>
+Usage: nerf-az-boards-mywi-show [--project|-p <project>] <wi_id>
+
+Options:
+  --project, -p <project>
+      Azure DevOps project name or ID (auto-detected from the git remote if omitted)
 
 Arguments:
   <wi_id> (required)
       Work item ID (numeric, must be assigned to you)
       Must match: ^[0-9]+$
 
-Maps to: az boards work-item show --id <wi_id> --output json
+Maps to: az boards work-item show --id <wi_id> <project> --output json
 
 Show details and comments for a work item assigned to you.
 EOF
   exit 1
 }
 
+PROJECT=""
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --project|-p) if [[ -n "${PROJECT}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -63,11 +70,11 @@ if [[ -n "${WI_ID}" ]] && ! [[ "${WI_ID}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az boards work-item show --id "${WI_ID}" --output json)
+  _NERF_DRY_CMD=(az boards work-item show --id "${WI_ID}" ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az boards work-item show --id "${WI_ID}" --output json
+exec az boards work-item show --id "${WI_ID}" ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json

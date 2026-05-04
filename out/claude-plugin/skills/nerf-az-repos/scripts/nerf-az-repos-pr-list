@@ -10,7 +10,7 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-az-repos-pr-list [--status <status>] [--top <top>] [--creator <creator>] [--reviewer <reviewer>]
+Usage: nerf-az-repos-pr-list [--status <status>] [--top <top>] [--creator <creator>] [--reviewer <reviewer>] [--project|-p <project>]
 
 Options:
   --status <status>
@@ -23,8 +23,10 @@ Options:
       Filter by PR creator
   --reviewer <reviewer>
       Filter by reviewer
+  --project, -p <project>
+      Azure DevOps project name or ID (auto-detected from the git remote if omitted)
 
-Maps to: az repos pr list <status> <top> <creator> <reviewer> --output json
+Maps to: az repos pr list <status> <top> <creator> <reviewer> <project> --output json
 
 List pull requests in the project as JSON.
 EOF
@@ -35,6 +37,7 @@ STATUS=""
 TOP=""
 CREATOR=""
 REVIEWER=""
+PROJECT=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -42,6 +45,7 @@ while [[ $# -gt 0 ]]; do
     --top) if [[ -n "${TOP}" ]]; then echo "error: --top can only be specified once" >&2; exit 1; fi; TOP="$2"; shift 2 ;;
     --creator) if [[ -n "${CREATOR}" ]]; then echo "error: --creator can only be specified once" >&2; exit 1; fi; CREATOR="$2"; shift 2 ;;
     --reviewer) if [[ -n "${REVIEWER}" ]]; then echo "error: --reviewer can only be specified once" >&2; exit 1; fi; REVIEWER="$2"; shift 2 ;;
+    --project|-p) if [[ -n "${PROJECT}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -67,11 +71,11 @@ if [[ -n "${TOP}" ]] && ! [[ "${TOP}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az repos pr list ${STATUS:+"--status"} ${STATUS:+"$STATUS"} ${TOP:+"--top"} ${TOP:+"$TOP"} ${CREATOR:+"--creator"} ${CREATOR:+"$CREATOR"} ${REVIEWER:+"--reviewer"} ${REVIEWER:+"$REVIEWER"} --output json)
+  _NERF_DRY_CMD=(az repos pr list ${STATUS:+"--status"} ${STATUS:+"$STATUS"} ${TOP:+"--top"} ${TOP:+"$TOP"} ${CREATOR:+"--creator"} ${CREATOR:+"$CREATOR"} ${REVIEWER:+"--reviewer"} ${REVIEWER:+"$REVIEWER"} ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az repos pr list ${STATUS:+"--status"} ${STATUS:+"$STATUS"} ${TOP:+"--top"} ${TOP:+"$TOP"} ${CREATOR:+"--creator"} ${CREATOR:+"$CREATOR"} ${REVIEWER:+"--reviewer"} ${REVIEWER:+"$REVIEWER"} --output json
+exec az repos pr list ${STATUS:+"--status"} ${STATUS:+"$STATUS"} ${TOP:+"--top"} ${TOP:+"$TOP"} ${CREATOR:+"--creator"} ${CREATOR:+"$CREATOR"} ${REVIEWER:+"--reviewer"} ${REVIEWER:+"$REVIEWER"} ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json

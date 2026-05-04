@@ -10,7 +10,7 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-az-boards-wi-create [--assigned-to <assigned_to>] [--area <area>] [--iteration <iteration>] [--description|-d <description>] [--discussion <discussion>] [--fields|-f <fields>] <type> <title>
+Usage: nerf-az-boards-wi-create [--assigned-to <assigned_to>] [--area <area>] [--iteration <iteration>] [--description|-d <description>] [--discussion <discussion>] [--fields|-f <fields>] [--project|-p <project>] <type> <title>
 
 Options:
   --assigned-to <assigned_to>
@@ -20,11 +20,13 @@ Options:
   --iteration <iteration>
       Iteration path (e.g. MyProject\Sprint 1)
   --description, -d <description>
-      Description of the work item
+      Description of the work item. Stored as HTML, so HTML markup renders (e.g. "<p>Steps:</p><ol><li>...</li></ol>"). Plain text is stored verbatim and renders as-is.
   --discussion <discussion>
-      Comment to add to the work item discussion
+      Comment to add to the work item discussion. Stored as HTML, so HTML markup renders; plain text renders as-is.
   --fields, -f <fields>
       Custom field assignment (e.g. "System.Tags=Rock")
+  --project, -p <project>
+      Azure DevOps project name or ID (auto-detected from the git remote if omitted)
 
 Arguments:
   <type> (required)
@@ -32,7 +34,7 @@ Arguments:
   <title> (required)
       Title of the work item
 
-Maps to: az boards work-item create --type <type> --title <title> <assigned_to> <area> <iteration> <description> <discussion> <fields> --output json
+Maps to: az boards work-item create --type <type> --title <title> <assigned_to> <area> <iteration> <description> <discussion> <fields> <project> --output json
 
 Create a new work item. Requires a type and title. Optionally set assigned-to, area, iteration, description, and a discussion comment. Returns the created work item as JSON..
 EOF
@@ -45,6 +47,7 @@ ITERATION=""
 DESCRIPTION=""
 DISCUSSION=""
 FIELDS=""
+PROJECT=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -54,6 +57,7 @@ while [[ $# -gt 0 ]]; do
     --description|-d) if [[ -n "${DESCRIPTION}" ]]; then echo "error: --description can only be specified once" >&2; exit 1; fi; DESCRIPTION="$2"; shift 2 ;;
     --discussion) if [[ -n "${DISCUSSION}" ]]; then echo "error: --discussion can only be specified once" >&2; exit 1; fi; DISCUSSION="$2"; shift 2 ;;
     --fields|-f) if [[ -n "${FIELDS}" ]]; then echo "error: --fields can only be specified once" >&2; exit 1; fi; FIELDS="$2"; shift 2 ;;
+    --project|-p) if [[ -n "${PROJECT}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -96,11 +100,11 @@ if [[ -z "${TITLE}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az boards work-item create --type "${TYPE}" --title "${TITLE}" ${ASSIGNED_TO:+"--assigned-to"} ${ASSIGNED_TO:+"$ASSIGNED_TO"} ${AREA:+"--area"} ${AREA:+"$AREA"} ${ITERATION:+"--iteration"} ${ITERATION:+"$ITERATION"} ${DESCRIPTION:+"--description"} ${DESCRIPTION:+"$DESCRIPTION"} ${DISCUSSION:+"--discussion"} ${DISCUSSION:+"$DISCUSSION"} ${FIELDS:+"--fields"} ${FIELDS:+"$FIELDS"} --output json)
+  _NERF_DRY_CMD=(az boards work-item create --type "${TYPE}" --title "${TITLE}" ${ASSIGNED_TO:+"--assigned-to"} ${ASSIGNED_TO:+"$ASSIGNED_TO"} ${AREA:+"--area"} ${AREA:+"$AREA"} ${ITERATION:+"--iteration"} ${ITERATION:+"$ITERATION"} ${DESCRIPTION:+"--description"} ${DESCRIPTION:+"$DESCRIPTION"} ${DISCUSSION:+"--discussion"} ${DISCUSSION:+"$DISCUSSION"} ${FIELDS:+"--fields"} ${FIELDS:+"$FIELDS"} ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az boards work-item create --type "${TYPE}" --title "${TITLE}" ${ASSIGNED_TO:+"--assigned-to"} ${ASSIGNED_TO:+"$ASSIGNED_TO"} ${AREA:+"--area"} ${AREA:+"$AREA"} ${ITERATION:+"--iteration"} ${ITERATION:+"$ITERATION"} ${DESCRIPTION:+"--description"} ${DESCRIPTION:+"$DESCRIPTION"} ${DISCUSSION:+"--discussion"} ${DISCUSSION:+"$DISCUSSION"} ${FIELDS:+"--fields"} ${FIELDS:+"$FIELDS"} --output json
+exec az boards work-item create --type "${TYPE}" --title "${TITLE}" ${ASSIGNED_TO:+"--assigned-to"} ${ASSIGNED_TO:+"$ASSIGNED_TO"} ${AREA:+"--area"} ${AREA:+"$AREA"} ${ITERATION:+"--iteration"} ${ITERATION:+"$ITERATION"} ${DESCRIPTION:+"--description"} ${DESCRIPTION:+"$DESCRIPTION"} ${DISCUSSION:+"--discussion"} ${DISCUSSION:+"$DISCUSSION"} ${FIELDS:+"--fields"} ${FIELDS:+"$FIELDS"} ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json

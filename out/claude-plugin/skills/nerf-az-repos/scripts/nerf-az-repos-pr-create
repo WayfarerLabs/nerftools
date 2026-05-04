@@ -10,19 +10,23 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-az-repos-pr-create [--draft] <title> <description>
+Usage: nerf-az-repos-pr-create [--draft] [--project|-p <project>] <title> <description>
 
 Switches:
   --draft
       Create the PR as a draft
 
+Options:
+  --project, -p <project>
+      Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+
 Arguments:
   <title> (required)
       PR title
   <description> (required)
-      PR description (body text)
+      PR description (body text; supports markdown)
 
-Maps to: az repos pr create --title <title> --description <description> <draft> --output json
+Maps to: az repos pr create --title <title> --description <description> <draft> <project> --output json
 
 Create a pull request from the current branch to the default target branch. Source branch is auto-detected from HEAD. Cannot be run from detached HEAD or from main..
 EOF
@@ -30,10 +34,12 @@ EOF
 }
 
 DRAFT=""
+PROJECT=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --draft) if [[ -n "${DRAFT}" ]]; then echo "error: --draft can only be specified once" >&2; exit 1; fi; DRAFT="true"; shift 1 ;;
+    --project|-p) if [[ -n "${PROJECT}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -79,11 +85,11 @@ git symbolic-ref --quiet HEAD > /dev/null 2>&1 || { echo 'error: nerf-az-repos-p
 ( [ "$(git symbolic-ref --short HEAD 2>/dev/null)" != "main" ] ) || { echo 'error: nerf-az-repos-pr-create: Cannot create a PR from main. Check out a feature branch first.' >&2; exit 1; }
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az repos pr create --title "${TITLE}" --description "${DESCRIPTION}" ${DRAFT:+"--draft"} --output json)
+  _NERF_DRY_CMD=(az repos pr create --title "${TITLE}" --description "${DESCRIPTION}" ${DRAFT:+"--draft"} ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az repos pr create --title "${TITLE}" --description "${DESCRIPTION}" ${DRAFT:+"--draft"} --output json
+exec az repos pr create --title "${TITLE}" --description "${DESCRIPTION}" ${DRAFT:+"--draft"} ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json
