@@ -411,6 +411,44 @@ def test_option_default_must_not_be_in_deny(tmp_path: Path) -> None:
         load_manifest(p)
 
 
+def test_option_default_null_is_rejected(tmp_path: Path) -> None:
+    """YAML null/~ must be rejected, not silently coerced to the string 'None'."""
+    p = _write_manifest(tmp_path, _option_default_manifest({"default": None}))
+    with pytest.raises(ManifestError, match="'default' must be a string, got NoneType"):
+        load_manifest(p)
+
+
+def test_option_default_int_is_rejected(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _option_default_manifest({"default": 0}))
+    with pytest.raises(ManifestError, match="'default' must be a string, got int"):
+        load_manifest(p)
+
+
+def test_option_default_bool_is_rejected(tmp_path: Path) -> None:
+    """YAML true/false would otherwise become the Python repr 'True'/'False'."""
+    p = _write_manifest(tmp_path, _option_default_manifest({"default": True}))
+    with pytest.raises(ManifestError, match="'default' must be a string, got bool"):
+        load_manifest(p)
+
+
+def test_option_default_empty_string_is_accepted(tmp_path: Path) -> None:
+    """Empty string is a legitimate default distinct from absent."""
+    p = _write_manifest(tmp_path, _option_default_manifest({"default": ""}))
+    m = load_manifest(p)
+    assert m.tools["t"].options["remote"].default == ""
+
+
+def test_option_default_with_path_tests_raises(tmp_path: Path) -> None:
+    """path_tests evaluate against runtime cwd, so a load-time default cannot be
+    meaningfully validated against them. Reject the combination explicitly.
+    """
+    p = _write_manifest(tmp_path, _option_default_manifest({
+        "default": ".", "path_tests": ["under_cwd"],
+    }))
+    with pytest.raises(ManifestError, match="'default' cannot be combined with 'path_tests'"):
+        load_manifest(p)
+
+
 # -- Arguments -----------------------------------------------------------------
 
 

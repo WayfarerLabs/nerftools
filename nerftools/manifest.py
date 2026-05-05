@@ -495,7 +495,14 @@ def _load_options(raw: dict[str, Any], path: Path, tool_name: str) -> dict[str, 
         allow = tuple(str(v) for v in spec_raw.get("allow", []))
         deny = tuple(str(v) for v in spec_raw.get("deny", []))
         path_tests = _load_path_tests(spec_raw, ctx)
-        default = str(spec_raw["default"]) if "default" in spec_raw else None
+        default: str | None = None
+        if "default" in spec_raw:
+            raw_default = spec_raw["default"]
+            if not isinstance(raw_default, str):
+                raise ManifestError(
+                    f"{ctx}: 'default' must be a string, got {type(raw_default).__name__}"
+                )
+            default = raw_default
 
         if not re.fullmatch(r"-{1,2}[a-zA-Z][a-zA-Z0-9-]*", flag):
             raise ManifestError(f"{ctx}: 'flag' must match -<name> or --<name> pattern, got {flag!r}")
@@ -514,6 +521,11 @@ def _load_options(raw: dict[str, Any], path: Path, tool_name: str) -> dict[str, 
                 raise ManifestError(f"{ctx}: 'default' and 'required: true' are mutually exclusive")
             if repeatable:
                 raise ManifestError(f"{ctx}: 'default' is not supported with 'repeatable: true'")
+            if path_tests:
+                raise ManifestError(
+                    f"{ctx}: 'default' cannot be combined with 'path_tests' "
+                    f"(path tests only evaluate against runtime cwd)"
+                )
             if pattern is not None and not re.fullmatch(pattern, default):
                 raise ManifestError(
                     f"{ctx}: 'default' value {default!r} does not match 'pattern' {pattern!r}"
