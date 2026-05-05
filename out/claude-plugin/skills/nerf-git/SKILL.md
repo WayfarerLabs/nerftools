@@ -203,7 +203,7 @@ Create a new annotated git tag at HEAD. Fails if the tag already exists. No forc
 Show the working-tree status in short porcelain format.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-status [-C <directory>]`
-**Maps to:** `git <directory> status --short`
+**Maps to:** `git <directory> status --porcelain`
 
 **Options:**
 
@@ -216,7 +216,7 @@ Show the working-tree status in short porcelain format.
 Show unstaged changes as a unified diff.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-diff [-C <directory>]`
-**Maps to:** `git <directory> diff`
+**Maps to:** `git <directory> diff --no-ext-diff --no-textconv`
 
 **Options:**
 
@@ -229,7 +229,7 @@ Show unstaged changes as a unified diff.
 Show staged changes as a unified diff.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-diff-staged [-C <directory>]`
-**Maps to:** `git <directory> diff --staged`
+**Maps to:** `git <directory> diff --no-ext-diff --no-textconv --staged`
 
 **Options:**
 

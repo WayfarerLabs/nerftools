@@ -16,7 +16,7 @@ Options:
   -C <directory>
       Subdirectory of the workspace to run git in (must be under cwd)
 
-Maps to: git <directory> diff --staged
+Maps to: git <directory> diff --no-ext-diff --no-textconv --staged
 
 Show staged changes as a unified diff.
 EOF
@@ -117,11 +117,11 @@ if [[ -n "${DIRECTORY}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(git ${DIRECTORY:+"-C"} ${DIRECTORY:+"$DIRECTORY"} diff --staged)
+  _NERF_DRY_CMD=(git ${DIRECTORY:+"-C"} ${DIRECTORY:+"$DIRECTORY"} diff --no-ext-diff --no-textconv --staged)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec git ${DIRECTORY:+"-C"} ${DIRECTORY:+"$DIRECTORY"} diff --staged
+exec git ${DIRECTORY:+"-C"} ${DIRECTORY:+"$DIRECTORY"} diff --no-ext-diff --no-textconv --staged

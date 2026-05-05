@@ -268,7 +268,7 @@ tools:
       read: workspace
       write: none
     template:
-      command: [git, "{{options.directory}}", status, --short]
+      command: [git, "{{options.directory}}", status, --porcelain]
     options:
       directory:
         description: Subdirectory of the workspace to run git in (must be under cwd)
@@ -281,7 +281,7 @@ tools:
       read: workspace
       write: none
     template:
-      command: [git, "{{options.directory}}", diff]
+      command: [git, "{{options.directory}}", diff, --no-ext-diff, --no-textconv]
     options:
       directory:
         description: Subdirectory of the workspace to run git in (must be under cwd)
@@ -294,7 +294,7 @@ tools:
       read: workspace
       write: none
     template:
-      command: [git, "{{options.directory}}", diff, --staged]
+      command: [git, "{{options.directory}}", diff, --no-ext-diff, --no-textconv, --staged]
     options:
       directory:
         description: Subdirectory of the workspace to run git in (must be under cwd)
