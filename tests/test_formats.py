@@ -10,6 +10,7 @@ from nerftools.formats import build_claude_plugin
 from nerftools.manifest import (
     ArgSpec,
     NerfManifest,
+    OptionSpec,
     PackageMeta,
     PassthroughSpec,
     TemplateSpec,
@@ -209,6 +210,16 @@ def test_claude_plugin_threat_metadata_in_script(tmp_path: Path) -> None:
     script_content = (tmp_path / "skills" / "nerf-git" / "scripts" / "nerf-git-log").read_text()
     assert "# nerf:threat:read=workspace" in script_content
     assert "# nerf:threat:write=none" in script_content
+
+
+def test_claude_plugin_skill_renders_option_default(tmp_path: Path) -> None:
+    """Defaults declared on options must surface in the shipped Claude plugin SKILL.md."""
+    options = {"remote": OptionSpec(flag="--remote", description="Remote.", default="origin")}
+    tools = {"git-x": _template_tool(["echo", "{{options.remote}}"], options=options)}
+    _build([_manifest(skill_group="git", tools=tools)], tmp_path, prefix="nerf-")
+
+    content = (tmp_path / "skills" / "nerf-git" / "SKILL.md").read_text()
+    assert "default `origin`" in content
 
 
 def test_claude_plugin_passthrough_skill(tmp_path: Path) -> None:

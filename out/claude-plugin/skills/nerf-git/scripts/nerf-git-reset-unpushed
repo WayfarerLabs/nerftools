@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-git-reset-unpushed -- Reset HEAD to a target ref. Default mode is mixed (changes left unstaged); pass --soft to keep them staged. Refuses if the current branch is main or if HEAD already exists on a remote. Hard reset is intentionally not exposed -- use git-reset-hard-last when you specifically want to discard the last commit.
+# nerf-git-reset-unpushed -- Reset HEAD to a target ref. Default mode is mixed (changes left unstaged); pass --soft to keep them staged. Refuses if the current branch is main or if any commit in target..HEAD is already reachable from a remote (which would orphan pushed commits). Hard reset is intentionally not exposed -- use git-reset-hard-last when you specifically want to discard the last commit.
 # Generated from git manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=workspace
@@ -27,7 +27,7 @@ Arguments:
 
 Maps to: git <directory> reset <soft> <target>
 
-Reset HEAD to a target ref. Default mode is mixed (changes left unstaged); pass --soft to keep them staged. Refuses if the current branch is main or if HEAD already exists on a remote. Hard reset is intentionally not exposed -- use git-reset-hard-last when you specifically want to discard the last commit.
+Reset HEAD to a target ref. Default mode is mixed (changes left unstaged); pass --soft to keep them staged. Refuses if the current branch is main or if any commit in target..HEAD is already reachable from a remote (which would orphan pushed commits). Hard reset is intentionally not exposed -- use git-reset-hard-last when you specifically want to discard the last commit.
 EOF
   exit 1
 }
@@ -166,10 +166,10 @@ _nerf_pre() {
     echo "error: cannot reset main" >&2
     return 1
   fi
-  REMOTE_BRANCHES=$(git ${DIRECTORY:+-C "${DIRECTORY}"} branch -r --contains HEAD 2>/dev/null)
-  if [ -n "${REMOTE_BRANCHES}" ]; then
-    echo "error: HEAD exists on remote branches -- reset would orphan pushed commits" >&2
-    echo "  remote branches: $(echo "${REMOTE_BRANCHES}" | tr -s ' \n' ', ' | sed 's/,$//')" >&2
+  RANGE_TOTAL=$(git ${DIRECTORY:+-C "${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" 2>/dev/null || echo 0)
+  RANGE_LOCAL=$(git ${DIRECTORY:+-C "${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" --not --remotes 2>/dev/null || echo 0)
+  if [ "${RANGE_TOTAL}" != "${RANGE_LOCAL}" ]; then
+    echo "error: ${TARGET}..HEAD contains commits already on a remote -- reset would orphan pushed commits" >&2
     return 1
   fi
 }

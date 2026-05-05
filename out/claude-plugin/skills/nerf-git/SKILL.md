@@ -334,7 +334,7 @@ Delete a local branch using "git branch -d", which refuses to delete a branch th
 
 ## nerf-git-rebase-unpushed
 
-Rebase the current branch onto a target ref. Refuses if the current branch is main or if HEAD already exists on a remote (which would require force-pushing). The intended use is replaying still-local commits onto a fresher upstream (e.g. git-rebase-unpushed origin/main).
+Rebase the current branch onto a target ref. Refuses if the current branch is main or if any commit in target..HEAD is already reachable from a remote (which would require force-pushing). The intended use is replaying still-local commits onto a fresher upstream (e.g. git-rebase-unpushed origin/main).
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-rebase-unpushed [-C <directory>] <target>`
 **Maps to:** `git <directory> rebase <target>`
@@ -351,7 +351,7 @@ Rebase the current branch onto a target ref. Refuses if the current branch is ma
 
 ## nerf-git-reset-unpushed
 
-Reset HEAD to a target ref. Default mode is mixed (changes left unstaged); pass --soft to keep them staged. Refuses if the current branch is main or if HEAD already exists on a remote. Hard reset is intentionally not exposed -- use git-reset-hard-last when you specifically want to discard the last commit.
+Reset HEAD to a target ref. Default mode is mixed (changes left unstaged); pass --soft to keep them staged. Refuses if the current branch is main or if any commit in target..HEAD is already reachable from a remote (which would orphan pushed commits). Hard reset is intentionally not exposed -- use git-reset-hard-last when you specifically want to discard the last commit.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-reset-unpushed [--soft|-s] [-C <directory>] <target>`
 **Maps to:** `git <directory> reset <soft> <target>`
