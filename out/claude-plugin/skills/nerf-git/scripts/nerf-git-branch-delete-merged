@@ -151,7 +151,8 @@ if [[ -n "${NAME}" ]] && ! [[ "${NAME}" =~ $_NERF_PATTERN ]]; then
 fi
 
 _nerf_pre() {
-  if [ "${NAME}" = "main" ]; then
+  NAME_LOWER=$(printf '%s' "${NAME}" | tr '[:upper:]' '[:lower:]')
+  if [ "${NAME_LOWER}" = "main" ]; then
     echo "error: cannot delete main" >&2
     return 1
   fi

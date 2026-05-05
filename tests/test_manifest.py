@@ -821,6 +821,21 @@ def test_builtin_git_loads() -> None:
     assert m.tools["git-push-branch"].threat.write == ThreatLevel.REMOTE
 
 
+def test_builtin_git_branch_delete_merged_main_guard_is_case_insensitive() -> None:
+    """The 'cannot delete main' guard must reject Main/MAIN/etc. on case-insensitive
+    filesystems (macOS APFS, Windows NTFS), where git resolves any casing to the
+    same ref. Without lowercasing, `git-branch-delete-merged Main` would bypass
+    the guard.
+    """
+    from nerftools.cli import _DEFAULT_MANIFESTS_DIR
+
+    m = load_manifest(_DEFAULT_MANIFESTS_DIR / "git.yaml")
+    pre = m.tools["git-branch-delete-merged"].pre or ""
+    assert "tr '[:upper:]' '[:lower:]'" in pre, (
+        "git-branch-delete-merged pre-hook should lowercase NAME before comparing to 'main'"
+    )
+
+
 def _builtin_manifest_paths() -> list[Path]:
     """Mirror the CLI's built-in manifest discovery (cli.py): .yaml files only."""
     from nerftools.cli import _DEFAULT_MANIFESTS_DIR

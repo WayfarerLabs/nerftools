@@ -433,7 +433,8 @@ tools:
         flag: -C
         path_tests: [under_cwd]
     pre: |
-      if [ "${NAME}" = "main" ]; then
+      NAME_LOWER=$(printf '%s' "${NAME}" | tr '[:upper:]' '[:lower:]')
+      if [ "${NAME_LOWER}" = "main" ]; then
         echo "error: cannot delete main" >&2
         return 1
       fi
