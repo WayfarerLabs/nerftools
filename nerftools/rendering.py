@@ -15,18 +15,23 @@ if TYPE_CHECKING:
 
 def md_code_span(text: str) -> str:
     """Wrap text as a markdown code span with a backtick fence that won't
-    conflict with backticks inside the content.
+    conflict with backticks or boundary whitespace inside the content.
 
-    Per CommonMark, a code span is delimited by N backticks and ends at the
-    next run of exactly N backticks; a literal backtick inside requires a
-    longer fence. We pick the smallest fence longer than any run in the
-    content, and pad with a single space when the content starts or ends
-    with a backtick (CommonMark strips one space of padding).
+    Per CommonMark:
+      - A code span is delimited by N backticks and ends at the next run of
+        exactly N backticks; a literal backtick inside requires a longer fence.
+      - If the content both begins AND ends with a space character but is not
+        entirely spaces, ONE space is stripped from each side. We work around
+        that by padding both sides when there's boundary whitespace.
+      - There is no valid empty code span: `` `` `` is parsed as two literal
+        backticks. We render empty input as `""` (literal empty quotes wrapped
+        in a code span) to keep the rendering pattern uniform.
 
-    Control characters (newlines, NUL, etc.) collapse weirdly inside code
-    spans and should be rejected by the manifest loader before reaching
-    here. This helper does not validate that.
+    Control characters (newlines, NUL, etc.) are rejected at manifest load
+    time, so this helper assumes printable input.
     """
+    if not text:
+        return '`""`'
     longest = 0
     current = 0
     for c in text:
@@ -37,7 +42,15 @@ def md_code_span(text: str) -> str:
         else:
             current = 0
     fence = "`" * (longest + 1)
-    pad = " " if text.startswith("`") or text.endswith("`") else ""
+    if text.strip() == "":
+        # All-whitespace content: CommonMark preserves it as-is (the "entirely
+        # of space characters" exemption from the trim rule). Padding would
+        # silently grow the visible count.
+        pad = ""
+    elif text[0] in " `" or text[-1] in " `":
+        pad = " "
+    else:
+        pad = ""
     return f"{fence}{pad}{text}{pad}{fence}"
 
 

@@ -270,6 +270,17 @@ def test_default_starting_with_backtick_pads_with_space() -> None:
     assert "default `` `tilted ``" in skill
 
 
+def test_empty_default_renders_as_quoted_empty_string() -> None:
+    """default: '' has no valid CommonMark code span representation, so
+    we render it as `\"\"` (literal empty quotes inside a code span) so
+    the meaning is unambiguous and the rendering pattern stays uniform.
+    """
+    options = {"x": OptionSpec(flag="--x", description="X.", default="")}
+    tool = _template_tool(["echo", "{{options.x}}"], options=options)
+    skill = build_skill_text(_manifest(tools={"t": tool}))
+    assert 'default `""`' in skill
+
+
 def test_pattern_constraint_shown() -> None:
     tool = _template_tool(
         ["echo", "{{options.x}}"], options={"x": _option("--x", pattern="^[a-z]+$")},
