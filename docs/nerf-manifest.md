@@ -426,6 +426,7 @@ options:
     allow: [<string>, ...] # Exhaustive list of allowed values
     deny: [<string>, ...] # Values to reject
     path_tests: [<test>, ...] # Mark as a filesystem path; see "Path tests" below
+    default: <string> # Default value seeded into the bash variable when the flag is omitted
 ```
 
 Rules:
@@ -436,6 +437,12 @@ Rules:
 - `pattern` is automatically anchored to a full match in the generated bash script.
 - When `repeatable: true`, the option can be passed multiple times. The generated script accumulates
   flag-value pairs in an array so `"${VAR[@]}"` expands to `--flag val1 --flag val2`.
+- `default` seeds the bash variable so inline placeholder substitutions like
+  `"{{options.x}}/foo"` see the value even when the agent omits the flag. `default` is
+  validated at manifest-load time: it must satisfy `pattern` / `allow` / `deny`, and is
+  mutually exclusive with `required: true`, `repeatable: true`, and `path_tests`
+  (path tests only evaluate against runtime cwd, so they cannot validate a load-time
+  default). `default` must be a string; YAML `null`, `true`, `0`, etc. are rejected.
 
 ### arguments
 
@@ -462,6 +469,8 @@ Rules:
 - Variadic arguments become bash arrays; all others become scalar variables.
 - By default, variadic arguments reject tokens starting with `-` to prevent flag injection. Set
   `allow_flags: true` when forwarding to a tool that expects its own flags (e.g. pytest, ruff).
+- Arguments do not have a `default` field. Required positional arguments always receive a value;
+  optional positionals are exposed to the wrapped tool only when the agent supplies one.
 
 ## Path tests
 
@@ -758,3 +767,6 @@ Generated skill files follow the same structure formatted as markdown for AI ass
 | `path_tests` is non-empty if present                                 | options, arguments    |
 | `path_tests` entries are known names                                 | options, arguments    |
 | `path_tests` mutual exclusions enforced                              | options, arguments    |
+| `default` must be a string                                           | options               |
+| `default` mutually exclusive with `required`, `repeatable`, `path_tests` | options           |
+| `default` must satisfy `pattern` / `allow` / `deny` if present       | options               |

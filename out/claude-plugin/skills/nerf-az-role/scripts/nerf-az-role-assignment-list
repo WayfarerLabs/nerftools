@@ -37,19 +37,24 @@ EOF
 
 ALL=""
 ASSIGNEE=""
+_ASSIGNEE_SET=""
 SCOPE=""
+_SCOPE_SET=""
 ROLE=""
+_ROLE_SET=""
 RESOURCE_GROUP=""
+_RESOURCE_GROUP_SET=""
 SUBSCRIPTION=""
+_SUBSCRIPTION_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --all) if [[ -n "${ALL}" ]]; then echo "error: --all can only be specified once" >&2; exit 1; fi; ALL="true"; shift 1 ;;
-    --assignee) if [[ -n "${ASSIGNEE}" ]]; then echo "error: --assignee can only be specified once" >&2; exit 1; fi; ASSIGNEE="$2"; shift 2 ;;
-    --scope) if [[ -n "${SCOPE}" ]]; then echo "error: --scope can only be specified once" >&2; exit 1; fi; SCOPE="$2"; shift 2 ;;
-    --role) if [[ -n "${ROLE}" ]]; then echo "error: --role can only be specified once" >&2; exit 1; fi; ROLE="$2"; shift 2 ;;
-    --resource-group|-g) if [[ -n "${RESOURCE_GROUP}" ]]; then echo "error: --resource-group can only be specified once" >&2; exit 1; fi; RESOURCE_GROUP="$2"; shift 2 ;;
-    --subscription) if [[ -n "${SUBSCRIPTION}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; shift 2 ;;
+    --assignee) if [[ -n "${_ASSIGNEE_SET}" ]]; then echo "error: --assignee can only be specified once" >&2; exit 1; fi; ASSIGNEE="$2"; _ASSIGNEE_SET=true; shift 2 ;;
+    --scope) if [[ -n "${_SCOPE_SET}" ]]; then echo "error: --scope can only be specified once" >&2; exit 1; fi; SCOPE="$2"; _SCOPE_SET=true; shift 2 ;;
+    --role) if [[ -n "${_ROLE_SET}" ]]; then echo "error: --role can only be specified once" >&2; exit 1; fi; ROLE="$2"; _ROLE_SET=true; shift 2 ;;
+    --resource-group|-g) if [[ -n "${_RESOURCE_GROUP_SET}" ]]; then echo "error: --resource-group can only be specified once" >&2; exit 1; fi; RESOURCE_GROUP="$2"; _RESOURCE_GROUP_SET=true; shift 2 ;;
+    --subscription) if [[ -n "${_SUBSCRIPTION_SET}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; _SUBSCRIPTION_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -58,11 +63,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az role assignment list ${ALL:+"--all"} ${ASSIGNEE:+"--assignee"} ${ASSIGNEE:+"$ASSIGNEE"} ${SCOPE:+"--scope"} ${SCOPE:+"$SCOPE"} ${ROLE:+"--role"} ${ROLE:+"$ROLE"} ${RESOURCE_GROUP:+"--resource-group"} ${RESOURCE_GROUP:+"$RESOURCE_GROUP"} ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json)
+  _NERF_DRY_CMD=(az role assignment list ${ALL:+"--all"} ${_ASSIGNEE_SET:+"--assignee"} ${_ASSIGNEE_SET:+"$ASSIGNEE"} ${_SCOPE_SET:+"--scope"} ${_SCOPE_SET:+"$SCOPE"} ${_ROLE_SET:+"--role"} ${_ROLE_SET:+"$ROLE"} ${_RESOURCE_GROUP_SET:+"--resource-group"} ${_RESOURCE_GROUP_SET:+"$RESOURCE_GROUP"} ${_SUBSCRIPTION_SET:+"--subscription"} ${_SUBSCRIPTION_SET:+"$SUBSCRIPTION"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az role assignment list ${ALL:+"--all"} ${ASSIGNEE:+"--assignee"} ${ASSIGNEE:+"$ASSIGNEE"} ${SCOPE:+"--scope"} ${SCOPE:+"$SCOPE"} ${ROLE:+"--role"} ${ROLE:+"$ROLE"} ${RESOURCE_GROUP:+"--resource-group"} ${RESOURCE_GROUP:+"$RESOURCE_GROUP"} ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json
+exec az role assignment list ${ALL:+"--all"} ${_ASSIGNEE_SET:+"--assignee"} ${_ASSIGNEE_SET:+"$ASSIGNEE"} ${_SCOPE_SET:+"--scope"} ${_SCOPE_SET:+"$SCOPE"} ${_ROLE_SET:+"--role"} ${_ROLE_SET:+"$ROLE"} ${_RESOURCE_GROUP_SET:+"--resource-group"} ${_RESOURCE_GROUP_SET:+"$RESOURCE_GROUP"} ${_SUBSCRIPTION_SET:+"--subscription"} ${_SUBSCRIPTION_SET:+"$SUBSCRIPTION"} --output json

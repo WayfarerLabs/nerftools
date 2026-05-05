@@ -45,16 +45,19 @@ EOF
 ALL_NAMESPACES=""
 SHOW_LABELS=""
 NAMESPACE=""
+_NAMESPACE_SET=""
 SELECTOR=""
+_SELECTOR_SET=""
 FIELD_SELECTOR=""
+_FIELD_SELECTOR_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --all-namespaces|-A) if [[ -n "${ALL_NAMESPACES}" ]]; then echo "error: --all-namespaces can only be specified once" >&2; exit 1; fi; ALL_NAMESPACES="true"; shift 1 ;;
     --show-labels) if [[ -n "${SHOW_LABELS}" ]]; then echo "error: --show-labels can only be specified once" >&2; exit 1; fi; SHOW_LABELS="true"; shift 1 ;;
-    --namespace|-n) if [[ -n "${NAMESPACE}" ]]; then echo "error: --namespace can only be specified once" >&2; exit 1; fi; NAMESPACE="$2"; shift 2 ;;
-    --selector|-l) if [[ -n "${SELECTOR}" ]]; then echo "error: --selector can only be specified once" >&2; exit 1; fi; SELECTOR="$2"; shift 2 ;;
-    --field-selector) if [[ -n "${FIELD_SELECTOR}" ]]; then echo "error: --field-selector can only be specified once" >&2; exit 1; fi; FIELD_SELECTOR="$2"; shift 2 ;;
+    --namespace|-n) if [[ -n "${_NAMESPACE_SET}" ]]; then echo "error: --namespace can only be specified once" >&2; exit 1; fi; NAMESPACE="$2"; _NAMESPACE_SET=true; shift 2 ;;
+    --selector|-l) if [[ -n "${_SELECTOR_SET}" ]]; then echo "error: --selector can only be specified once" >&2; exit 1; fi; SELECTOR="$2"; _SELECTOR_SET=true; shift 2 ;;
+    --field-selector) if [[ -n "${_FIELD_SELECTOR_SET}" ]]; then echo "error: --field-selector can only be specified once" >&2; exit 1; fi; FIELD_SELECTOR="$2"; _FIELD_SELECTOR_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -62,10 +65,22 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-RESOURCE="${1:-}"
-shift 2>/dev/null || true
-NAME="${1:-}"
-shift 2>/dev/null || true
+_RESOURCE_SET=""
+if [[ $# -gt 0 ]]; then
+  RESOURCE="$1"
+  _RESOURCE_SET=true
+  shift
+else
+  RESOURCE=""
+fi
+_NAME_SET=""
+if [[ $# -gt 0 ]]; then
+  NAME="$1"
+  _NAME_SET=true
+  shift
+else
+  NAME=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-kubectl-get: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
@@ -73,7 +88,7 @@ if [[ $# -gt 0 ]]; then
 fi
 
 _NERF_PATTERN='^[a-z0-9-]+$'
-if [[ -n "${NAMESPACE}" ]] && ! [[ "${NAMESPACE}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_NAMESPACE_SET}" ]] && ! [[ "${NAMESPACE}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-kubectl-get: option --namespace does not match required pattern" >&2
   echo "  value:   \"${NAMESPACE}\"" >&2
   echo "  pattern: ^[a-z0-9-]+$" >&2
@@ -81,7 +96,7 @@ if [[ -n "${NAMESPACE}" ]] && ! [[ "${NAMESPACE}" =~ $_NERF_PATTERN ]]; then
   exit 1
 fi
 
-if [[ -n "${RESOURCE}" ]] && [[ "${RESOURCE}" == -* ]]; then
+if [[ -n "${_RESOURCE_SET}" ]] && [[ "${RESOURCE}" == -* ]]; then
   echo "error: nerf-kubectl-get: <resource> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -94,7 +109,7 @@ if [[ -z "${RESOURCE}" ]]; then
 fi
 
 _NERF_PATTERN='^[a-z][a-zA-Z0-9.-]*(/[a-zA-Z0-9._-]+)?$'
-if [[ -n "${RESOURCE}" ]] && ! [[ "${RESOURCE}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_RESOURCE_SET}" ]] && ! [[ "${RESOURCE}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-kubectl-get: argument <resource> does not match required pattern" >&2
   echo "  value:   \"${RESOURCE}\"" >&2
   echo "  pattern: ^[a-z][a-zA-Z0-9.-]*(/[a-zA-Z0-9._-]+)?$" >&2
@@ -102,14 +117,14 @@ if [[ -n "${RESOURCE}" ]] && ! [[ "${RESOURCE}" =~ $_NERF_PATTERN ]]; then
   exit 1
 fi
 
-if [[ -n "${NAME}" ]] && [[ "${NAME}" == -* ]]; then
+if [[ -n "${_NAME_SET}" ]] && [[ "${NAME}" == -* ]]; then
   echo "error: nerf-kubectl-get: <name> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
 fi
 
 _NERF_PATTERN='^[a-zA-Z0-9._-]+$'
-if [[ -n "${NAME}" ]] && ! [[ "${NAME}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_NAME_SET}" ]] && ! [[ "${NAME}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-kubectl-get: argument <name> does not match required pattern" >&2
   echo "  value:   \"${NAME}\"" >&2
   echo "  pattern: ^[a-zA-Z0-9._-]+$" >&2
@@ -120,11 +135,11 @@ fi
 ( [[ ! "$(echo "${RESOURCE}" | tr '[:upper:]' '[:lower:]')" =~ ^secrets?($|\.|/) ]] ) || { echo 'error: nerf-kubectl-get: kubectl-get refuses secrets. Use kubectl-get-secrets which redacts .data / .stringData.' >&2; exit 1; }
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(kubectl get "${RESOURCE}" ${NAME:+"$NAME"} ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} ${ALL_NAMESPACES:+"--all-namespaces"} ${SELECTOR:+"--selector"} ${SELECTOR:+"$SELECTOR"} ${FIELD_SELECTOR:+"--field-selector"} ${FIELD_SELECTOR:+"$FIELD_SELECTOR"} ${SHOW_LABELS:+"--show-labels"} --output json)
+  _NERF_DRY_CMD=(kubectl get "${RESOURCE}" ${_NAME_SET:+"$NAME"} ${_NAMESPACE_SET:+"--namespace"} ${_NAMESPACE_SET:+"$NAMESPACE"} ${ALL_NAMESPACES:+"--all-namespaces"} ${_SELECTOR_SET:+"--selector"} ${_SELECTOR_SET:+"$SELECTOR"} ${_FIELD_SELECTOR_SET:+"--field-selector"} ${_FIELD_SELECTOR_SET:+"$FIELD_SELECTOR"} ${SHOW_LABELS:+"--show-labels"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec kubectl get "${RESOURCE}" ${NAME:+"$NAME"} ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} ${ALL_NAMESPACES:+"--all-namespaces"} ${SELECTOR:+"--selector"} ${SELECTOR:+"$SELECTOR"} ${FIELD_SELECTOR:+"--field-selector"} ${FIELD_SELECTOR:+"$FIELD_SELECTOR"} ${SHOW_LABELS:+"--show-labels"} --output json
+exec kubectl get "${RESOURCE}" ${_NAME_SET:+"$NAME"} ${_NAMESPACE_SET:+"--namespace"} ${_NAMESPACE_SET:+"$NAMESPACE"} ${ALL_NAMESPACES:+"--all-namespaces"} ${_SELECTOR_SET:+"--selector"} ${_SELECTOR_SET:+"$SELECTOR"} ${_FIELD_SELECTOR_SET:+"--field-selector"} ${_FIELD_SELECTOR_SET:+"$FIELD_SELECTOR"} ${SHOW_LABELS:+"--show-labels"} --output json

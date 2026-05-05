@@ -6,11 +6,16 @@ package:
   skill_group: git
   skill_intro: |
     These tools wrap git operations with safety guardrails. Always stage changes
-    with git-add before committing. Commit messages must follow the
-    Conventional Commits specification. All remote operations take the remote
-    name as the first positional argument (typically origin). Every tool
-    accepts an optional -C <directory> to operate on a different repo
-    subdirectory; the directory must be under the workspace root.
+    with git-add before committing. Commit messages (git-commit) and new local
+    branch names (git-create-branch) must follow the Conventional Commits type
+    vocabulary (feat/, fix/, docs/, style/, refactor/, perf/, test/, build/,
+    ci/, chore/, revert/). Tools that switch to or check out branches that
+    already exist (git-switch, git-branch-checkout-remote) do not enforce this
+    prefix. All remote operations take the remote name as the first positional
+    argument (typically origin). Every tool accepts an optional -C <directory>
+    to operate on a different repo subdirectory; the directory must be under
+    the workspace root. Several tools refuse operations on main or operations
+    that would require force-pushing already-pushed commits.
 
 tools:
   git-add:
@@ -151,7 +156,7 @@ tools:
       remote:
         description: Remote name (e.g. origin)
         required: true
-        pattern: "^[a-z0-9_-]+$"
+        pattern: "^[a-zA-Z0-9_.-]+$"
 
   git-pull:
     description: Pull the current branch from a remote.
@@ -169,7 +174,7 @@ tools:
       remote:
         description: Remote name (e.g. origin)
         required: true
-        pattern: "^[a-z0-9_-]+$"
+        pattern: "^[a-zA-Z0-9_.-]+$"
 
   git-push-main:
     description: >-
@@ -189,7 +194,7 @@ tools:
       remote:
         description: Remote name (e.g. origin)
         required: true
-        pattern: "^[a-z0-9_-]+$"
+        pattern: "^[a-zA-Z0-9_.-]+$"
 
   git-push-branch:
     description: >-
@@ -209,14 +214,15 @@ tools:
       remote:
         description: Remote name (e.g. origin)
         required: true
-        pattern: "^[a-z0-9_-]+$"
+        pattern: "^[a-zA-Z0-9_.-]+$"
     pre: |
       BRANCH=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null)
       if [ -z "$BRANCH" ]; then
         echo "error: cannot push from detached HEAD state" >&2
         return 1
       fi
-      if [ "$BRANCH" = "main" ]; then
+      BRANCH_LOWER=$(printf '%s' "${BRANCH}" | tr '[:upper:]' '[:lower:]')
+      if [ "${BRANCH_LOWER}" = "main" ]; then
         echo "error: use git-push-main for the main branch" >&2
         return 1
       fi
@@ -257,3 +263,279 @@ tools:
       - script: |
           ! git ${DIRECTORY:+-C "${DIRECTORY}"} rev-parse "refs/tags/{{arguments.tag}}" > /dev/null 2>&1
         fail_message: Tag already exists. Use a different version.
+
+  git-status:
+    description: Show the working-tree status in short porcelain format.
+    threat:
+      read: workspace
+      write: none
+    template:
+      command: [git, "{{options.directory}}", status, --porcelain=v1]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+
+  git-diff:
+    description: Show unstaged changes as a unified diff.
+    threat:
+      read: workspace
+      write: none
+    template:
+      command: [git, "{{options.directory}}", diff, --no-ext-diff, --no-textconv]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+
+  git-diff-staged:
+    description: Show staged changes as a unified diff.
+    threat:
+      read: workspace
+      write: none
+    template:
+      command: [git, "{{options.directory}}", diff, --no-ext-diff, --no-textconv, --staged]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+
+  git-branch-list-local:
+    description: >-
+      List local branches with the current-branch marker, short SHA,
+      upstream tracking, and most-recent commit subject.
+    threat:
+      read: workspace
+      write: none
+    template:
+      command: [git, "{{options.directory}}", branch, --list, -vv]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+
+  git-branch-list-remote:
+    description: >-
+      List remote-tracking branches with short SHA and most-recent
+      commit subject. Run git-fetch first to refresh.
+    threat:
+      read: workspace
+      write: none
+    template:
+      command: [git, "{{options.directory}}", branch, --remotes, -vv]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+
+  git-switch:
+    description: >-
+      Switch to an existing branch. If no local branch with this name
+      exists but a unique remote (typically origin) has one, git
+      auto-creates a tracking branch. The auto-track path skips the
+      Conventional-Commits prefix guard because the branch already
+      exists upstream.
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command: [git, "{{options.directory}}", switch, "{{arguments.name}}"]
+    arguments:
+      name:
+        description: Branch name to switch to
+        required: true
+        pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$"
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+
+  git-create-branch:
+    description: >-
+      Create a new branch from the current HEAD and switch to it. The
+      name must start with a Conventional Commits type prefix (feat/,
+      fix/, docs/, style/, refactor/, perf/, test/, build/, ci/,
+      chore/, revert/) so branch names compose with the
+      Conventional-Commits-formatted commit messages enforced by
+      git-commit.
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command: [git, "{{options.directory}}", switch, -c, "{{arguments.name}}"]
+    arguments:
+      name:
+        description: New branch name (must start with feat/, fix/, docs/, etc.)
+        required: true
+        pattern: "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)/[a-zA-Z0-9._/-]+$"
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+
+  git-branch-checkout-remote:
+    description: >-
+      Create a local branch that explicitly tracks <remote>/<name>.
+      Use git-switch for the simpler auto-track behavior; reach for
+      this tool when you have multiple remotes with the same branch
+      name (auto-track refuses the ambiguity) or want to be explicit
+      about which remote you are tracking. Skips the
+      Conventional-Commits prefix guard because the branch already
+      exists upstream.
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - checkout
+        - --track
+        - "{{arguments.remote}}/{{arguments.name}}"
+    arguments:
+      remote:
+        description: Remote name (e.g. origin)
+        required: true
+        pattern: "^[a-zA-Z0-9_.-]+$"
+      name:
+        description: Branch name (must exist as <remote>/<name>)
+        required: true
+        pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$"
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+
+  git-branch-delete-merged:
+    description: >-
+      Delete a local branch using "git branch -d", which refuses to
+      delete a branch that has unmerged commits. Cannot delete main
+      or the currently-checked-out branch.
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command: [git, "{{options.directory}}", branch, --delete, "{{arguments.name}}"]
+    arguments:
+      name:
+        description: Branch name to delete (must be fully merged)
+        required: true
+        pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$"
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    pre: |
+      NAME_LOWER=$(printf '%s' "${NAME}" | tr '[:upper:]' '[:lower:]')
+      if [ "${NAME_LOWER}" = "main" ]; then
+        echo "error: cannot delete main" >&2
+        return 1
+      fi
+      CURRENT=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
+      if [ "${NAME}" = "${CURRENT}" ]; then
+        echo "error: cannot delete the current branch (${CURRENT})" >&2
+        echo "  hint: switch to another branch first (e.g., git-switch main)" >&2
+        return 1
+      fi
+
+  git-rebase-unpushed:
+    description: >-
+      Rebase the current branch onto a target ref. Refuses if the
+      current branch is main or if any commit in target..HEAD is
+      already reachable from a remote (which would require
+      force-pushing). The intended use is replaying still-local
+      commits onto a fresher upstream
+      (e.g. git-rebase-unpushed origin/main).
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command: [git, "{{options.directory}}", rebase, "{{arguments.target}}"]
+    arguments:
+      target:
+        description: Ref to rebase onto (e.g. origin/main, main)
+        required: true
+        pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$"
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    pre: |
+      BRANCH=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
+      if [ -z "${BRANCH}" ]; then
+        echo "error: cannot rebase from a detached HEAD state" >&2
+        return 1
+      fi
+      BRANCH_LOWER=$(printf '%s' "${BRANCH}" | tr '[:upper:]' '[:lower:]')
+      if [ "${BRANCH_LOWER}" = "main" ]; then
+        echo "error: cannot rebase main" >&2
+        return 1
+      fi
+      RANGE_TOTAL=$(git ${DIRECTORY:+-C "${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" 2>/dev/null || echo 0)
+      RANGE_LOCAL=$(git ${DIRECTORY:+-C "${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" --not --remotes 2>/dev/null || echo 0)
+      if [ "${RANGE_TOTAL}" != "${RANGE_LOCAL}" ]; then
+        echo "error: ${TARGET}..HEAD contains commits already on a remote -- rebase would require a force push" >&2
+        return 1
+      fi
+
+  git-reset-unpushed:
+    description: >-
+      Reset HEAD to a target ref. Default mode is mixed (changes left
+      unstaged); pass --soft to keep them staged. Refuses if the
+      current branch is main or if any commit in target..HEAD is
+      already reachable from a remote (which would orphan pushed
+      commits). Hard reset is intentionally not exposed -- use
+      git-reset-hard-last when you specifically want to discard the
+      last commit.
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - reset
+        - "{{switches.soft}}"
+        - "{{arguments.target}}"
+    arguments:
+      target:
+        description: Ref to reset to (e.g. HEAD~1, origin/main)
+        required: true
+        pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$"
+    switches:
+      soft:
+        description: Soft reset -- keep changes staged (default is mixed; changes unstaged)
+        flag: --soft
+        short: -s
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    pre: |
+      BRANCH=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
+      if [ -z "${BRANCH}" ]; then
+        echo "error: cannot reset from a detached HEAD state" >&2
+        return 1
+      fi
+      BRANCH_LOWER=$(printf '%s' "${BRANCH}" | tr '[:upper:]' '[:lower:]')
+      if [ "${BRANCH_LOWER}" = "main" ]; then
+        echo "error: cannot reset main" >&2
+        return 1
+      fi
+      RANGE_TOTAL=$(git ${DIRECTORY:+-C "${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" 2>/dev/null || echo 0)
+      RANGE_LOCAL=$(git ${DIRECTORY:+-C "${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" --not --remotes 2>/dev/null || echo 0)
+      if [ "${RANGE_TOTAL}" != "${RANGE_LOCAL}" ]; then
+        echo "error: ${TARGET}..HEAD contains commits already on a remote -- reset would orphan pushed commits" >&2
+        return 1
+      fi

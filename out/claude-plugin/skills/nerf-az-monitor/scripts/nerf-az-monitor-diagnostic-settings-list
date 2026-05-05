@@ -28,10 +28,11 @@ EOF
 }
 
 SUBSCRIPTION=""
+_SUBSCRIPTION_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --subscription) if [[ -n "${SUBSCRIPTION}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; shift 2 ;;
+    --subscription) if [[ -n "${_SUBSCRIPTION_SET}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; _SUBSCRIPTION_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -39,15 +40,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-RESOURCE_ID="${1:-}"
-shift 2>/dev/null || true
+_RESOURCE_ID_SET=""
+if [[ $# -gt 0 ]]; then
+  RESOURCE_ID="$1"
+  _RESOURCE_ID_SET=true
+  shift
+else
+  RESOURCE_ID=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-az-monitor-diagnostic-settings-list: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${RESOURCE_ID}" ]] && [[ "${RESOURCE_ID}" == -* ]]; then
+if [[ -n "${_RESOURCE_ID_SET}" ]] && [[ "${RESOURCE_ID}" == -* ]]; then
   echo "error: nerf-az-monitor-diagnostic-settings-list: <resource_id> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -60,11 +67,11 @@ if [[ -z "${RESOURCE_ID}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az monitor diagnostic-settings list --resource "${RESOURCE_ID}" ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json)
+  _NERF_DRY_CMD=(az monitor diagnostic-settings list --resource "${RESOURCE_ID}" ${_SUBSCRIPTION_SET:+"--subscription"} ${_SUBSCRIPTION_SET:+"$SUBSCRIPTION"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az monitor diagnostic-settings list --resource "${RESOURCE_ID}" ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json
+exec az monitor diagnostic-settings list --resource "${RESOURCE_ID}" ${_SUBSCRIPTION_SET:+"--subscription"} ${_SUBSCRIPTION_SET:+"$SUBSCRIPTION"} --output json

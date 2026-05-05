@@ -34,17 +34,29 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-ISSUE="${1:-}"
-shift 2>/dev/null || true
-BODY="${1:-}"
-shift 2>/dev/null || true
+_ISSUE_SET=""
+if [[ $# -gt 0 ]]; then
+  ISSUE="$1"
+  _ISSUE_SET=true
+  shift
+else
+  ISSUE=""
+fi
+_BODY_SET=""
+if [[ $# -gt 0 ]]; then
+  BODY="$1"
+  _BODY_SET=true
+  shift
+else
+  BODY=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-gh-issue-comment: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${ISSUE}" ]] && [[ "${ISSUE}" == -* ]]; then
+if [[ -n "${_ISSUE_SET}" ]] && [[ "${ISSUE}" == -* ]]; then
   echo "error: nerf-gh-issue-comment: <issue> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -56,7 +68,7 @@ if [[ -z "${ISSUE}" ]]; then
   usage
 fi
 
-if [[ -n "${BODY}" ]] && [[ "${BODY}" == -* ]]; then
+if [[ -n "${_BODY_SET}" ]] && [[ "${BODY}" == -* ]]; then
   echo "error: nerf-gh-issue-comment: <body> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1

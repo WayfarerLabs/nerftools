@@ -241,6 +241,46 @@ def test_optional_option_labeled() -> None:
     assert "(optional)" in skill
 
 
+def test_default_value_shown_in_skill() -> None:
+    """Defaults must surface in skill docs so agents see them when picking arguments."""
+    options = {"remote": OptionSpec(flag="--remote", description="Remote.", default="origin")}
+    tool = _template_tool(["echo", "{{options.remote}}"], options=options)
+    m = _manifest(tools={"t": tool})
+    skill = build_skill_text(m)
+    assert "default `origin`" in skill
+
+
+def test_default_with_backticks_uses_longer_fence() -> None:
+    """A default containing a backtick must be wrapped with a longer fence so
+    the rendered markdown remains valid, instead of breaking the code span.
+    """
+    options = {"x": OptionSpec(flag="--x", description="X.", default="foo`bar")}
+    tool = _template_tool(["echo", "{{options.x}}"], options=options)
+    skill = build_skill_text(_manifest(tools={"t": tool}))
+    assert "default ``foo`bar``" in skill
+
+
+def test_default_starting_with_backtick_pads_with_space() -> None:
+    """A default that starts with a backtick needs boundary padding -- per
+    CommonMark, a code span strips one leading/trailing space.
+    """
+    options = {"x": OptionSpec(flag="--x", description="X.", default="`tilted")}
+    tool = _template_tool(["echo", "{{options.x}}"], options=options)
+    skill = build_skill_text(_manifest(tools={"t": tool}))
+    assert "default `` `tilted ``" in skill
+
+
+def test_empty_default_renders_as_quoted_empty_string() -> None:
+    """default: '' has no valid CommonMark code span representation, so
+    we render it as `\"\"` (literal empty quotes inside a code span) so
+    the meaning is unambiguous and the rendering pattern stays uniform.
+    """
+    options = {"x": OptionSpec(flag="--x", description="X.", default="")}
+    tool = _template_tool(["echo", "{{options.x}}"], options=options)
+    skill = build_skill_text(_manifest(tools={"t": tool}))
+    assert 'default `""`' in skill
+
+
 def test_pattern_constraint_shown() -> None:
     tool = _template_tool(
         ["echo", "{{options.x}}"], options={"x": _option("--x", pattern="^[a-z]+$")},

@@ -29,10 +29,11 @@ EOF
 }
 
 DIRECTORY=""
+_DIRECTORY_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -C) if [[ -n "${DIRECTORY}" ]]; then echo "error: -C can only be specified once" >&2; exit 1; fi; DIRECTORY="$2"; shift 2 ;;
+    -C) if [[ -n "${_DIRECTORY_SET}" ]]; then echo "error: -C can only be specified once" >&2; exit 1; fi; DIRECTORY="$2"; _DIRECTORY_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -40,8 +41,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-TAG="${1:-}"
-shift 2>/dev/null || true
+_TAG_SET=""
+if [[ $# -gt 0 ]]; then
+  TAG="$1"
+  _TAG_SET=true
+  shift
+else
+  TAG=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-git-tag: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
@@ -125,11 +132,11 @@ _nerf_check_path() {
   fi
 }
 
-if [[ -n "${DIRECTORY}" ]]; then
+if [[ -n "${_DIRECTORY_SET}" ]]; then
   _nerf_check_path 'option -C' "${DIRECTORY}" 'under_cwd' || exit 1
 fi
 
-if [[ -n "${TAG}" ]] && [[ "${TAG}" == -* ]]; then
+if [[ -n "${_TAG_SET}" ]] && [[ "${TAG}" == -* ]]; then
   echo "error: nerf-git-tag: <tag> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -142,7 +149,7 @@ if [[ -z "${TAG}" ]]; then
 fi
 
 _NERF_PATTERN='^[a-zA-Z0-9._/-]+$'
-if [[ -n "${TAG}" ]] && ! [[ "${TAG}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_TAG_SET}" ]] && ! [[ "${TAG}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-git-tag: argument <tag> does not match required pattern" >&2
   echo "  value:   \"${TAG}\"" >&2
   echo "  pattern: ^[a-zA-Z0-9._/-]+$" >&2
@@ -153,11 +160,11 @@ fi
 ( ! git ${DIRECTORY:+-C "${DIRECTORY}"} rev-parse "refs/tags/${TAG}" > /dev/null 2>&1 ) || { echo 'error: nerf-git-tag: Tag already exists. Use a different version.' >&2; exit 1; }
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(git ${DIRECTORY:+"-C"} ${DIRECTORY:+"$DIRECTORY"} tag -a "${TAG}" -m "${TAG}")
+  _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} tag -a "${TAG}" -m "${TAG}")
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec git ${DIRECTORY:+"-C"} ${DIRECTORY:+"$DIRECTORY"} tag -a "${TAG}" -m "${TAG}"
+exec git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} tag -a "${TAG}" -m "${TAG}"

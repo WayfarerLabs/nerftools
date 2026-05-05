@@ -40,20 +40,26 @@ EOF
 }
 
 RESOURCE_ID=""
+_RESOURCE_ID_SET=""
 AGGREGATION=""
+_AGGREGATION_SET=""
 INTERVAL=""
+_INTERVAL_SET=""
 START_TIME=""
+_START_TIME_SET=""
 END_TIME=""
+_END_TIME_SET=""
 SUBSCRIPTION=""
+_SUBSCRIPTION_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --resource) if [[ -n "${RESOURCE_ID}" ]]; then echo "error: --resource can only be specified once" >&2; exit 1; fi; RESOURCE_ID="$2"; shift 2 ;;
-    --aggregation) if [[ -n "${AGGREGATION}" ]]; then echo "error: --aggregation can only be specified once" >&2; exit 1; fi; AGGREGATION="$2"; shift 2 ;;
-    --interval) if [[ -n "${INTERVAL}" ]]; then echo "error: --interval can only be specified once" >&2; exit 1; fi; INTERVAL="$2"; shift 2 ;;
-    --start-time) if [[ -n "${START_TIME}" ]]; then echo "error: --start-time can only be specified once" >&2; exit 1; fi; START_TIME="$2"; shift 2 ;;
-    --end-time) if [[ -n "${END_TIME}" ]]; then echo "error: --end-time can only be specified once" >&2; exit 1; fi; END_TIME="$2"; shift 2 ;;
-    --subscription) if [[ -n "${SUBSCRIPTION}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; shift 2 ;;
+    --resource) if [[ -n "${_RESOURCE_ID_SET}" ]]; then echo "error: --resource can only be specified once" >&2; exit 1; fi; RESOURCE_ID="$2"; _RESOURCE_ID_SET=true; shift 2 ;;
+    --aggregation) if [[ -n "${_AGGREGATION_SET}" ]]; then echo "error: --aggregation can only be specified once" >&2; exit 1; fi; AGGREGATION="$2"; _AGGREGATION_SET=true; shift 2 ;;
+    --interval) if [[ -n "${_INTERVAL_SET}" ]]; then echo "error: --interval can only be specified once" >&2; exit 1; fi; INTERVAL="$2"; _INTERVAL_SET=true; shift 2 ;;
+    --start-time) if [[ -n "${_START_TIME_SET}" ]]; then echo "error: --start-time can only be specified once" >&2; exit 1; fi; START_TIME="$2"; _START_TIME_SET=true; shift 2 ;;
+    --end-time) if [[ -n "${_END_TIME_SET}" ]]; then echo "error: --end-time can only be specified once" >&2; exit 1; fi; END_TIME="$2"; _END_TIME_SET=true; shift 2 ;;
+    --subscription) if [[ -n "${_SUBSCRIPTION_SET}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; _SUBSCRIPTION_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -61,8 +67,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-METRIC="${1:-}"
-shift 2>/dev/null || true
+_METRIC_SET=""
+if [[ $# -gt 0 ]]; then
+  METRIC="$1"
+  _METRIC_SET=true
+  shift
+else
+  METRIC=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-az-monitor-metrics-list: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
@@ -75,7 +87,7 @@ if [[ -z "${RESOURCE_ID}" ]]; then
   usage
 fi
 
-if [[ -n "${AGGREGATION}" ]] && [[ "${AGGREGATION}" != "Average" && "${AGGREGATION}" != "Count" && "${AGGREGATION}" != "Maximum" && "${AGGREGATION}" != "Minimum" && "${AGGREGATION}" != "Total" ]]; then
+if [[ -n "${_AGGREGATION_SET}" ]] && [[ "${AGGREGATION}" != "Average" && "${AGGREGATION}" != "Count" && "${AGGREGATION}" != "Maximum" && "${AGGREGATION}" != "Minimum" && "${AGGREGATION}" != "Total" ]]; then
   echo "error: nerf-az-monitor-metrics-list: option --aggregation is not an allowed value" >&2
   echo "  value:   \"${AGGREGATION}\"" >&2
   echo "  allowed: Average, Count, Maximum, Minimum, Total" >&2
@@ -83,7 +95,7 @@ if [[ -n "${AGGREGATION}" ]] && [[ "${AGGREGATION}" != "Average" && "${AGGREGATI
   exit 1
 fi
 
-if [[ -n "${INTERVAL}" ]] && [[ "${INTERVAL}" != "PT1M" && "${INTERVAL}" != "PT5M" && "${INTERVAL}" != "PT15M" && "${INTERVAL}" != "PT30M" && "${INTERVAL}" != "PT1H" && "${INTERVAL}" != "PT6H" && "${INTERVAL}" != "PT12H" && "${INTERVAL}" != "P1D" && "${INTERVAL}" != "FULL" ]]; then
+if [[ -n "${_INTERVAL_SET}" ]] && [[ "${INTERVAL}" != "PT1M" && "${INTERVAL}" != "PT5M" && "${INTERVAL}" != "PT15M" && "${INTERVAL}" != "PT30M" && "${INTERVAL}" != "PT1H" && "${INTERVAL}" != "PT6H" && "${INTERVAL}" != "PT12H" && "${INTERVAL}" != "P1D" && "${INTERVAL}" != "FULL" ]]; then
   echo "error: nerf-az-monitor-metrics-list: option --interval is not an allowed value" >&2
   echo "  value:   \"${INTERVAL}\"" >&2
   echo "  allowed: PT1M, PT5M, PT15M, PT30M, PT1H, PT6H, PT12H, P1D, FULL" >&2
@@ -91,7 +103,7 @@ if [[ -n "${INTERVAL}" ]] && [[ "${INTERVAL}" != "PT1M" && "${INTERVAL}" != "PT5
   exit 1
 fi
 
-if [[ -n "${METRIC}" ]] && [[ "${METRIC}" == -* ]]; then
+if [[ -n "${_METRIC_SET}" ]] && [[ "${METRIC}" == -* ]]; then
   echo "error: nerf-az-monitor-metrics-list: <metric> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -104,11 +116,11 @@ if [[ -z "${METRIC}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az monitor metrics list --resource "${RESOURCE_ID}" --metric "${METRIC}" ${AGGREGATION:+"--aggregation"} ${AGGREGATION:+"$AGGREGATION"} ${INTERVAL:+"--interval"} ${INTERVAL:+"$INTERVAL"} ${START_TIME:+"--start-time"} ${START_TIME:+"$START_TIME"} ${END_TIME:+"--end-time"} ${END_TIME:+"$END_TIME"} ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json)
+  _NERF_DRY_CMD=(az monitor metrics list --resource "${RESOURCE_ID}" --metric "${METRIC}" ${_AGGREGATION_SET:+"--aggregation"} ${_AGGREGATION_SET:+"$AGGREGATION"} ${_INTERVAL_SET:+"--interval"} ${_INTERVAL_SET:+"$INTERVAL"} ${_START_TIME_SET:+"--start-time"} ${_START_TIME_SET:+"$START_TIME"} ${_END_TIME_SET:+"--end-time"} ${_END_TIME_SET:+"$END_TIME"} ${_SUBSCRIPTION_SET:+"--subscription"} ${_SUBSCRIPTION_SET:+"$SUBSCRIPTION"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az monitor metrics list --resource "${RESOURCE_ID}" --metric "${METRIC}" ${AGGREGATION:+"--aggregation"} ${AGGREGATION:+"$AGGREGATION"} ${INTERVAL:+"--interval"} ${INTERVAL:+"$INTERVAL"} ${START_TIME:+"--start-time"} ${START_TIME:+"$START_TIME"} ${END_TIME:+"--end-time"} ${END_TIME:+"$END_TIME"} ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json
+exec az monitor metrics list --resource "${RESOURCE_ID}" --metric "${METRIC}" ${_AGGREGATION_SET:+"--aggregation"} ${_AGGREGATION_SET:+"$AGGREGATION"} ${_INTERVAL_SET:+"--interval"} ${_INTERVAL_SET:+"$INTERVAL"} ${_START_TIME_SET:+"--start-time"} ${_START_TIME_SET:+"$START_TIME"} ${_END_TIME_SET:+"--end-time"} ${_END_TIME_SET:+"$END_TIME"} ${_SUBSCRIPTION_SET:+"--subscription"} ${_SUBSCRIPTION_SET:+"$SUBSCRIPTION"} --output json

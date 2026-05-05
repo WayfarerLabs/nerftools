@@ -33,15 +33,18 @@ EOF
 
 CUSTOM_ROLE_ONLY=""
 NAME=""
+_NAME_SET=""
 SCOPE=""
+_SCOPE_SET=""
 SUBSCRIPTION=""
+_SUBSCRIPTION_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --custom-role-only) if [[ -n "${CUSTOM_ROLE_ONLY}" ]]; then echo "error: --custom-role-only can only be specified once" >&2; exit 1; fi; CUSTOM_ROLE_ONLY="true"; shift 1 ;;
-    --name|-n) if [[ -n "${NAME}" ]]; then echo "error: --name can only be specified once" >&2; exit 1; fi; NAME="$2"; shift 2 ;;
-    --scope) if [[ -n "${SCOPE}" ]]; then echo "error: --scope can only be specified once" >&2; exit 1; fi; SCOPE="$2"; shift 2 ;;
-    --subscription) if [[ -n "${SUBSCRIPTION}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; shift 2 ;;
+    --name|-n) if [[ -n "${_NAME_SET}" ]]; then echo "error: --name can only be specified once" >&2; exit 1; fi; NAME="$2"; _NAME_SET=true; shift 2 ;;
+    --scope) if [[ -n "${_SCOPE_SET}" ]]; then echo "error: --scope can only be specified once" >&2; exit 1; fi; SCOPE="$2"; _SCOPE_SET=true; shift 2 ;;
+    --subscription) if [[ -n "${_SUBSCRIPTION_SET}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; _SUBSCRIPTION_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -50,11 +53,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az role definition list ${NAME:+"--name"} ${NAME:+"$NAME"} ${SCOPE:+"--scope"} ${SCOPE:+"$SCOPE"} ${CUSTOM_ROLE_ONLY:+"--custom-role-only"} ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json)
+  _NERF_DRY_CMD=(az role definition list ${_NAME_SET:+"--name"} ${_NAME_SET:+"$NAME"} ${_SCOPE_SET:+"--scope"} ${_SCOPE_SET:+"$SCOPE"} ${CUSTOM_ROLE_ONLY:+"--custom-role-only"} ${_SUBSCRIPTION_SET:+"--subscription"} ${_SUBSCRIPTION_SET:+"$SUBSCRIPTION"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az role definition list ${NAME:+"--name"} ${NAME:+"$NAME"} ${SCOPE:+"--scope"} ${SCOPE:+"$SCOPE"} ${CUSTOM_ROLE_ONLY:+"--custom-role-only"} ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json
+exec az role definition list ${_NAME_SET:+"--name"} ${_NAME_SET:+"$NAME"} ${_SCOPE_SET:+"--scope"} ${_SCOPE_SET:+"$SCOPE"} ${CUSTOM_ROLE_ONLY:+"--custom-role-only"} ${_SUBSCRIPTION_SET:+"--subscription"} ${_SUBSCRIPTION_SET:+"$SUBSCRIPTION"} --output json

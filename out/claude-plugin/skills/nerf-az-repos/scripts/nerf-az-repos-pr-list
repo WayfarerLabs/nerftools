@@ -34,18 +34,23 @@ EOF
 }
 
 STATUS=""
+_STATUS_SET=""
 TOP=""
+_TOP_SET=""
 CREATOR=""
+_CREATOR_SET=""
 REVIEWER=""
+_REVIEWER_SET=""
 PROJECT=""
+_PROJECT_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --status) if [[ -n "${STATUS}" ]]; then echo "error: --status can only be specified once" >&2; exit 1; fi; STATUS="$2"; shift 2 ;;
-    --top) if [[ -n "${TOP}" ]]; then echo "error: --top can only be specified once" >&2; exit 1; fi; TOP="$2"; shift 2 ;;
-    --creator) if [[ -n "${CREATOR}" ]]; then echo "error: --creator can only be specified once" >&2; exit 1; fi; CREATOR="$2"; shift 2 ;;
-    --reviewer) if [[ -n "${REVIEWER}" ]]; then echo "error: --reviewer can only be specified once" >&2; exit 1; fi; REVIEWER="$2"; shift 2 ;;
-    --project|-p) if [[ -n "${PROJECT}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; shift 2 ;;
+    --status) if [[ -n "${_STATUS_SET}" ]]; then echo "error: --status can only be specified once" >&2; exit 1; fi; STATUS="$2"; _STATUS_SET=true; shift 2 ;;
+    --top) if [[ -n "${_TOP_SET}" ]]; then echo "error: --top can only be specified once" >&2; exit 1; fi; TOP="$2"; _TOP_SET=true; shift 2 ;;
+    --creator) if [[ -n "${_CREATOR_SET}" ]]; then echo "error: --creator can only be specified once" >&2; exit 1; fi; CREATOR="$2"; _CREATOR_SET=true; shift 2 ;;
+    --reviewer) if [[ -n "${_REVIEWER_SET}" ]]; then echo "error: --reviewer can only be specified once" >&2; exit 1; fi; REVIEWER="$2"; _REVIEWER_SET=true; shift 2 ;;
+    --project|-p) if [[ -n "${_PROJECT_SET}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; _PROJECT_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -53,7 +58,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -n "${STATUS}" ]] && [[ "${STATUS}" != "active" && "${STATUS}" != "abandoned" && "${STATUS}" != "completed" && "${STATUS}" != "all" ]]; then
+if [[ -n "${_STATUS_SET}" ]] && [[ "${STATUS}" != "active" && "${STATUS}" != "abandoned" && "${STATUS}" != "completed" && "${STATUS}" != "all" ]]; then
   echo "error: nerf-az-repos-pr-list: option --status is not an allowed value" >&2
   echo "  value:   \"${STATUS}\"" >&2
   echo "  allowed: active, abandoned, completed, all" >&2
@@ -62,7 +67,7 @@ if [[ -n "${STATUS}" ]] && [[ "${STATUS}" != "active" && "${STATUS}" != "abandon
 fi
 
 _NERF_PATTERN='^[0-9]+$'
-if [[ -n "${TOP}" ]] && ! [[ "${TOP}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_TOP_SET}" ]] && ! [[ "${TOP}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-az-repos-pr-list: option --top does not match required pattern" >&2
   echo "  value:   \"${TOP}\"" >&2
   echo "  pattern: ^[0-9]+$" >&2
@@ -71,11 +76,11 @@ if [[ -n "${TOP}" ]] && ! [[ "${TOP}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az repos pr list ${STATUS:+"--status"} ${STATUS:+"$STATUS"} ${TOP:+"--top"} ${TOP:+"$TOP"} ${CREATOR:+"--creator"} ${CREATOR:+"$CREATOR"} ${REVIEWER:+"--reviewer"} ${REVIEWER:+"$REVIEWER"} ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json)
+  _NERF_DRY_CMD=(az repos pr list ${_STATUS_SET:+"--status"} ${_STATUS_SET:+"$STATUS"} ${_TOP_SET:+"--top"} ${_TOP_SET:+"$TOP"} ${_CREATOR_SET:+"--creator"} ${_CREATOR_SET:+"$CREATOR"} ${_REVIEWER_SET:+"--reviewer"} ${_REVIEWER_SET:+"$REVIEWER"} ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az repos pr list ${STATUS:+"--status"} ${STATUS:+"$STATUS"} ${TOP:+"--top"} ${TOP:+"$TOP"} ${CREATOR:+"--creator"} ${CREATOR:+"$CREATOR"} ${REVIEWER:+"--reviewer"} ${REVIEWER:+"$REVIEWER"} ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json
+exec az repos pr list ${_STATUS_SET:+"--status"} ${_STATUS_SET:+"$STATUS"} ${_TOP_SET:+"--top"} ${_TOP_SET:+"$TOP"} ${_CREATOR_SET:+"--creator"} ${_CREATOR_SET:+"$CREATOR"} ${_REVIEWER_SET:+"--reviewer"} ${_REVIEWER_SET:+"$REVIEWER"} ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json

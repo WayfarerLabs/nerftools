@@ -28,10 +28,11 @@ EOF
 }
 
 SUBSCRIPTION=""
+_SUBSCRIPTION_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --subscription) if [[ -n "${SUBSCRIPTION}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; shift 2 ;;
+    --subscription) if [[ -n "${_SUBSCRIPTION_SET}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; _SUBSCRIPTION_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -39,15 +40,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-LOCATION="${1:-}"
-shift 2>/dev/null || true
+_LOCATION_SET=""
+if [[ $# -gt 0 ]]; then
+  LOCATION="$1"
+  _LOCATION_SET=true
+  shift
+else
+  LOCATION=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-az-aks-get-versions: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${LOCATION}" ]] && [[ "${LOCATION}" == -* ]]; then
+if [[ -n "${_LOCATION_SET}" ]] && [[ "${LOCATION}" == -* ]]; then
   echo "error: nerf-az-aks-get-versions: <location> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -60,11 +67,11 @@ if [[ -z "${LOCATION}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az aks get-versions --location "${LOCATION}" ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json)
+  _NERF_DRY_CMD=(az aks get-versions --location "${LOCATION}" ${_SUBSCRIPTION_SET:+"--subscription"} ${_SUBSCRIPTION_SET:+"$SUBSCRIPTION"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az aks get-versions --location "${LOCATION}" ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json
+exec az aks get-versions --location "${LOCATION}" ${_SUBSCRIPTION_SET:+"--subscription"} ${_SUBSCRIPTION_SET:+"$SUBSCRIPTION"} --output json

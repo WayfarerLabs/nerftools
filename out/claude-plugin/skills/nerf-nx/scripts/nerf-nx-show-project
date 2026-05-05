@@ -33,15 +33,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-PROJECT="${1:-}"
-shift 2>/dev/null || true
+_PROJECT_SET=""
+if [[ $# -gt 0 ]]; then
+  PROJECT="$1"
+  _PROJECT_SET=true
+  shift
+else
+  PROJECT=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-nx-show-project: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${PROJECT}" ]] && [[ "${PROJECT}" == -* ]]; then
+if [[ -n "${_PROJECT_SET}" ]] && [[ "${PROJECT}" == -* ]]; then
   echo "error: nerf-nx-show-project: <project> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -54,7 +60,7 @@ if [[ -z "${PROJECT}" ]]; then
 fi
 
 _NERF_PATTERN='^[a-zA-Z0-9_-]+$'
-if [[ -n "${PROJECT}" ]] && ! [[ "${PROJECT}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_PROJECT_SET}" ]] && ! [[ "${PROJECT}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-nx-show-project: argument <project> does not match required pattern" >&2
   echo "  value:   \"${PROJECT}\"" >&2
   echo "  pattern: ^[a-zA-Z0-9_-]+$" >&2

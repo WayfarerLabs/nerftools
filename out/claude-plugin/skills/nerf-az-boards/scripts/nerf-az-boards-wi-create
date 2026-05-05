@@ -42,22 +42,29 @@ EOF
 }
 
 ASSIGNED_TO=""
+_ASSIGNED_TO_SET=""
 AREA=""
+_AREA_SET=""
 ITERATION=""
+_ITERATION_SET=""
 DESCRIPTION=""
+_DESCRIPTION_SET=""
 DISCUSSION=""
+_DISCUSSION_SET=""
 FIELDS=""
+_FIELDS_SET=""
 PROJECT=""
+_PROJECT_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --assigned-to) if [[ -n "${ASSIGNED_TO}" ]]; then echo "error: --assigned-to can only be specified once" >&2; exit 1; fi; ASSIGNED_TO="$2"; shift 2 ;;
-    --area) if [[ -n "${AREA}" ]]; then echo "error: --area can only be specified once" >&2; exit 1; fi; AREA="$2"; shift 2 ;;
-    --iteration) if [[ -n "${ITERATION}" ]]; then echo "error: --iteration can only be specified once" >&2; exit 1; fi; ITERATION="$2"; shift 2 ;;
-    --description|-d) if [[ -n "${DESCRIPTION}" ]]; then echo "error: --description can only be specified once" >&2; exit 1; fi; DESCRIPTION="$2"; shift 2 ;;
-    --discussion) if [[ -n "${DISCUSSION}" ]]; then echo "error: --discussion can only be specified once" >&2; exit 1; fi; DISCUSSION="$2"; shift 2 ;;
-    --fields|-f) if [[ -n "${FIELDS}" ]]; then echo "error: --fields can only be specified once" >&2; exit 1; fi; FIELDS="$2"; shift 2 ;;
-    --project|-p) if [[ -n "${PROJECT}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; shift 2 ;;
+    --assigned-to) if [[ -n "${_ASSIGNED_TO_SET}" ]]; then echo "error: --assigned-to can only be specified once" >&2; exit 1; fi; ASSIGNED_TO="$2"; _ASSIGNED_TO_SET=true; shift 2 ;;
+    --area) if [[ -n "${_AREA_SET}" ]]; then echo "error: --area can only be specified once" >&2; exit 1; fi; AREA="$2"; _AREA_SET=true; shift 2 ;;
+    --iteration) if [[ -n "${_ITERATION_SET}" ]]; then echo "error: --iteration can only be specified once" >&2; exit 1; fi; ITERATION="$2"; _ITERATION_SET=true; shift 2 ;;
+    --description|-d) if [[ -n "${_DESCRIPTION_SET}" ]]; then echo "error: --description can only be specified once" >&2; exit 1; fi; DESCRIPTION="$2"; _DESCRIPTION_SET=true; shift 2 ;;
+    --discussion) if [[ -n "${_DISCUSSION_SET}" ]]; then echo "error: --discussion can only be specified once" >&2; exit 1; fi; DISCUSSION="$2"; _DISCUSSION_SET=true; shift 2 ;;
+    --fields|-f) if [[ -n "${_FIELDS_SET}" ]]; then echo "error: --fields can only be specified once" >&2; exit 1; fi; FIELDS="$2"; _FIELDS_SET=true; shift 2 ;;
+    --project|-p) if [[ -n "${_PROJECT_SET}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; _PROJECT_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -65,17 +72,29 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-TYPE="${1:-}"
-shift 2>/dev/null || true
-TITLE="${1:-}"
-shift 2>/dev/null || true
+_TYPE_SET=""
+if [[ $# -gt 0 ]]; then
+  TYPE="$1"
+  _TYPE_SET=true
+  shift
+else
+  TYPE=""
+fi
+_TITLE_SET=""
+if [[ $# -gt 0 ]]; then
+  TITLE="$1"
+  _TITLE_SET=true
+  shift
+else
+  TITLE=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-az-boards-wi-create: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${TYPE}" ]] && [[ "${TYPE}" == -* ]]; then
+if [[ -n "${_TYPE_SET}" ]] && [[ "${TYPE}" == -* ]]; then
   echo "error: nerf-az-boards-wi-create: <type> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -87,7 +106,7 @@ if [[ -z "${TYPE}" ]]; then
   usage
 fi
 
-if [[ -n "${TITLE}" ]] && [[ "${TITLE}" == -* ]]; then
+if [[ -n "${_TITLE_SET}" ]] && [[ "${TITLE}" == -* ]]; then
   echo "error: nerf-az-boards-wi-create: <title> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -100,11 +119,11 @@ if [[ -z "${TITLE}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az boards work-item create --type "${TYPE}" --title "${TITLE}" ${ASSIGNED_TO:+"--assigned-to"} ${ASSIGNED_TO:+"$ASSIGNED_TO"} ${AREA:+"--area"} ${AREA:+"$AREA"} ${ITERATION:+"--iteration"} ${ITERATION:+"$ITERATION"} ${DESCRIPTION:+"--description"} ${DESCRIPTION:+"$DESCRIPTION"} ${DISCUSSION:+"--discussion"} ${DISCUSSION:+"$DISCUSSION"} ${FIELDS:+"--fields"} ${FIELDS:+"$FIELDS"} ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json)
+  _NERF_DRY_CMD=(az boards work-item create --type "${TYPE}" --title "${TITLE}" ${_ASSIGNED_TO_SET:+"--assigned-to"} ${_ASSIGNED_TO_SET:+"$ASSIGNED_TO"} ${_AREA_SET:+"--area"} ${_AREA_SET:+"$AREA"} ${_ITERATION_SET:+"--iteration"} ${_ITERATION_SET:+"$ITERATION"} ${_DESCRIPTION_SET:+"--description"} ${_DESCRIPTION_SET:+"$DESCRIPTION"} ${_DISCUSSION_SET:+"--discussion"} ${_DISCUSSION_SET:+"$DISCUSSION"} ${_FIELDS_SET:+"--fields"} ${_FIELDS_SET:+"$FIELDS"} ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az boards work-item create --type "${TYPE}" --title "${TITLE}" ${ASSIGNED_TO:+"--assigned-to"} ${ASSIGNED_TO:+"$ASSIGNED_TO"} ${AREA:+"--area"} ${AREA:+"$AREA"} ${ITERATION:+"--iteration"} ${ITERATION:+"$ITERATION"} ${DESCRIPTION:+"--description"} ${DESCRIPTION:+"$DESCRIPTION"} ${DISCUSSION:+"--discussion"} ${DISCUSSION:+"$DISCUSSION"} ${FIELDS:+"--fields"} ${FIELDS:+"$FIELDS"} ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json
+exec az boards work-item create --type "${TYPE}" --title "${TITLE}" ${_ASSIGNED_TO_SET:+"--assigned-to"} ${_ASSIGNED_TO_SET:+"$ASSIGNED_TO"} ${_AREA_SET:+"--area"} ${_AREA_SET:+"$AREA"} ${_ITERATION_SET:+"--iteration"} ${_ITERATION_SET:+"$ITERATION"} ${_DESCRIPTION_SET:+"--description"} ${_DESCRIPTION_SET:+"$DESCRIPTION"} ${_DISCUSSION_SET:+"--discussion"} ${_DISCUSSION_SET:+"$DISCUSSION"} ${_FIELDS_SET:+"--fields"} ${_FIELDS_SET:+"$FIELDS"} ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json

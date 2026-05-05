@@ -32,15 +32,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-PROJECT="${1:-}"
-shift 2>/dev/null || true
+_PROJECT_SET=""
+if [[ $# -gt 0 ]]; then
+  PROJECT="$1"
+  _PROJECT_SET=true
+  shift
+else
+  PROJECT=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-az-devops-set-default-project: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${PROJECT}" ]] && [[ "${PROJECT}" == -* ]]; then
+if [[ -n "${_PROJECT_SET}" ]] && [[ "${PROJECT}" == -* ]]; then
   echo "error: nerf-az-devops-set-default-project: <project> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1

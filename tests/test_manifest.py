@@ -349,6 +349,127 @@ def test_invalid_option_pattern_raises(tmp_path: Path) -> None:
         load_manifest(p)
 
 
+def _option_default_manifest(option_spec: dict) -> dict:
+    return _minimal_manifest(tools={
+        "t": {
+            "description": "A test tool.",
+            "threat": {"read": "none", "write": "none"},
+            "template": {"command": ["cmd", "{{options.remote}}"]},
+            "options": {"remote": {"description": "Remote name.", **option_spec}},
+        },
+    })
+
+
+def test_option_default_loaded(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _option_default_manifest({"default": "origin"}))
+    m = load_manifest(p)
+    assert m.tools["t"].options["remote"].default == "origin"
+
+
+def test_option_default_absent_is_none(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _option_default_manifest({}))
+    m = load_manifest(p)
+    assert m.tools["t"].options["remote"].default is None
+
+
+def test_option_default_with_required_raises(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _option_default_manifest({"default": "origin", "required": True}))
+    with pytest.raises(ManifestError, match="'default' and 'required: true' are mutually exclusive"):
+        load_manifest(p)
+
+
+def test_option_default_with_repeatable_raises(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _option_default_manifest({"default": "origin", "repeatable": True}))
+    with pytest.raises(ManifestError, match="'default' is not supported with 'repeatable: true'"):
+        load_manifest(p)
+
+
+def test_option_default_must_match_pattern(tmp_path: Path) -> None:
+    p = _write_manifest(
+        tmp_path,
+        _option_default_manifest({"default": "BadValue", "pattern": "^[a-z]+$"}),
+    )
+    with pytest.raises(ManifestError, match="does not match 'pattern'"):
+        load_manifest(p)
+
+
+def test_option_default_must_be_in_allow(tmp_path: Path) -> None:
+    p = _write_manifest(
+        tmp_path,
+        _option_default_manifest({"default": "github", "allow": ["origin", "upstream"]}),
+    )
+    with pytest.raises(ManifestError, match="is not in 'allow' list"):
+        load_manifest(p)
+
+
+def test_option_default_must_not_be_in_deny(tmp_path: Path) -> None:
+    p = _write_manifest(
+        tmp_path,
+        _option_default_manifest({"default": "origin", "deny": ["origin"]}),
+    )
+    with pytest.raises(ManifestError, match="is in 'deny' list"):
+        load_manifest(p)
+
+
+def test_option_default_null_is_rejected(tmp_path: Path) -> None:
+    """YAML null/~ must be rejected, not silently coerced to the string 'None'."""
+    p = _write_manifest(tmp_path, _option_default_manifest({"default": None}))
+    with pytest.raises(ManifestError, match="'default' must be a string, got NoneType"):
+        load_manifest(p)
+
+
+def test_option_default_int_is_rejected(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _option_default_manifest({"default": 0}))
+    with pytest.raises(ManifestError, match="'default' must be a string, got int"):
+        load_manifest(p)
+
+
+def test_option_default_bool_is_rejected(tmp_path: Path) -> None:
+    """YAML true/false would otherwise become the Python repr 'True'/'False'."""
+    p = _write_manifest(tmp_path, _option_default_manifest({"default": True}))
+    with pytest.raises(ManifestError, match="'default' must be a string, got bool"):
+        load_manifest(p)
+
+
+def test_option_default_empty_string_is_accepted(tmp_path: Path) -> None:
+    """Empty string is a legitimate default distinct from absent."""
+    p = _write_manifest(tmp_path, _option_default_manifest({"default": ""}))
+    m = load_manifest(p)
+    assert m.tools["t"].options["remote"].default == ""
+
+
+def test_option_default_with_newline_is_rejected(tmp_path: Path) -> None:
+    """Control characters break the generated bash and markdown -- newlines
+    collapse inside code spans, NUL terminates C strings. Reject at load time.
+    """
+    p = _write_manifest(tmp_path, _option_default_manifest({"default": "line1\nline2"}))
+    with pytest.raises(ManifestError, match="contains control characters"):
+        load_manifest(p)
+
+
+def test_option_pattern_with_control_char_is_rejected(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _option_default_manifest({"pattern": "^foo\x07bar$"}))
+    with pytest.raises(ManifestError, match="contains control characters"):
+        load_manifest(p)
+
+
+def test_option_allow_with_control_char_is_rejected(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _option_default_manifest({"allow": ["ok", "bad\tvalue"]}))
+    with pytest.raises(ManifestError, match="contains control characters"):
+        load_manifest(p)
+
+
+def test_option_default_with_path_tests_raises(tmp_path: Path) -> None:
+    """path_tests evaluate against runtime cwd, so a load-time default cannot be
+    meaningfully validated against them. Reject the combination explicitly.
+    """
+    p = _write_manifest(tmp_path, _option_default_manifest({
+        "default": ".", "path_tests": ["under_cwd"],
+    }))
+    with pytest.raises(ManifestError, match="'default' cannot be combined with 'path_tests'"):
+        load_manifest(p)
+
+
 # -- Arguments -----------------------------------------------------------------
 
 
@@ -757,6 +878,27 @@ def test_builtin_git_loads() -> None:
     assert m.tools["git-log"].threat.read == ThreatLevel.WORKSPACE
     assert m.tools["git-log"].threat.write == ThreatLevel.NONE
     assert m.tools["git-push-branch"].threat.write == ThreatLevel.REMOTE
+
+
+@pytest.mark.parametrize("tool_name", [
+    "git-branch-delete-merged",
+    "git-rebase-unpushed",
+    "git-reset-unpushed",
+    "git-push-branch",
+])
+def test_builtin_git_main_guards_are_case_insensitive(tool_name: str) -> None:
+    """Every 'cannot {op} main' guard must lowercase before comparing. On
+    case-insensitive filesystems (macOS APFS, Windows NTFS) git preserves the
+    user's casing in symbolic-ref output, so a literal `= "main"` check misses
+    branches stored as `Main`/`MAIN` even though they resolve to the same ref.
+    """
+    from nerftools.cli import _DEFAULT_MANIFESTS_DIR
+
+    m = load_manifest(_DEFAULT_MANIFESTS_DIR / "git.yaml")
+    pre = m.tools[tool_name].pre or ""
+    assert "tr '[:upper:]' '[:lower:]'" in pre, (
+        f"{tool_name} pre-hook should lowercase before comparing to 'main'"
+    )
 
 
 def _builtin_manifest_paths() -> list[Path]:

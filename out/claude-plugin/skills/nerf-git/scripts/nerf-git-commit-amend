@@ -29,10 +29,11 @@ EOF
 }
 
 DIRECTORY=""
+_DIRECTORY_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -C) if [[ -n "${DIRECTORY}" ]]; then echo "error: -C can only be specified once" >&2; exit 1; fi; DIRECTORY="$2"; shift 2 ;;
+    -C) if [[ -n "${_DIRECTORY_SET}" ]]; then echo "error: -C can only be specified once" >&2; exit 1; fi; DIRECTORY="$2"; _DIRECTORY_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -40,8 +41,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-MESSAGE="${1:-}"
-shift 2>/dev/null || true
+_MESSAGE_SET=""
+if [[ $# -gt 0 ]]; then
+  MESSAGE="$1"
+  _MESSAGE_SET=true
+  shift
+else
+  MESSAGE=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-git-commit-amend: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
@@ -125,11 +132,11 @@ _nerf_check_path() {
   fi
 }
 
-if [[ -n "${DIRECTORY}" ]]; then
+if [[ -n "${_DIRECTORY_SET}" ]]; then
   _nerf_check_path 'option -C' "${DIRECTORY}" 'under_cwd' || exit 1
 fi
 
-if [[ -n "${MESSAGE}" ]] && [[ "${MESSAGE}" == -* ]]; then
+if [[ -n "${_MESSAGE_SET}" ]] && [[ "${MESSAGE}" == -* ]]; then
   echo "error: nerf-git-commit-amend: <message> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -142,7 +149,7 @@ if [[ -z "${MESSAGE}" ]]; then
 fi
 
 _NERF_PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+$'
-if [[ -n "${MESSAGE}" ]] && ! [[ "${MESSAGE}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_MESSAGE_SET}" ]] && ! [[ "${MESSAGE}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-git-commit-amend: argument <message> does not match required pattern" >&2
   echo "  value:   \"${MESSAGE}\"" >&2
   echo "  pattern: ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+" >&2
@@ -171,11 +178,11 @@ if [ $_nerf_pre_rc -ne 0 ]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(git ${DIRECTORY:+"-C"} ${DIRECTORY:+"$DIRECTORY"} commit --amend -m "${MESSAGE}")
+  _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} commit --amend -m "${MESSAGE}")
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec git ${DIRECTORY:+"-C"} ${DIRECTORY:+"$DIRECTORY"} commit --amend -m "${MESSAGE}"
+exec git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} commit --amend -m "${MESSAGE}"

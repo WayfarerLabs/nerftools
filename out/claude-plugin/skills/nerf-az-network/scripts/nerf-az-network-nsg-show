@@ -30,12 +30,14 @@ EOF
 }
 
 RESOURCE_GROUP=""
+_RESOURCE_GROUP_SET=""
 SUBSCRIPTION=""
+_SUBSCRIPTION_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --resource-group|-g) if [[ -n "${RESOURCE_GROUP}" ]]; then echo "error: --resource-group can only be specified once" >&2; exit 1; fi; RESOURCE_GROUP="$2"; shift 2 ;;
-    --subscription) if [[ -n "${SUBSCRIPTION}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; shift 2 ;;
+    --resource-group|-g) if [[ -n "${_RESOURCE_GROUP_SET}" ]]; then echo "error: --resource-group can only be specified once" >&2; exit 1; fi; RESOURCE_GROUP="$2"; _RESOURCE_GROUP_SET=true; shift 2 ;;
+    --subscription) if [[ -n "${_SUBSCRIPTION_SET}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; _SUBSCRIPTION_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -43,8 +45,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-NAME="${1:-}"
-shift 2>/dev/null || true
+_NAME_SET=""
+if [[ $# -gt 0 ]]; then
+  NAME="$1"
+  _NAME_SET=true
+  shift
+else
+  NAME=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-az-network-nsg-show: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
@@ -57,7 +65,7 @@ if [[ -z "${RESOURCE_GROUP}" ]]; then
   usage
 fi
 
-if [[ -n "${NAME}" ]] && [[ "${NAME}" == -* ]]; then
+if [[ -n "${_NAME_SET}" ]] && [[ "${NAME}" == -* ]]; then
   echo "error: nerf-az-network-nsg-show: <name> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -70,11 +78,11 @@ if [[ -z "${NAME}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az network nsg show --resource-group "${RESOURCE_GROUP}" --name "${NAME}" ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json)
+  _NERF_DRY_CMD=(az network nsg show --resource-group "${RESOURCE_GROUP}" --name "${NAME}" ${_SUBSCRIPTION_SET:+"--subscription"} ${_SUBSCRIPTION_SET:+"$SUBSCRIPTION"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az network nsg show --resource-group "${RESOURCE_GROUP}" --name "${NAME}" ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json
+exec az network nsg show --resource-group "${RESOURCE_GROUP}" --name "${NAME}" ${_SUBSCRIPTION_SET:+"--subscription"} ${_SUBSCRIPTION_SET:+"$SUBSCRIPTION"} --output json

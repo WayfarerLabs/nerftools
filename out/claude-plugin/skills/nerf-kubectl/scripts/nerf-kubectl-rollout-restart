@@ -30,10 +30,11 @@ EOF
 }
 
 NAMESPACE=""
+_NAMESPACE_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --namespace|-n) if [[ -n "${NAMESPACE}" ]]; then echo "error: --namespace can only be specified once" >&2; exit 1; fi; NAMESPACE="$2"; shift 2 ;;
+    --namespace|-n) if [[ -n "${_NAMESPACE_SET}" ]]; then echo "error: --namespace can only be specified once" >&2; exit 1; fi; NAMESPACE="$2"; _NAMESPACE_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -41,8 +42,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-TARGET="${1:-}"
-shift 2>/dev/null || true
+_TARGET_SET=""
+if [[ $# -gt 0 ]]; then
+  TARGET="$1"
+  _TARGET_SET=true
+  shift
+else
+  TARGET=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-kubectl-rollout-restart: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
@@ -50,7 +57,7 @@ if [[ $# -gt 0 ]]; then
 fi
 
 _NERF_PATTERN='^[a-z0-9-]+$'
-if [[ -n "${NAMESPACE}" ]] && ! [[ "${NAMESPACE}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_NAMESPACE_SET}" ]] && ! [[ "${NAMESPACE}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-kubectl-rollout-restart: option --namespace does not match required pattern" >&2
   echo "  value:   \"${NAMESPACE}\"" >&2
   echo "  pattern: ^[a-z0-9-]+$" >&2
@@ -58,7 +65,7 @@ if [[ -n "${NAMESPACE}" ]] && ! [[ "${NAMESPACE}" =~ $_NERF_PATTERN ]]; then
   exit 1
 fi
 
-if [[ -n "${TARGET}" ]] && [[ "${TARGET}" == -* ]]; then
+if [[ -n "${_TARGET_SET}" ]] && [[ "${TARGET}" == -* ]]; then
   echo "error: nerf-kubectl-rollout-restart: <target> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -71,7 +78,7 @@ if [[ -z "${TARGET}" ]]; then
 fi
 
 _NERF_PATTERN='^(deployment|deploy|daemonset|ds|statefulset|sts)/[a-z0-9]([-a-z0-9.]*[a-z0-9])?$'
-if [[ -n "${TARGET}" ]] && ! [[ "${TARGET}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_TARGET_SET}" ]] && ! [[ "${TARGET}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-kubectl-rollout-restart: argument <target> does not match required pattern" >&2
   echo "  value:   \"${TARGET}\"" >&2
   echo "  pattern: ^(deployment|deploy|daemonset|ds|statefulset|sts)/[a-z0-9]([-a-z0-9.]*[a-z0-9])?$" >&2
@@ -80,11 +87,11 @@ if [[ -n "${TARGET}" ]] && ! [[ "${TARGET}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(kubectl rollout restart ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} "${TARGET}")
+  _NERF_DRY_CMD=(kubectl rollout restart ${_NAMESPACE_SET:+"--namespace"} ${_NAMESPACE_SET:+"$NAMESPACE"} "${TARGET}")
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec kubectl rollout restart ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} "${TARGET}"
+exec kubectl rollout restart ${_NAMESPACE_SET:+"--namespace"} ${_NAMESPACE_SET:+"$NAMESPACE"} "${TARGET}"

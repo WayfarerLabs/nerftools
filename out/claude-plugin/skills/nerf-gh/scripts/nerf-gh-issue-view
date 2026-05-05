@@ -32,15 +32,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-ISSUE="${1:-}"
-shift 2>/dev/null || true
+_ISSUE_SET=""
+if [[ $# -gt 0 ]]; then
+  ISSUE="$1"
+  _ISSUE_SET=true
+  shift
+else
+  ISSUE=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-gh-issue-view: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${ISSUE}" ]] && [[ "${ISSUE}" == -* ]]; then
+if [[ -n "${_ISSUE_SET}" ]] && [[ "${ISSUE}" == -* ]]; then
   echo "error: nerf-gh-issue-view: <issue> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1

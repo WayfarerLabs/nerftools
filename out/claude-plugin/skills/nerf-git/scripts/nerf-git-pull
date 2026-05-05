@@ -19,7 +19,7 @@ Options:
 Arguments:
   <remote> (required)
       Remote name (e.g. origin)
-      Must match: ^[a-z0-9_-]+$
+      Must match: ^[a-zA-Z0-9_.-]+$
 
 Maps to: git <directory> pull <remote>
 
@@ -29,10 +29,11 @@ EOF
 }
 
 DIRECTORY=""
+_DIRECTORY_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -C) if [[ -n "${DIRECTORY}" ]]; then echo "error: -C can only be specified once" >&2; exit 1; fi; DIRECTORY="$2"; shift 2 ;;
+    -C) if [[ -n "${_DIRECTORY_SET}" ]]; then echo "error: -C can only be specified once" >&2; exit 1; fi; DIRECTORY="$2"; _DIRECTORY_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -40,8 +41,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-REMOTE="${1:-}"
-shift 2>/dev/null || true
+_REMOTE_SET=""
+if [[ $# -gt 0 ]]; then
+  REMOTE="$1"
+  _REMOTE_SET=true
+  shift
+else
+  REMOTE=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-git-pull: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
@@ -125,11 +132,11 @@ _nerf_check_path() {
   fi
 }
 
-if [[ -n "${DIRECTORY}" ]]; then
+if [[ -n "${_DIRECTORY_SET}" ]]; then
   _nerf_check_path 'option -C' "${DIRECTORY}" 'under_cwd' || exit 1
 fi
 
-if [[ -n "${REMOTE}" ]] && [[ "${REMOTE}" == -* ]]; then
+if [[ -n "${_REMOTE_SET}" ]] && [[ "${REMOTE}" == -* ]]; then
   echo "error: nerf-git-pull: <remote> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -141,21 +148,21 @@ if [[ -z "${REMOTE}" ]]; then
   usage
 fi
 
-_NERF_PATTERN='^[a-z0-9_-]+$'
-if [[ -n "${REMOTE}" ]] && ! [[ "${REMOTE}" =~ $_NERF_PATTERN ]]; then
+_NERF_PATTERN='^[a-zA-Z0-9_.-]+$'
+if [[ -n "${_REMOTE_SET}" ]] && ! [[ "${REMOTE}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-git-pull: argument <remote> does not match required pattern" >&2
   echo "  value:   \"${REMOTE}\"" >&2
-  echo "  pattern: ^[a-z0-9_-]+$" >&2
-  echo "  hint: value must match ^[a-z0-9_-]+$" >&2
+  echo "  pattern: ^[a-zA-Z0-9_.-]+$" >&2
+  echo "  hint: value must match ^[a-zA-Z0-9_.-]+$" >&2
   exit 1
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(git ${DIRECTORY:+"-C"} ${DIRECTORY:+"$DIRECTORY"} pull "${REMOTE}")
+  _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} pull "${REMOTE}")
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec git ${DIRECTORY:+"-C"} ${DIRECTORY:+"$DIRECTORY"} pull "${REMOTE}"
+exec git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} pull "${REMOTE}"

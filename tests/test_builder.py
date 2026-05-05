@@ -157,16 +157,238 @@ def test_required_option_validation() -> None:
     assert "missing required option --remote" in script
 
 
+def test_option_default_seeds_bash_variable() -> None:
+    """An option with default should initialize its bash variable to the default,
+    so inline placeholders see the value even when the agent doesn't pass --flag.
+    """
+    options = {"remote": OptionSpec(flag="--remote", description="Remote.", default="origin")}
+    tool = _template_tool(["echo", "{{options.remote}}"], options=options)
+    script = build_script_text("t", "p", tool)
+    assert "REMOTE='origin'" in script
+    assert 'REMOTE=""' not in script
+
+
+def test_option_default_does_not_trigger_dup_check_on_first_use(tmp_path: Path) -> None:
+    """Regression: when an option has a default, the bash variable is initialized
+    non-empty, but the duplicate-detection check must still allow the user to
+    pass --flag once. Uses a separate "_<VAR>_SET" marker.
+    """
+    options = {"remote": OptionSpec(flag="--remote", description="Remote.", default="origin")}
+    tool = _template_tool(["echo", "{{options.remote}}"], options=options)
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+    # First use of the flag with a non-default value must succeed
+    result = subprocess.run(
+        [str(script_path), "--nerf-dry-run", "--remote", "upstream"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "upstream" in result.stdout
+    # But passing the flag twice must still be rejected
+    result = subprocess.run(
+        [str(script_path), "--remote", "a", "--remote", "b"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode != 0
+    assert "can only be specified once" in result.stderr
+
+
+def test_option_default_in_inline_placeholder(tmp_path: Path) -> None:
+    """The default-feature is most useful in inline placeholders like
+    "{{options.x}}/{{arguments.y}}" where the substituted ${X} must be non-empty
+    for the URL/path to be well-formed. Whole-token placeholders happen to also
+    work, but the inline path is the load-bearing case.
+    """
+    options = {"remote": OptionSpec(flag="--remote", description="Remote.", default="origin")}
+    arguments = {"branch": ArgSpec(description="Branch.", required=True)}
+    tool = _template_tool(
+        ["echo", "{{options.remote}}/{{arguments.branch}}"],
+        options=options,
+        arguments=arguments,
+    )
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+
+    # Default applied when --remote omitted
+    result = subprocess.run([str(script_path), "feat-x"], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert "origin/feat-x" in result.stdout
+
+    # User override
+    result = subprocess.run(
+        [str(script_path), "--remote", "upstream", "feat-x"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "upstream/feat-x" in result.stdout
+
+
+def test_option_default_with_special_chars_is_quoted(tmp_path: Path) -> None:
+    """Defaults with shell-special characters must be safely single-quoted."""
+    options = {"x": OptionSpec(flag="--x", description="X.", default="it's tricky")}
+    tool = _template_tool(["echo", "{{options.x}}"], options=options)
+    script = build_script_text("t", "p", tool)
+    # Single-quote escaping uses '\"'\"' to embed a literal single quote
+    assert "X='it'\"'\"'s tricky'" in script
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(script)
+    script_path.chmod(0o755)
+    result = subprocess.run([str(script_path), "--nerf-dry-run"], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+
+
+def test_empty_string_value_runs_through_pattern_validation(tmp_path: Path) -> None:
+    """Regression: validation gates used `[[ -n "$VAR" ]]`, so an explicit
+    `--flag ''` slipped through pattern/allow/deny/path_tests because the
+    empty value made the gate false. With value-independent presence
+    tracking, validation runs whenever the user supplied the flag.
+    """
+    options = {"remote": _option("--remote", required=False, pattern="^[a-z]+$")}
+    tool = _template_tool(["echo", "{{options.remote}}"], options=options)
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "--remote", ""],
+        capture_output=True, text=True,
+    )
+    assert result.returncode != 0
+    assert "does not match required pattern" in result.stderr
+
+
+def test_empty_string_positional_runs_through_pattern_validation(tmp_path: Path) -> None:
+    """Same regression for positional arguments: an explicit empty value
+    must hit pattern validation rather than being silently accepted.
+    """
+    arguments = {"name": ArgSpec(description="Name.", required=False, pattern="^[a-z]+$")}
+    tool = _template_tool(["echo", "{{arguments.name}}"], arguments=arguments)
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run([str(script_path), ""], capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "does not match required pattern" in result.stderr
+
+
+def test_omitted_optional_positional_still_skips_validation(tmp_path: Path) -> None:
+    """Sanity check: when the user omits an optional positional entirely,
+    the marker stays empty and validation does NOT run -- otherwise every
+    optional with a pattern would always fail.
+    """
+    arguments = {"name": ArgSpec(description="Name.", required=False, pattern="^[a-z]+$")}
+    tool = _template_tool(["echo", "{{arguments.name}}"], arguments=arguments)
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run([str(script_path), "--nerf-dry-run"], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+
+
+def test_non_defaulted_option_dup_check_catches_empty_first_value(tmp_path: Path) -> None:
+    """Regression: the original dup-check used `[[ -n "$VAR" ]]`, so an agent
+    passing `--flag '' --flag second` slipped past because the empty first
+    value left VAR empty. Presence tracking must be value-independent.
+    """
+    options = {"remote": _option("--remote", required=False)}
+    tool = _template_tool(["echo", "{{options.remote}}"], options=options)
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "--remote", "", "--remote", "second"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode != 0
+    assert "can only be specified once" in result.stderr
+
+
+def test_option_default_appears_in_usage_help() -> None:
+    """The default value should be visible in --help output so agents can see it."""
+    options = {"remote": OptionSpec(flag="--remote", description="Remote.", default="origin")}
+    tool = _template_tool(["echo", "{{options.remote}}"], options=options)
+    script = build_script_text("t", "p", tool)
+    assert "Default: origin" in script
+
+
 def test_optional_option_no_required_check() -> None:
     options = {"remote": _option("--remote", required=False)}
     script = build_script_text("t", "p", _template_tool(["echo", "{{options.remote}}"], options=options))
     assert "missing required option --remote" not in script
 
 
-def test_optional_option_uses_conditional_expansion() -> None:
+def test_optional_option_uses_presence_gated_expansion() -> None:
     options = {"remote": _option("--remote", required=False)}
     script = build_script_text("t", "p", _template_tool(["git", "fetch", "{{options.remote}}"], options=options))
-    assert '${REMOTE:+"$REMOTE"}' in script
+    # Presence-gated emission lets `--remote ''` reach the tool as a literal
+    # empty token rather than collapsing to nothing.
+    assert '${_REMOTE_SET:+"--remote"} ${_REMOTE_SET:+"$REMOTE"}' in script
+
+
+def test_explicit_empty_option_value_emits_literal_empty_token(tmp_path: Path) -> None:
+    """`--flag ''` should reach the wrapped command as a literal empty token,
+    not collapse out of the argv. Empty values can carry meaning (clearing a
+    config, passing a deliberate empty arg).
+    """
+    options = {"remote": _option("--remote", required=False)}
+    tool = _template_tool(["echo", "{{options.remote}}"], options=options)
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "--nerf-dry-run", "--remote", ""],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "dry-run: echo --remote ''" in result.stdout
+
+
+def test_omitted_optional_option_collapses_out(tmp_path: Path) -> None:
+    """Sanity check: when the user omits the option entirely, no flag/value
+    pair appears in the argv -- otherwise every optional option would always
+    emit the flag.
+    """
+    options = {"remote": _option("--remote", required=False)}
+    tool = _template_tool(["echo", "{{options.remote}}"], options=options)
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "--nerf-dry-run"], capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "--remote" not in result.stdout
+
+
+def test_defaulted_option_emits_unconditionally_even_when_default_is_empty(tmp_path: Path) -> None:
+    """An option with default: '' is meaningfully different from no default --
+    it always emits the flag, with the (default or user-supplied) empty value.
+    """
+    options = {"remote": OptionSpec(flag="--remote", description="Remote.", default="")}
+    tool = _template_tool(["echo", "{{options.remote}}"], options=options)
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "--nerf-dry-run"], capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "dry-run: echo --remote ''" in result.stdout
+
+
+def test_explicit_empty_positional_emits_literal_empty(tmp_path: Path) -> None:
+    """Same presence preservation for positional arguments."""
+    arguments = {"name": ArgSpec(description="Name.", required=False)}
+    tool = _template_tool(["echo", "{{arguments.name}}"], arguments=arguments)
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "--nerf-dry-run", ""], capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "dry-run: echo ''" in result.stdout
 
 
 def test_pattern_validation() -> None:
@@ -253,7 +475,8 @@ def test_switch_bash_syntax() -> None:
 def test_positional_arg_collected() -> None:
     arguments = {"remote": _arg(required=True)}
     script = build_script_text("t", "p", _template_tool(["git", "fetch", "{{arguments.remote}}"], arguments=arguments))
-    assert 'REMOTE="${1:-}"' in script
+    assert 'REMOTE="$1"' in script
+    assert "_REMOTE_SET=true" in script
 
 
 def test_positional_exec_substitution() -> None:
@@ -840,8 +1063,9 @@ def test_path_tests_helper_emitted_once_per_tool() -> None:
 def test_path_tests_option_invocation() -> None:
     script = build_script_text("t", "p", _path_option_tool((PathTest.UNDER_CWD, PathTest.DIR)))
     assert "_nerf_check_path 'option -C' \"${DIR}\" 'under_cwd,dir'" in script
-    # Optional option is gated on non-empty:
-    assert 'if [[ -n "${DIR}" ]]; then' in script
+    # Validation gates on the presence marker, not the value, so an explicit
+    # empty value still hits path validation.
+    assert 'if [[ -n "${_DIR_SET}" ]]; then' in script
 
 
 def test_path_tests_required_argument_invocation() -> None:

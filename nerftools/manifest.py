@@ -154,6 +154,7 @@ class OptionSpec:
     allow: tuple[str, ...] = field(default_factory=tuple)
     deny: tuple[str, ...] = field(default_factory=tuple)
     path_tests: tuple[PathTest, ...] = field(default_factory=tuple)
+    default: str | None = None
 
 
 @dataclass(frozen=True)
@@ -494,6 +495,26 @@ def _load_options(raw: dict[str, Any], path: Path, tool_name: str) -> dict[str, 
         allow = tuple(str(v) for v in spec_raw.get("allow", []))
         deny = tuple(str(v) for v in spec_raw.get("deny", []))
         path_tests = _load_path_tests(spec_raw, ctx)
+        default: str | None = None
+        if "default" in spec_raw:
+            raw_default = spec_raw["default"]
+            if not isinstance(raw_default, str):
+                raise ManifestError(
+                    f"{ctx}: 'default' must be a string, got {type(raw_default).__name__}"
+                )
+            default = raw_default
+
+        # Reject control characters in fields that get rendered into bash
+        # and skill markdown. Done before regex/structural validation so
+        # the error is specific.
+        if pattern is not None:
+            _reject_control_chars(pattern, "pattern", ctx)
+        for v in allow:
+            _reject_control_chars(v, "allow", ctx)
+        for v in deny:
+            _reject_control_chars(v, "deny", ctx)
+        if default is not None:
+            _reject_control_chars(default, "default", ctx)
 
         if not re.fullmatch(r"-{1,2}[a-zA-Z][a-zA-Z0-9-]*", flag):
             raise ManifestError(f"{ctx}: 'flag' must match -<name> or --<name> pattern, got {flag!r}")
@@ -507,11 +528,34 @@ def _load_options(raw: dict[str, Any], path: Path, tool_name: str) -> dict[str, 
             except re.error as e:
                 raise ManifestError(f"{ctx}: invalid 'pattern' regex: {e}") from e
 
+        if default is not None:
+            if required:
+                raise ManifestError(f"{ctx}: 'default' and 'required: true' are mutually exclusive")
+            if repeatable:
+                raise ManifestError(f"{ctx}: 'default' is not supported with 'repeatable: true'")
+            if path_tests:
+                raise ManifestError(
+                    f"{ctx}: 'default' cannot be combined with 'path_tests' "
+                    f"(path tests only evaluate against runtime cwd)"
+                )
+            if pattern is not None and not re.fullmatch(pattern, default):
+                raise ManifestError(
+                    f"{ctx}: 'default' value {default!r} does not match 'pattern' {pattern!r}"
+                )
+            if allow and default not in allow:
+                raise ManifestError(
+                    f"{ctx}: 'default' value {default!r} is not in 'allow' list {list(allow)}"
+                )
+            if deny and default in deny:
+                raise ManifestError(
+                    f"{ctx}: 'default' value {default!r} is in 'deny' list {list(deny)}"
+                )
+
         options[name] = OptionSpec(
             description=description, flag=flag, short=short,
             required=required, repeatable=repeatable,
             pattern=pattern, allow=allow, deny=deny,
-            path_tests=path_tests,
+            path_tests=path_tests, default=default,
         )
 
     return options
@@ -550,6 +594,14 @@ def _load_arguments(raw: dict[str, Any], path: Path, tool_name: str) -> dict[str
                 re.compile(pattern)
             except re.error as e:
                 raise ManifestError(f"{ctx}: invalid 'pattern' regex: {e}") from e
+
+        # Reject control characters in fields rendered into bash and markdown.
+        if pattern is not None:
+            _reject_control_chars(pattern, "pattern", ctx)
+        for v in allow:
+            _reject_control_chars(v, "allow", ctx)
+        for v in deny:
+            _reject_control_chars(v, "deny", ctx)
 
         arguments[name] = ArgSpec(
             description=description, required=required, variadic=variadic,
@@ -757,6 +809,23 @@ def _require_str(data: dict[str, Any], key: str, ctx: str) -> str:
     if key not in data:
         raise ManifestError(f"{ctx}: '{key}' is required")
     return str(data[key])
+
+
+_CONTROL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def _reject_control_chars(value: str, field: str, ctx: str) -> None:
+    """Reject C0 control characters (0x00-0x1F, 0x7F) in manifest string values
+    that get rendered into bash and skill markdown. Newlines collapse inside
+    code spans; NUL terminates C strings; tabs and other controls render
+    unpredictably across viewers. Manifest authors should write literal
+    characters, not control sequences.
+    """
+    if _CONTROL_CHARS_RE.search(value):
+        raise ManifestError(
+            f"{ctx}: '{field}' value {value!r} contains control characters; "
+            f"these would corrupt generated bash and skill markdown"
+        )
 
 
 def _load_path_tests(spec_raw: dict[str, Any], ctx: str) -> tuple[PathTest, ...]:

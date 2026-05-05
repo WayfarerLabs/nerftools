@@ -65,15 +65,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-PATTERN="${1:-}"
-shift 2>/dev/null || true
+_PATTERN_SET=""
+if [[ $# -gt 0 ]]; then
+  PATTERN="$1"
+  _PATTERN_SET=true
+  shift
+else
+  PATTERN=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-grep-recursive-cwd: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${PATTERN}" ]] && [[ "${PATTERN}" == -* ]]; then
+if [[ -n "${_PATTERN_SET}" ]] && [[ "${PATTERN}" == -* ]]; then
   echo "error: nerf-grep-recursive-cwd: <pattern> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1

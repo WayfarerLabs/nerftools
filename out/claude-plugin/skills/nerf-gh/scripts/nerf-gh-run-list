@@ -32,16 +32,20 @@ EOF
 }
 
 WORKFLOW=""
+_WORKFLOW_SET=""
 BRANCH=""
+_BRANCH_SET=""
 STATUS=""
+_STATUS_SET=""
 LIMIT=""
+_LIMIT_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --workflow|-w) if [[ -n "${WORKFLOW}" ]]; then echo "error: --workflow can only be specified once" >&2; exit 1; fi; WORKFLOW="$2"; shift 2 ;;
-    --branch|-b) if [[ -n "${BRANCH}" ]]; then echo "error: --branch can only be specified once" >&2; exit 1; fi; BRANCH="$2"; shift 2 ;;
-    --status|-s) if [[ -n "${STATUS}" ]]; then echo "error: --status can only be specified once" >&2; exit 1; fi; STATUS="$2"; shift 2 ;;
-    --limit|-L) if [[ -n "${LIMIT}" ]]; then echo "error: --limit can only be specified once" >&2; exit 1; fi; LIMIT="$2"; shift 2 ;;
+    --workflow|-w) if [[ -n "${_WORKFLOW_SET}" ]]; then echo "error: --workflow can only be specified once" >&2; exit 1; fi; WORKFLOW="$2"; _WORKFLOW_SET=true; shift 2 ;;
+    --branch|-b) if [[ -n "${_BRANCH_SET}" ]]; then echo "error: --branch can only be specified once" >&2; exit 1; fi; BRANCH="$2"; _BRANCH_SET=true; shift 2 ;;
+    --status|-s) if [[ -n "${_STATUS_SET}" ]]; then echo "error: --status can only be specified once" >&2; exit 1; fi; STATUS="$2"; _STATUS_SET=true; shift 2 ;;
+    --limit|-L) if [[ -n "${_LIMIT_SET}" ]]; then echo "error: --limit can only be specified once" >&2; exit 1; fi; LIMIT="$2"; _LIMIT_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -49,7 +53,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -n "${STATUS}" ]] && [[ "${STATUS}" != "queued" && "${STATUS}" != "in_progress" && "${STATUS}" != "completed" && "${STATUS}" != "waiting" && "${STATUS}" != "requested" && "${STATUS}" != "action_required" && "${STATUS}" != "cancelled" && "${STATUS}" != "failure" && "${STATUS}" != "neutral" && "${STATUS}" != "skipped" && "${STATUS}" != "stale" && "${STATUS}" != "startup_failure" && "${STATUS}" != "success" && "${STATUS}" != "timed_out" ]]; then
+if [[ -n "${_STATUS_SET}" ]] && [[ "${STATUS}" != "queued" && "${STATUS}" != "in_progress" && "${STATUS}" != "completed" && "${STATUS}" != "waiting" && "${STATUS}" != "requested" && "${STATUS}" != "action_required" && "${STATUS}" != "cancelled" && "${STATUS}" != "failure" && "${STATUS}" != "neutral" && "${STATUS}" != "skipped" && "${STATUS}" != "stale" && "${STATUS}" != "startup_failure" && "${STATUS}" != "success" && "${STATUS}" != "timed_out" ]]; then
   echo "error: nerf-gh-run-list: option --status is not an allowed value" >&2
   echo "  value:   \"${STATUS}\"" >&2
   echo "  allowed: queued, in_progress, completed, waiting, requested, action_required, cancelled, failure, neutral, skipped, stale, startup_failure, success, timed_out" >&2
@@ -58,7 +62,7 @@ if [[ -n "${STATUS}" ]] && [[ "${STATUS}" != "queued" && "${STATUS}" != "in_prog
 fi
 
 _NERF_PATTERN='^[0-9]+$'
-if [[ -n "${LIMIT}" ]] && ! [[ "${LIMIT}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_LIMIT_SET}" ]] && ! [[ "${LIMIT}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-gh-run-list: option --limit does not match required pattern" >&2
   echo "  value:   \"${LIMIT}\"" >&2
   echo "  pattern: ^[0-9]+$" >&2
@@ -67,11 +71,11 @@ if [[ -n "${LIMIT}" ]] && ! [[ "${LIMIT}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(gh run list ${WORKFLOW:+"--workflow"} ${WORKFLOW:+"$WORKFLOW"} ${BRANCH:+"--branch"} ${BRANCH:+"$BRANCH"} ${STATUS:+"--status"} ${STATUS:+"$STATUS"} ${LIMIT:+"--limit"} ${LIMIT:+"$LIMIT"})
+  _NERF_DRY_CMD=(gh run list ${_WORKFLOW_SET:+"--workflow"} ${_WORKFLOW_SET:+"$WORKFLOW"} ${_BRANCH_SET:+"--branch"} ${_BRANCH_SET:+"$BRANCH"} ${_STATUS_SET:+"--status"} ${_STATUS_SET:+"$STATUS"} ${_LIMIT_SET:+"--limit"} ${_LIMIT_SET:+"$LIMIT"})
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec gh run list ${WORKFLOW:+"--workflow"} ${WORKFLOW:+"$WORKFLOW"} ${BRANCH:+"--branch"} ${BRANCH:+"$BRANCH"} ${STATUS:+"--status"} ${STATUS:+"$STATUS"} ${LIMIT:+"--limit"} ${LIMIT:+"$LIMIT"}
+exec gh run list ${_WORKFLOW_SET:+"--workflow"} ${_WORKFLOW_SET:+"$WORKFLOW"} ${_BRANCH_SET:+"--branch"} ${_BRANCH_SET:+"$BRANCH"} ${_STATUS_SET:+"--status"} ${_STATUS_SET:+"$STATUS"} ${_LIMIT_SET:+"--limit"} ${_LIMIT_SET:+"$LIMIT"}

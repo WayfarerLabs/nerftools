@@ -175,7 +175,9 @@ def _usage_function(tool_name: str, tool_spec: ToolSpec) -> str:
             required_marker = " (required)" if opt.required else ""
             lines.append(f"  {flag_display} <{name}>{required_marker}")
             lines.append(f"      {opt.description}")
-            _append_constraints(lines, opt.pattern, opt.allow, opt.deny, indent="      ")
+            _append_constraints(
+                lines, opt.pattern, opt.allow, opt.deny, indent="      ", default=opt.default
+            )
         lines.append("")
 
     # Arguments
@@ -214,6 +216,7 @@ def _append_constraints(
     allow: tuple[str, ...],
     deny: tuple[str, ...],
     indent: str,
+    default: str | None = None,
 ) -> None:
     if pattern:
         lines.append(f"{indent}Must match: {pattern}")
@@ -221,6 +224,8 @@ def _append_constraints(
         lines.append(f"{indent}Allowed values: {', '.join(allow)}")
     if deny:
         lines.append(f"{indent}Not allowed: {', '.join(deny)}")
+    if default is not None:
+        lines.append(f"{indent}Default: {default}")
 
 
 # -- Variable declarations and parsing ----------------------------------------
@@ -239,7 +244,13 @@ def _var_declarations(tool_spec: ToolSpec) -> str:
         if opt.repeatable:
             lines.append(f"{var}=()")
         else:
-            lines.append(f'{var}=""')
+            if opt.default is not None:
+                lines.append(f"{var}='{_shell_escape_sq(opt.default)}'")
+            else:
+                lines.append(f'{var}=""')
+            # Value-independent presence marker so duplicate detection
+            # works for empty-string values and default-seeded values.
+            lines.append(f'_{var}_SET=""')
     return "\n".join(lines)
 
 
@@ -264,11 +275,13 @@ def _flag_parser(tool_spec: ToolSpec, *, has_positional: bool, is_passthrough: b
         if opt.repeatable:
             cases.append(f'    {pattern}) {var}+=("{opt.flag}" "$2"); shift 2 ;;')
         else:
+            # Presence marker is value-independent so empty-string and
+            # default-seeded values still trigger duplicate detection.
             dup_check = (
-                f'if [[ -n "${{{var}}}" ]]; then '
+                f'if [[ -n "${{_{var}_SET}}" ]]; then '
                 f'echo "error: {opt.flag} can only be specified once" >&2; exit 1; fi; '
             )
-            cases.append(f'    {pattern}) {dup_check}{var}="$2"; shift 2 ;;')
+            cases.append(f'    {pattern}) {dup_check}{var}="$2"; _{var}_SET=true; shift 2 ;;')
 
     cases.append('    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;')
     cases.append("    -h|--help) usage ;;")
@@ -297,8 +310,17 @@ def _positional_parser(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
         if spec.variadic:
             lines.append(f'{var}=("$@")')
         else:
-            lines.append(f'{var}="${{1:-}}"')
-            lines.append("shift 2>/dev/null || true")
+            # _<VAR>_SET tracks "was a positional consumed for this slot" so
+            # downstream validation can distinguish "user passed empty string"
+            # from "user did not provide an optional positional at all".
+            lines.append(f'_{var}_SET=""')
+            lines.append("if [[ $# -gt 0 ]]; then")
+            lines.append(f'  {var}="$1"')
+            lines.append(f"  _{var}_SET=true")
+            lines.append("  shift")
+            lines.append("else")
+            lines.append(f'  {var}=""')
+            lines.append("fi")
     if not has_variadic:
         # Reject any tokens left after consuming declared positionals. Without
         # this, "tool <pos1> --unknown-flag extra" silently drops the trailing
@@ -431,10 +453,13 @@ def _param_validations(tool_name: str, tool_spec: ToolSpec) -> str:
             lines.append("fi")
             lines.append("")
 
+        # Validation gates use the _<VAR>_SET marker, not [[ -n "$VAR" ]],
+        # so an explicit empty-string value (e.g. --flag '') still goes through
+        # pattern/allow/deny/path_tests rather than slipping through silently.
         if opt.pattern:
             anchored = _anchored_pattern(opt.pattern)
             lines.append(f"_NERF_PATTERN='{_shell_escape_sq(anchored)}'")
-            lines.append(f'if [[ -n "${{{var}}}" ]] && ! [[ "${{{var}}}" =~ $_NERF_PATTERN ]]; then')
+            lines.append(f'if [[ -n "${{_{var}_SET}}" ]] && ! [[ "${{{var}}}" =~ $_NERF_PATTERN ]]; then')
             lines.append(f'  echo "error: {tool_name}: option {opt.flag} does not match required pattern" >&2')
             lines.append(f'  echo "  value:   \\"${{{var}}}\\"" >&2')
             lines.append(f'  echo "  pattern: {opt.pattern}" >&2')
@@ -446,7 +471,7 @@ def _param_validations(tool_name: str, tool_spec: ToolSpec) -> str:
         if opt.allow:
             allow_checks = " && ".join(f'"${{{var}}}" != "{_shell_escape_dq(v)}"' for v in opt.allow)
             vals = ", ".join(opt.allow)
-            lines.append(f'if [[ -n "${{{var}}}" ]] && [[ {allow_checks} ]]; then')
+            lines.append(f'if [[ -n "${{_{var}_SET}}" ]] && [[ {allow_checks} ]]; then')
             lines.append(f'  echo "error: {tool_name}: option {opt.flag} is not an allowed value" >&2')
             lines.append(f'  echo "  value:   \\"${{{var}}}\\"" >&2')
             lines.append(f'  echo "  allowed: {_shell_escape_dq(vals)}" >&2')
@@ -458,7 +483,7 @@ def _param_validations(tool_name: str, tool_spec: ToolSpec) -> str:
         if opt.deny:
             for denied in opt.deny:
                 escaped = _shell_escape_dq(denied)
-                lines.append(f'if [[ "${{{var}}}" == "{escaped}" ]]; then')
+                lines.append(f'if [[ -n "${{_{var}_SET}}" ]] && [[ "${{{var}}}" == "{escaped}" ]]; then')
                 lines.append(f'  echo "error: {tool_name}: option {opt.flag} is not allowed" >&2')
                 lines.append(f'  echo "  value:  \\"{escaped}\\"" >&2')
                 lines.append(f'  echo "  denied: {_shell_escape_dq(", ".join(opt.deny))}" >&2')
@@ -470,7 +495,7 @@ def _param_validations(tool_name: str, tool_spec: ToolSpec) -> str:
         if opt.path_tests:
             csv = _path_tests_csv(opt.path_tests)
             label = f"option {opt.flag}"
-            lines.append(f'if [[ -n "${{{var}}}" ]]; then')
+            lines.append(f'if [[ -n "${{_{var}_SET}}" ]]; then')
             lines.append(f"  _nerf_check_path '{label}' \"${{{var}}}\" '{csv}' || exit 1")
             lines.append("fi")
             lines.append("")
@@ -566,13 +591,17 @@ def _arg_validations(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
                 lines.append("done")
                 lines.append("")
         else:
-            lines.append(f'if [[ -n "${{{var}}}" ]] && [[ "${{{var}}}" == -* ]]; then')
+            # Validation gates use the _<VAR>_SET marker, not [[ -n "$VAR" ]],
+            # so an explicit empty-string positional value still goes through
+            # pattern/allow/deny/path_tests rather than slipping through.
+            lines.append(f'if [[ -n "${{_{var}_SET}}" ]] && [[ "${{{var}}}" == -* ]]; then')
             lines.append(f"  echo \"error: {tool_name}: <{name}> cannot start with '-'\" >&2")
             lines.append('  echo "  hint: use -- before positional arguments if needed" >&2')
             lines.append("  exit 1")
             lines.append("fi")
             lines.append("")
             if spec.required:
+                # Required keeps -z "$VAR" -- a required value must be non-empty.
                 lines.append(f'if [[ -z "${{{var}}}" ]]; then')
                 lines.append(f'  echo "error: {tool_name}: missing required argument <{name}>" >&2')
                 lines.append(f'  echo "  hint: provide a value for <{name}>" >&2')
@@ -582,7 +611,7 @@ def _arg_validations(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
             if spec.pattern:
                 anchored = _anchored_pattern(spec.pattern)
                 lines.append(f"_NERF_PATTERN='{_shell_escape_sq(anchored)}'")
-                lines.append(f'if [[ -n "${{{var}}}" ]] && ! [[ "${{{var}}}" =~ $_NERF_PATTERN ]]; then')
+                lines.append(f'if [[ -n "${{_{var}_SET}}" ]] && ! [[ "${{{var}}}" =~ $_NERF_PATTERN ]]; then')
                 lines.append(f'  echo "error: {tool_name}: argument <{name}> does not match required pattern" >&2')
                 lines.append(f'  echo "  value:   \\"${{{var}}}\\"" >&2')
                 lines.append(f'  echo "  pattern: {spec.pattern}" >&2')
@@ -593,7 +622,7 @@ def _arg_validations(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
             if spec.allow:
                 allow_checks = " && ".join(f'"${{{var}}}" != "{_shell_escape_dq(v)}"' for v in spec.allow)
                 vals = ", ".join(spec.allow)
-                lines.append(f'if [[ -n "${{{var}}}" ]] && [[ {allow_checks} ]]; then')
+                lines.append(f'if [[ -n "${{_{var}_SET}}" ]] && [[ {allow_checks} ]]; then')
                 lines.append(f'  echo "error: {tool_name}: argument <{name}> is not an allowed value" >&2')
                 lines.append(f'  echo "  value:   \\"${{{var}}}\\"" >&2')
                 lines.append(f'  echo "  allowed: {_shell_escape_dq(vals)}" >&2')
@@ -604,7 +633,7 @@ def _arg_validations(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
             if spec.deny:
                 for denied in spec.deny:
                     escaped = _shell_escape_dq(denied)
-                    lines.append(f'if [[ "${{{var}}}" == "{escaped}" ]]; then')
+                    lines.append(f'if [[ -n "${{_{var}_SET}}" ]] && [[ "${{{var}}}" == "{escaped}" ]]; then')
                     lines.append(f'  echo "error: {tool_name}: argument <{name}> is not allowed" >&2')
                     lines.append(f'  echo "  value:  \\"{escaped}\\"" >&2')
                     lines.append(f'  echo "  denied: {_shell_escape_dq(", ".join(spec.deny))}" >&2')
@@ -615,7 +644,7 @@ def _arg_validations(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
             if spec.path_tests:
                 csv = _path_tests_csv(spec.path_tests)
                 label = f"argument <{name}>"
-                lines.append(f'if [[ -n "${{{var}}}" ]]; then')
+                lines.append(f'if [[ -n "${{_{var}_SET}}" ]]; then')
                 lines.append(f"  _nerf_check_path '{label}' \"${{{var}}}\" '{csv}' || exit 1")
                 lines.append("fi")
                 lines.append("")
@@ -812,9 +841,18 @@ def _substitute_template_command(
                     result.append("${" + var + '[@]+"${' + var + '[@]}"}')
                 elif opt.required:
                     result.append(f'"${{{var}}}"')
+                elif opt.default is not None:
+                    # Default makes the option always-present, even if the
+                    # default itself is empty. Emit the flag and value
+                    # unconditionally so empty-but-set values reach the tool.
+                    result.append(f'"{opt.flag}"')
+                    result.append(f'"${{{var}}}"')
                 else:
-                    result.append("${" + var + ':+"' + opt.flag + '"}')
-                    result.append("${" + var + ':+"$' + var + '"}')
+                    # Gate on the presence marker so an explicit --flag ''
+                    # (i.e. _<VAR>_SET=true with VAR='') still emits
+                    # --flag "" rather than collapsing to nothing.
+                    result.append("${_" + var + '_SET:+"' + opt.flag + '"}')
+                    result.append("${_" + var + '_SET:+"$' + var + '"}')
 
             elif kind == "arguments":
                 spec = tool.arguments[name]
@@ -827,7 +865,9 @@ def _substitute_template_command(
                     if spec.required:
                         result.append(f'"${{{var}}}"')
                     else:
-                        result.append("${" + var + ':+"$' + var + '"}')
+                        # Same presence-gated emission as options: an explicit
+                        # empty positional reaches the tool as a literal "".
+                        result.append("${_" + var + '_SET:+"$' + var + '"}')
 
         elif PLACEHOLDER_RE.search(part):
             # Inline placeholder: simple variable substitution in a quoted string

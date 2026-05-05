@@ -32,14 +32,17 @@ EOF
 }
 
 BODY=""
+_BODY_SET=""
 LABEL=""
+_LABEL_SET=""
 ASSIGNEE=""
+_ASSIGNEE_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --body|-b) if [[ -n "${BODY}" ]]; then echo "error: --body can only be specified once" >&2; exit 1; fi; BODY="$2"; shift 2 ;;
-    --label|-l) if [[ -n "${LABEL}" ]]; then echo "error: --label can only be specified once" >&2; exit 1; fi; LABEL="$2"; shift 2 ;;
-    --assignee|-a) if [[ -n "${ASSIGNEE}" ]]; then echo "error: --assignee can only be specified once" >&2; exit 1; fi; ASSIGNEE="$2"; shift 2 ;;
+    --body|-b) if [[ -n "${_BODY_SET}" ]]; then echo "error: --body can only be specified once" >&2; exit 1; fi; BODY="$2"; _BODY_SET=true; shift 2 ;;
+    --label|-l) if [[ -n "${_LABEL_SET}" ]]; then echo "error: --label can only be specified once" >&2; exit 1; fi; LABEL="$2"; _LABEL_SET=true; shift 2 ;;
+    --assignee|-a) if [[ -n "${_ASSIGNEE_SET}" ]]; then echo "error: --assignee can only be specified once" >&2; exit 1; fi; ASSIGNEE="$2"; _ASSIGNEE_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -47,15 +50,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-TITLE="${1:-}"
-shift 2>/dev/null || true
+_TITLE_SET=""
+if [[ $# -gt 0 ]]; then
+  TITLE="$1"
+  _TITLE_SET=true
+  shift
+else
+  TITLE=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-gh-issue-create: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${TITLE}" ]] && [[ "${TITLE}" == -* ]]; then
+if [[ -n "${_TITLE_SET}" ]] && [[ "${TITLE}" == -* ]]; then
   echo "error: nerf-gh-issue-create: <title> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -68,11 +77,11 @@ if [[ -z "${TITLE}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(gh issue create --title "${TITLE}" ${BODY:+"--body"} ${BODY:+"$BODY"} ${LABEL:+"--label"} ${LABEL:+"$LABEL"} ${ASSIGNEE:+"--assignee"} ${ASSIGNEE:+"$ASSIGNEE"})
+  _NERF_DRY_CMD=(gh issue create --title "${TITLE}" ${_BODY_SET:+"--body"} ${_BODY_SET:+"$BODY"} ${_LABEL_SET:+"--label"} ${_LABEL_SET:+"$LABEL"} ${_ASSIGNEE_SET:+"--assignee"} ${_ASSIGNEE_SET:+"$ASSIGNEE"})
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec gh issue create --title "${TITLE}" ${BODY:+"--body"} ${BODY:+"$BODY"} ${LABEL:+"--label"} ${LABEL:+"$LABEL"} ${ASSIGNEE:+"--assignee"} ${ASSIGNEE:+"$ASSIGNEE"}
+exec gh issue create --title "${TITLE}" ${_BODY_SET:+"--body"} ${_BODY_SET:+"$BODY"} ${_LABEL_SET:+"--label"} ${_LABEL_SET:+"$LABEL"} ${_ASSIGNEE_SET:+"--assignee"} ${_ASSIGNEE_SET:+"$ASSIGNEE"}

@@ -32,16 +32,20 @@ EOF
 }
 
 STATE=""
+_STATE_SET=""
 ASSIGNEE=""
+_ASSIGNEE_SET=""
 LABEL=""
+_LABEL_SET=""
 LIMIT=""
+_LIMIT_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --state|-s) if [[ -n "${STATE}" ]]; then echo "error: --state can only be specified once" >&2; exit 1; fi; STATE="$2"; shift 2 ;;
-    --assignee|-a) if [[ -n "${ASSIGNEE}" ]]; then echo "error: --assignee can only be specified once" >&2; exit 1; fi; ASSIGNEE="$2"; shift 2 ;;
-    --label|-l) if [[ -n "${LABEL}" ]]; then echo "error: --label can only be specified once" >&2; exit 1; fi; LABEL="$2"; shift 2 ;;
-    --limit|-L) if [[ -n "${LIMIT}" ]]; then echo "error: --limit can only be specified once" >&2; exit 1; fi; LIMIT="$2"; shift 2 ;;
+    --state|-s) if [[ -n "${_STATE_SET}" ]]; then echo "error: --state can only be specified once" >&2; exit 1; fi; STATE="$2"; _STATE_SET=true; shift 2 ;;
+    --assignee|-a) if [[ -n "${_ASSIGNEE_SET}" ]]; then echo "error: --assignee can only be specified once" >&2; exit 1; fi; ASSIGNEE="$2"; _ASSIGNEE_SET=true; shift 2 ;;
+    --label|-l) if [[ -n "${_LABEL_SET}" ]]; then echo "error: --label can only be specified once" >&2; exit 1; fi; LABEL="$2"; _LABEL_SET=true; shift 2 ;;
+    --limit|-L) if [[ -n "${_LIMIT_SET}" ]]; then echo "error: --limit can only be specified once" >&2; exit 1; fi; LIMIT="$2"; _LIMIT_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -49,7 +53,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -n "${STATE}" ]] && [[ "${STATE}" != "open" && "${STATE}" != "closed" && "${STATE}" != "all" ]]; then
+if [[ -n "${_STATE_SET}" ]] && [[ "${STATE}" != "open" && "${STATE}" != "closed" && "${STATE}" != "all" ]]; then
   echo "error: nerf-gh-issue-list: option --state is not an allowed value" >&2
   echo "  value:   \"${STATE}\"" >&2
   echo "  allowed: open, closed, all" >&2
@@ -58,7 +62,7 @@ if [[ -n "${STATE}" ]] && [[ "${STATE}" != "open" && "${STATE}" != "closed" && "
 fi
 
 _NERF_PATTERN='^[0-9]+$'
-if [[ -n "${LIMIT}" ]] && ! [[ "${LIMIT}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_LIMIT_SET}" ]] && ! [[ "${LIMIT}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-gh-issue-list: option --limit does not match required pattern" >&2
   echo "  value:   \"${LIMIT}\"" >&2
   echo "  pattern: ^[0-9]+$" >&2
@@ -67,11 +71,11 @@ if [[ -n "${LIMIT}" ]] && ! [[ "${LIMIT}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(gh issue list ${STATE:+"--state"} ${STATE:+"$STATE"} ${ASSIGNEE:+"--assignee"} ${ASSIGNEE:+"$ASSIGNEE"} ${LABEL:+"--label"} ${LABEL:+"$LABEL"} ${LIMIT:+"--limit"} ${LIMIT:+"$LIMIT"})
+  _NERF_DRY_CMD=(gh issue list ${_STATE_SET:+"--state"} ${_STATE_SET:+"$STATE"} ${_ASSIGNEE_SET:+"--assignee"} ${_ASSIGNEE_SET:+"$ASSIGNEE"} ${_LABEL_SET:+"--label"} ${_LABEL_SET:+"$LABEL"} ${_LIMIT_SET:+"--limit"} ${_LIMIT_SET:+"$LIMIT"})
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec gh issue list ${STATE:+"--state"} ${STATE:+"$STATE"} ${ASSIGNEE:+"--assignee"} ${ASSIGNEE:+"$ASSIGNEE"} ${LABEL:+"--label"} ${LABEL:+"$LABEL"} ${LIMIT:+"--limit"} ${LIMIT:+"$LIMIT"}
+exec gh issue list ${_STATE_SET:+"--state"} ${_STATE_SET:+"$STATE"} ${_ASSIGNEE_SET:+"--assignee"} ${_ASSIGNEE_SET:+"$ASSIGNEE"} ${_LABEL_SET:+"--label"} ${_LABEL_SET:+"$LABEL"} ${_LIMIT_SET:+"--limit"} ${_LIMIT_SET:+"$LIMIT"}
