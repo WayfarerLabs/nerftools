@@ -135,11 +135,11 @@ fi
 ( [[ ! "$(echo "${RESOURCE}" | tr '[:upper:]' '[:lower:]')" =~ ^secrets?($|\.|/) ]] ) || { echo 'error: nerf-kubectl-get: kubectl-get refuses secrets. Use kubectl-get-secrets which redacts .data / .stringData.' >&2; exit 1; }
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(kubectl get "${RESOURCE}" ${NAME:+"$NAME"} ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} ${ALL_NAMESPACES:+"--all-namespaces"} ${SELECTOR:+"--selector"} ${SELECTOR:+"$SELECTOR"} ${FIELD_SELECTOR:+"--field-selector"} ${FIELD_SELECTOR:+"$FIELD_SELECTOR"} ${SHOW_LABELS:+"--show-labels"} --output json)
+  _NERF_DRY_CMD=(kubectl get "${RESOURCE}" ${_NAME_SET:+"$NAME"} ${_NAMESPACE_SET:+"--namespace"} ${_NAMESPACE_SET:+"$NAMESPACE"} ${ALL_NAMESPACES:+"--all-namespaces"} ${_SELECTOR_SET:+"--selector"} ${_SELECTOR_SET:+"$SELECTOR"} ${_FIELD_SELECTOR_SET:+"--field-selector"} ${_FIELD_SELECTOR_SET:+"$FIELD_SELECTOR"} ${SHOW_LABELS:+"--show-labels"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec kubectl get "${RESOURCE}" ${NAME:+"$NAME"} ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} ${ALL_NAMESPACES:+"--all-namespaces"} ${SELECTOR:+"--selector"} ${SELECTOR:+"$SELECTOR"} ${FIELD_SELECTOR:+"--field-selector"} ${FIELD_SELECTOR:+"$FIELD_SELECTOR"} ${SHOW_LABELS:+"--show-labels"} --output json
+exec kubectl get "${RESOURCE}" ${_NAME_SET:+"$NAME"} ${_NAMESPACE_SET:+"--namespace"} ${_NAMESPACE_SET:+"$NAMESPACE"} ${ALL_NAMESPACES:+"--all-namespaces"} ${_SELECTOR_SET:+"--selector"} ${_SELECTOR_SET:+"$SELECTOR"} ${_FIELD_SELECTOR_SET:+"--field-selector"} ${_FIELD_SELECTOR_SET:+"$FIELD_SELECTOR"} ${SHOW_LABELS:+"--show-labels"} --output json

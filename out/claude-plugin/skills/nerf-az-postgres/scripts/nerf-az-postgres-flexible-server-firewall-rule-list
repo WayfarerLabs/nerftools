@@ -78,11 +78,11 @@ if [[ -z "${NAME}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az postgres flexible-server firewall-rule list --resource-group "${RESOURCE_GROUP}" --name "${NAME}" ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json)
+  _NERF_DRY_CMD=(az postgres flexible-server firewall-rule list --resource-group "${RESOURCE_GROUP}" --name "${NAME}" ${_SUBSCRIPTION_SET:+"--subscription"} ${_SUBSCRIPTION_SET:+"$SUBSCRIPTION"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az postgres flexible-server firewall-rule list --resource-group "${RESOURCE_GROUP}" --name "${NAME}" ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json
+exec az postgres flexible-server firewall-rule list --resource-group "${RESOURCE_GROUP}" --name "${NAME}" ${_SUBSCRIPTION_SET:+"--subscription"} ${_SUBSCRIPTION_SET:+"$SUBSCRIPTION"} --output json

@@ -77,11 +77,11 @@ if [[ -n "${_LIMIT_SET}" ]] && ! [[ "${LIMIT}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(gh pr list ${WEB:+"--web"} ${STATE:+"--state"} ${STATE:+"$STATE"} ${AUTHOR:+"--author"} ${AUTHOR:+"$AUTHOR"} ${BASE:+"--base"} ${BASE:+"$BASE"} ${LIMIT:+"--limit"} ${LIMIT:+"$LIMIT"})
+  _NERF_DRY_CMD=(gh pr list ${WEB:+"--web"} ${_STATE_SET:+"--state"} ${_STATE_SET:+"$STATE"} ${_AUTHOR_SET:+"--author"} ${_AUTHOR_SET:+"$AUTHOR"} ${_BASE_SET:+"--base"} ${_BASE_SET:+"$BASE"} ${_LIMIT_SET:+"--limit"} ${_LIMIT_SET:+"$LIMIT"})
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec gh pr list ${WEB:+"--web"} ${STATE:+"--state"} ${STATE:+"$STATE"} ${AUTHOR:+"--author"} ${AUTHOR:+"$AUTHOR"} ${BASE:+"--base"} ${BASE:+"$BASE"} ${LIMIT:+"--limit"} ${LIMIT:+"$LIMIT"}
+exec gh pr list ${WEB:+"--web"} ${_STATE_SET:+"--state"} ${_STATE_SET:+"$STATE"} ${_AUTHOR_SET:+"--author"} ${_AUTHOR_SET:+"$AUTHOR"} ${_BASE_SET:+"--base"} ${_BASE_SET:+"$BASE"} ${_LIMIT_SET:+"--limit"} ${_LIMIT_SET:+"$LIMIT"}

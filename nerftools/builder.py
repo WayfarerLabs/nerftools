@@ -841,9 +841,18 @@ def _substitute_template_command(
                     result.append("${" + var + '[@]+"${' + var + '[@]}"}')
                 elif opt.required:
                     result.append(f'"${{{var}}}"')
+                elif opt.default is not None:
+                    # Default makes the option always-present, even if the
+                    # default itself is empty. Emit the flag and value
+                    # unconditionally so empty-but-set values reach the tool.
+                    result.append(f'"{opt.flag}"')
+                    result.append(f'"${{{var}}}"')
                 else:
-                    result.append("${" + var + ':+"' + opt.flag + '"}')
-                    result.append("${" + var + ':+"$' + var + '"}')
+                    # Gate on the presence marker so an explicit --flag ''
+                    # (i.e. _<VAR>_SET=true with VAR='') still emits
+                    # --flag "" rather than collapsing to nothing.
+                    result.append("${_" + var + '_SET:+"' + opt.flag + '"}')
+                    result.append("${_" + var + '_SET:+"$' + var + '"}')
 
             elif kind == "arguments":
                 spec = tool.arguments[name]
@@ -856,7 +865,9 @@ def _substitute_template_command(
                     if spec.required:
                         result.append(f'"${{{var}}}"')
                     else:
-                        result.append("${" + var + ':+"$' + var + '"}')
+                        # Same presence-gated emission as options: an explicit
+                        # empty positional reaches the tool as a literal "".
+                        result.append("${_" + var + '_SET:+"$' + var + '"}')
 
         elif PLACEHOLDER_RE.search(part):
             # Inline placeholder: simple variable substitution in a quoted string

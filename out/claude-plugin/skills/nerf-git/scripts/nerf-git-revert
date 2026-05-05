@@ -148,11 +148,11 @@ if [[ -z "${REF}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(git ${DIRECTORY:+"-C"} ${DIRECTORY:+"$DIRECTORY"} revert --no-edit "${REF}")
+  _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} revert --no-edit "${REF}")
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec git ${DIRECTORY:+"-C"} ${DIRECTORY:+"$DIRECTORY"} revert --no-edit "${REF}"
+exec git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} revert --no-edit "${REF}"

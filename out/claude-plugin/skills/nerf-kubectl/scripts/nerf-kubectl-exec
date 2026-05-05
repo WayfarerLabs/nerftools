@@ -114,11 +114,11 @@ if [[ ${#COMMAND[@]} -eq 0 ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(kubectl exec "${POD}" ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} ${CONTAINER:+"--container"} ${CONTAINER:+"$CONTAINER"} -- "${COMMAND[@]}")
+  _NERF_DRY_CMD=(kubectl exec "${POD}" ${_NAMESPACE_SET:+"--namespace"} ${_NAMESPACE_SET:+"$NAMESPACE"} ${_CONTAINER_SET:+"--container"} ${_CONTAINER_SET:+"$CONTAINER"} -- "${COMMAND[@]}")
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec kubectl exec "${POD}" ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} ${CONTAINER:+"--container"} ${CONTAINER:+"$CONTAINER"} -- "${COMMAND[@]}"
+exec kubectl exec "${POD}" ${_NAMESPACE_SET:+"--namespace"} ${_NAMESPACE_SET:+"$NAMESPACE"} ${_CONTAINER_SET:+"--container"} ${_CONTAINER_SET:+"$CONTAINER"} -- "${COMMAND[@]}"

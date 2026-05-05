@@ -160,11 +160,11 @@ fi
 ( ! git ${DIRECTORY:+-C "${DIRECTORY}"} rev-parse "refs/tags/${TAG}" > /dev/null 2>&1 ) || { echo 'error: nerf-git-tag: Tag already exists. Use a different version.' >&2; exit 1; }
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(git ${DIRECTORY:+"-C"} ${DIRECTORY:+"$DIRECTORY"} tag -a "${TAG}" -m "${TAG}")
+  _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} tag -a "${TAG}" -m "${TAG}")
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec git ${DIRECTORY:+"-C"} ${DIRECTORY:+"$DIRECTORY"} tag -a "${TAG}" -m "${TAG}"
+exec git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} tag -a "${TAG}" -m "${TAG}"

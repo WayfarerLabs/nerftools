@@ -63,11 +63,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az role assignment list ${ALL:+"--all"} ${ASSIGNEE:+"--assignee"} ${ASSIGNEE:+"$ASSIGNEE"} ${SCOPE:+"--scope"} ${SCOPE:+"$SCOPE"} ${ROLE:+"--role"} ${ROLE:+"$ROLE"} ${RESOURCE_GROUP:+"--resource-group"} ${RESOURCE_GROUP:+"$RESOURCE_GROUP"} ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json)
+  _NERF_DRY_CMD=(az role assignment list ${ALL:+"--all"} ${_ASSIGNEE_SET:+"--assignee"} ${_ASSIGNEE_SET:+"$ASSIGNEE"} ${_SCOPE_SET:+"--scope"} ${_SCOPE_SET:+"$SCOPE"} ${_ROLE_SET:+"--role"} ${_ROLE_SET:+"$ROLE"} ${_RESOURCE_GROUP_SET:+"--resource-group"} ${_RESOURCE_GROUP_SET:+"$RESOURCE_GROUP"} ${_SUBSCRIPTION_SET:+"--subscription"} ${_SUBSCRIPTION_SET:+"$SUBSCRIPTION"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az role assignment list ${ALL:+"--all"} ${ASSIGNEE:+"--assignee"} ${ASSIGNEE:+"$ASSIGNEE"} ${SCOPE:+"--scope"} ${SCOPE:+"$SCOPE"} ${ROLE:+"--role"} ${ROLE:+"$ROLE"} ${RESOURCE_GROUP:+"--resource-group"} ${RESOURCE_GROUP:+"$RESOURCE_GROUP"} ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json
+exec az role assignment list ${ALL:+"--all"} ${_ASSIGNEE_SET:+"--assignee"} ${_ASSIGNEE_SET:+"$ASSIGNEE"} ${_SCOPE_SET:+"--scope"} ${_SCOPE_SET:+"$SCOPE"} ${_ROLE_SET:+"--role"} ${_ROLE_SET:+"$ROLE"} ${_RESOURCE_GROUP_SET:+"--resource-group"} ${_RESOURCE_GROUP_SET:+"$RESOURCE_GROUP"} ${_SUBSCRIPTION_SET:+"--subscription"} ${_SUBSCRIPTION_SET:+"$SUBSCRIPTION"} --output json

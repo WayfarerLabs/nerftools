@@ -123,11 +123,11 @@ if [[ -n "${_POD_SET}" ]] && ! [[ "${POD}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(kubectl logs "${POD}" ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} ${CONTAINER:+"--container"} ${CONTAINER:+"$CONTAINER"} ${TAIL:+"--tail"} ${TAIL:+"$TAIL"} ${PREVIOUS:+"--previous"})
+  _NERF_DRY_CMD=(kubectl logs "${POD}" ${_NAMESPACE_SET:+"--namespace"} ${_NAMESPACE_SET:+"$NAMESPACE"} ${_CONTAINER_SET:+"--container"} ${_CONTAINER_SET:+"$CONTAINER"} ${_TAIL_SET:+"--tail"} ${_TAIL_SET:+"$TAIL"} ${PREVIOUS:+"--previous"})
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec kubectl logs "${POD}" ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} ${CONTAINER:+"--container"} ${CONTAINER:+"$CONTAINER"} ${TAIL:+"--tail"} ${TAIL:+"$TAIL"} ${PREVIOUS:+"--previous"}
+exec kubectl logs "${POD}" ${_NAMESPACE_SET:+"--namespace"} ${_NAMESPACE_SET:+"$NAMESPACE"} ${_CONTAINER_SET:+"--container"} ${_CONTAINER_SET:+"$CONTAINER"} ${_TAIL_SET:+"--tail"} ${_TAIL_SET:+"$TAIL"} ${PREVIOUS:+"--previous"}

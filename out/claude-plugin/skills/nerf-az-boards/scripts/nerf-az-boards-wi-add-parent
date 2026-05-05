@@ -109,11 +109,11 @@ if [[ -n "${_PARENT_ID_SET}" ]] && ! [[ "${PARENT_ID}" =~ $_NERF_PATTERN ]]; the
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az boards work-item relation add --id "${CHILD_ID}" --relation-type parent --target-id "${PARENT_ID}" ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json)
+  _NERF_DRY_CMD=(az boards work-item relation add --id "${CHILD_ID}" --relation-type parent --target-id "${PARENT_ID}" ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az boards work-item relation add --id "${CHILD_ID}" --relation-type parent --target-id "${PARENT_ID}" ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json
+exec az boards work-item relation add --id "${CHILD_ID}" --relation-type parent --target-id "${PARENT_ID}" ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json

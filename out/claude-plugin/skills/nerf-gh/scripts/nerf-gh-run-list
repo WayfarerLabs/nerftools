@@ -71,11 +71,11 @@ if [[ -n "${_LIMIT_SET}" ]] && ! [[ "${LIMIT}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(gh run list ${WORKFLOW:+"--workflow"} ${WORKFLOW:+"$WORKFLOW"} ${BRANCH:+"--branch"} ${BRANCH:+"$BRANCH"} ${STATUS:+"--status"} ${STATUS:+"$STATUS"} ${LIMIT:+"--limit"} ${LIMIT:+"$LIMIT"})
+  _NERF_DRY_CMD=(gh run list ${_WORKFLOW_SET:+"--workflow"} ${_WORKFLOW_SET:+"$WORKFLOW"} ${_BRANCH_SET:+"--branch"} ${_BRANCH_SET:+"$BRANCH"} ${_STATUS_SET:+"--status"} ${_STATUS_SET:+"$STATUS"} ${_LIMIT_SET:+"--limit"} ${_LIMIT_SET:+"$LIMIT"})
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec gh run list ${WORKFLOW:+"--workflow"} ${WORKFLOW:+"$WORKFLOW"} ${BRANCH:+"--branch"} ${BRANCH:+"$BRANCH"} ${STATUS:+"--status"} ${STATUS:+"$STATUS"} ${LIMIT:+"--limit"} ${LIMIT:+"$LIMIT"}
+exec gh run list ${_WORKFLOW_SET:+"--workflow"} ${_WORKFLOW_SET:+"$WORKFLOW"} ${_BRANCH_SET:+"--branch"} ${_BRANCH_SET:+"$BRANCH"} ${_STATUS_SET:+"--status"} ${_STATUS_SET:+"$STATUS"} ${_LIMIT_SET:+"--limit"} ${_LIMIT_SET:+"$LIMIT"}

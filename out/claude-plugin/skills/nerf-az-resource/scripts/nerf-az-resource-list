@@ -52,11 +52,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az resource list ${RESOURCE_GROUP:+"--resource-group"} ${RESOURCE_GROUP:+"$RESOURCE_GROUP"} ${RESOURCE_TYPE:+"--resource-type"} ${RESOURCE_TYPE:+"$RESOURCE_TYPE"} ${TAG:+"--tag"} ${TAG:+"$TAG"} ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json)
+  _NERF_DRY_CMD=(az resource list ${_RESOURCE_GROUP_SET:+"--resource-group"} ${_RESOURCE_GROUP_SET:+"$RESOURCE_GROUP"} ${_RESOURCE_TYPE_SET:+"--resource-type"} ${_RESOURCE_TYPE_SET:+"$RESOURCE_TYPE"} ${_TAG_SET:+"--tag"} ${_TAG_SET:+"$TAG"} ${_SUBSCRIPTION_SET:+"--subscription"} ${_SUBSCRIPTION_SET:+"$SUBSCRIPTION"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az resource list ${RESOURCE_GROUP:+"--resource-group"} ${RESOURCE_GROUP:+"$RESOURCE_GROUP"} ${RESOURCE_TYPE:+"--resource-type"} ${RESOURCE_TYPE:+"$RESOURCE_TYPE"} ${TAG:+"--tag"} ${TAG:+"$TAG"} ${SUBSCRIPTION:+"--subscription"} ${SUBSCRIPTION:+"$SUBSCRIPTION"} --output json
+exec az resource list ${_RESOURCE_GROUP_SET:+"--resource-group"} ${_RESOURCE_GROUP_SET:+"$RESOURCE_GROUP"} ${_RESOURCE_TYPE_SET:+"--resource-type"} ${_RESOURCE_TYPE_SET:+"$RESOURCE_TYPE"} ${_TAG_SET:+"--tag"} ${_TAG_SET:+"$TAG"} ${_SUBSCRIPTION_SET:+"--subscription"} ${_SUBSCRIPTION_SET:+"$SUBSCRIPTION"} --output json

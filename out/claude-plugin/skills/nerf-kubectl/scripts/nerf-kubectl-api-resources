@@ -47,11 +47,11 @@ if [[ -n "${_API_GROUP_SET}" ]] && ! [[ "${API_GROUP}" =~ $_NERF_PATTERN ]]; the
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(kubectl api-resources --output name ${API_GROUP:+"--api-group"} ${API_GROUP:+"$API_GROUP"})
+  _NERF_DRY_CMD=(kubectl api-resources --output name ${_API_GROUP_SET:+"--api-group"} ${_API_GROUP_SET:+"$API_GROUP"})
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec kubectl api-resources --output name ${API_GROUP:+"--api-group"} ${API_GROUP:+"$API_GROUP"}
+exec kubectl api-resources --output name ${_API_GROUP_SET:+"--api-group"} ${_API_GROUP_SET:+"$API_GROUP"}

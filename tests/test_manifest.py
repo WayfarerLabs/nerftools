@@ -438,6 +438,27 @@ def test_option_default_empty_string_is_accepted(tmp_path: Path) -> None:
     assert m.tools["t"].options["remote"].default == ""
 
 
+def test_option_default_with_newline_is_rejected(tmp_path: Path) -> None:
+    """Control characters break the generated bash and markdown -- newlines
+    collapse inside code spans, NUL terminates C strings. Reject at load time.
+    """
+    p = _write_manifest(tmp_path, _option_default_manifest({"default": "line1\nline2"}))
+    with pytest.raises(ManifestError, match="contains control characters"):
+        load_manifest(p)
+
+
+def test_option_pattern_with_control_char_is_rejected(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _option_default_manifest({"pattern": "^foo\x07bar$"}))
+    with pytest.raises(ManifestError, match="contains control characters"):
+        load_manifest(p)
+
+
+def test_option_allow_with_control_char_is_rejected(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _option_default_manifest({"allow": ["ok", "bad\tvalue"]}))
+    with pytest.raises(ManifestError, match="contains control characters"):
+        load_manifest(p)
+
+
 def test_option_default_with_path_tests_raises(tmp_path: Path) -> None:
     """path_tests evaluate against runtime cwd, so a load-time default cannot be
     meaningfully validated against them. Reject the combination explicitly.

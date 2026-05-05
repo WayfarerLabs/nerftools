@@ -142,11 +142,11 @@ fi
 which timeout > /dev/null 2>&1 || { echo 'error: nerf-kubectl-port-forward: "timeout" (from coreutils) is required but not found. Pre-installed on Linux and recent macOS.' >&2; exit 1; }
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(timeout "${TIMEOUT_SECONDS}" kubectl port-forward ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} "${TARGET}" "${PORTS}")
+  _NERF_DRY_CMD=(timeout "${TIMEOUT_SECONDS}" kubectl port-forward ${_NAMESPACE_SET:+"--namespace"} ${_NAMESPACE_SET:+"$NAMESPACE"} "${TARGET}" "${PORTS}")
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec timeout "${TIMEOUT_SECONDS}" kubectl port-forward ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} "${TARGET}" "${PORTS}"
+exec timeout "${TIMEOUT_SECONDS}" kubectl port-forward ${_NAMESPACE_SET:+"--namespace"} ${_NAMESPACE_SET:+"$NAMESPACE"} "${TARGET}" "${PORTS}"

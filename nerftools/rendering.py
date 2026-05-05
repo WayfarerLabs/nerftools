@@ -13,6 +13,34 @@ if TYPE_CHECKING:
     from nerftools.manifest import ArgSpec, OptionSpec, SwitchSpec, ToolSpec
 
 
+def md_code_span(text: str) -> str:
+    """Wrap text as a markdown code span with a backtick fence that won't
+    conflict with backticks inside the content.
+
+    Per CommonMark, a code span is delimited by N backticks and ends at the
+    next run of exactly N backticks; a literal backtick inside requires a
+    longer fence. We pick the smallest fence longer than any run in the
+    content, and pad with a single space when the content starts or ends
+    with a backtick (CommonMark strips one space of padding).
+
+    Control characters (newlines, NUL, etc.) collapse weirdly inside code
+    spans and should be rejected by the manifest loader before reaching
+    here. This helper does not validate that.
+    """
+    longest = 0
+    current = 0
+    for c in text:
+        if c == "`":
+            current += 1
+            if current > longest:
+                longest = current
+        else:
+            current = 0
+    fence = "`" * (longest + 1)
+    pad = " " if text.startswith("`") or text.endswith("`") else ""
+    return f"{fence}{pad}{text}{pad}{fence}"
+
+
 def maps_to_text(tool_spec: ToolSpec) -> str | None:
     """Return the 'Maps to' string, or None for script mode."""
     if tool_spec.template is not None:
@@ -89,13 +117,13 @@ def _constraints_suffix(
     """Build a constraint suffix like '. must match ...; one of ...; default `x`'."""
     constraints: list[str] = []
     if pattern:
-        constraints.append(f"must match `{pattern}`")
+        constraints.append(f"must match {md_code_span(pattern)}")
     if allow:
-        vals = ", ".join(f"`{v}`" for v in allow)
+        vals = ", ".join(md_code_span(v) for v in allow)
         constraints.append(f"one of {vals}")
     if deny:
-        vals = ", ".join(f"`{v}`" for v in deny)
+        vals = ", ".join(md_code_span(v) for v in deny)
         constraints.append(f"not {vals}")
     if default is not None:
-        constraints.append(f"default `{default}`")
+        constraints.append(f"default {md_code_span(default)}")
     return ". " + "; ".join(constraints) if constraints else ""

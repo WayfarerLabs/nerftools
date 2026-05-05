@@ -121,11 +121,11 @@ fi
 ( [[ ! "$(echo "${RESOURCE}" | tr '[:upper:]' '[:lower:]')" =~ ^secrets?($|\.|/) ]] ) || { echo 'error: nerf-kubectl-describe: kubectl-describe refuses secrets (annotations may include last-applied-configuration with raw .data). Use kubectl-get-secrets which redacts.' >&2; exit 1; }
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(kubectl describe "${RESOURCE}" "${NAME}" ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"})
+  _NERF_DRY_CMD=(kubectl describe "${RESOURCE}" "${NAME}" ${_NAMESPACE_SET:+"--namespace"} ${_NAMESPACE_SET:+"$NAMESPACE"})
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec kubectl describe "${RESOURCE}" "${NAME}" ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"}
+exec kubectl describe "${RESOURCE}" "${NAME}" ${_NAMESPACE_SET:+"--namespace"} ${_NAMESPACE_SET:+"$NAMESPACE"}

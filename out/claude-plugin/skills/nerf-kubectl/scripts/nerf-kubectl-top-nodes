@@ -37,11 +37,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(kubectl top nodes ${SELECTOR:+"--selector"} ${SELECTOR:+"$SELECTOR"})
+  _NERF_DRY_CMD=(kubectl top nodes ${_SELECTOR_SET:+"--selector"} ${_SELECTOR_SET:+"$SELECTOR"})
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec kubectl top nodes ${SELECTOR:+"--selector"} ${SELECTOR:+"$SELECTOR"}
+exec kubectl top nodes ${_SELECTOR_SET:+"--selector"} ${_SELECTOR_SET:+"$SELECTOR"}

@@ -83,11 +83,11 @@ if [[ -z "${TITLE}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(gh pr create ${DRAFT:+"--draft"} --title "${TITLE}" ${BODY:+"--body"} ${BODY:+"$BODY"} ${BASE:+"--base"} ${BASE:+"$BASE"} ${REVIEWER:+"--reviewer"} ${REVIEWER:+"$REVIEWER"})
+  _NERF_DRY_CMD=(gh pr create ${DRAFT:+"--draft"} --title "${TITLE}" ${_BODY_SET:+"--body"} ${_BODY_SET:+"$BODY"} ${_BASE_SET:+"--base"} ${_BASE_SET:+"$BASE"} ${_REVIEWER_SET:+"--reviewer"} ${_REVIEWER_SET:+"$REVIEWER"})
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec gh pr create ${DRAFT:+"--draft"} --title "${TITLE}" ${BODY:+"--body"} ${BODY:+"$BODY"} ${BASE:+"--base"} ${BASE:+"$BASE"} ${REVIEWER:+"--reviewer"} ${REVIEWER:+"$REVIEWER"}
+exec gh pr create ${DRAFT:+"--draft"} --title "${TITLE}" ${_BODY_SET:+"--body"} ${_BODY_SET:+"$BODY"} ${_BASE_SET:+"--base"} ${_BASE_SET:+"$BASE"} ${_REVIEWER_SET:+"--reviewer"} ${_REVIEWER_SET:+"$REVIEWER"}

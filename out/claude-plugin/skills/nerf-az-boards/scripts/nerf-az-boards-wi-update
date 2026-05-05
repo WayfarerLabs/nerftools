@@ -112,11 +112,11 @@ if [[ -n "${_WI_ID_SET}" ]] && ! [[ "${WI_ID}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az boards work-item update --id "${WI_ID}" ${STATE:+"--state"} ${STATE:+"$STATE"} ${TITLE:+"--title"} ${TITLE:+"$TITLE"} ${ASSIGNED_TO:+"--assigned-to"} ${ASSIGNED_TO:+"$ASSIGNED_TO"} ${AREA:+"--area"} ${AREA:+"$AREA"} ${ITERATION:+"--iteration"} ${ITERATION:+"$ITERATION"} ${DISCUSSION:+"--discussion"} ${DISCUSSION:+"$DISCUSSION"} ${FIELDS:+"--fields"} ${FIELDS:+"$FIELDS"} ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json)
+  _NERF_DRY_CMD=(az boards work-item update --id "${WI_ID}" ${_STATE_SET:+"--state"} ${_STATE_SET:+"$STATE"} ${_TITLE_SET:+"--title"} ${_TITLE_SET:+"$TITLE"} ${_ASSIGNED_TO_SET:+"--assigned-to"} ${_ASSIGNED_TO_SET:+"$ASSIGNED_TO"} ${_AREA_SET:+"--area"} ${_AREA_SET:+"$AREA"} ${_ITERATION_SET:+"--iteration"} ${_ITERATION_SET:+"$ITERATION"} ${_DISCUSSION_SET:+"--discussion"} ${_DISCUSSION_SET:+"$DISCUSSION"} ${_FIELDS_SET:+"--fields"} ${_FIELDS_SET:+"$FIELDS"} ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az boards work-item update --id "${WI_ID}" ${STATE:+"--state"} ${STATE:+"$STATE"} ${TITLE:+"--title"} ${TITLE:+"$TITLE"} ${ASSIGNED_TO:+"--assigned-to"} ${ASSIGNED_TO:+"$ASSIGNED_TO"} ${AREA:+"--area"} ${AREA:+"$AREA"} ${ITERATION:+"--iteration"} ${ITERATION:+"$ITERATION"} ${DISCUSSION:+"--discussion"} ${DISCUSSION:+"$DISCUSSION"} ${FIELDS:+"--fields"} ${FIELDS:+"$FIELDS"} ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json
+exec az boards work-item update --id "${WI_ID}" ${_STATE_SET:+"--state"} ${_STATE_SET:+"$STATE"} ${_TITLE_SET:+"--title"} ${_TITLE_SET:+"$TITLE"} ${_ASSIGNED_TO_SET:+"--assigned-to"} ${_ASSIGNED_TO_SET:+"$ASSIGNED_TO"} ${_AREA_SET:+"--area"} ${_AREA_SET:+"$AREA"} ${_ITERATION_SET:+"--iteration"} ${_ITERATION_SET:+"$ITERATION"} ${_DISCUSSION_SET:+"--discussion"} ${_DISCUSSION_SET:+"$DISCUSSION"} ${_FIELDS_SET:+"--fields"} ${_FIELDS_SET:+"$FIELDS"} ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json

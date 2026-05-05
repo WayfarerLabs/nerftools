@@ -108,11 +108,11 @@ if [[ -n "${_VOTE_SET}" ]] && [[ "${VOTE}" != "approve" && "${VOTE}" != "approve
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az repos pr set-vote --id "${PR_ID}" --vote "${VOTE}" ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json)
+  _NERF_DRY_CMD=(az repos pr set-vote --id "${PR_ID}" --vote "${VOTE}" ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az repos pr set-vote --id "${PR_ID}" --vote "${VOTE}" ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json
+exec az repos pr set-vote --id "${PR_ID}" --vote "${VOTE}" ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json

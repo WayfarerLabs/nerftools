@@ -119,11 +119,11 @@ if [[ -z "${TITLE}" ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az boards work-item create --type "${TYPE}" --title "${TITLE}" ${ASSIGNED_TO:+"--assigned-to"} ${ASSIGNED_TO:+"$ASSIGNED_TO"} ${AREA:+"--area"} ${AREA:+"$AREA"} ${ITERATION:+"--iteration"} ${ITERATION:+"$ITERATION"} ${DESCRIPTION:+"--description"} ${DESCRIPTION:+"$DESCRIPTION"} ${DISCUSSION:+"--discussion"} ${DISCUSSION:+"$DISCUSSION"} ${FIELDS:+"--fields"} ${FIELDS:+"$FIELDS"} ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json)
+  _NERF_DRY_CMD=(az boards work-item create --type "${TYPE}" --title "${TITLE}" ${_ASSIGNED_TO_SET:+"--assigned-to"} ${_ASSIGNED_TO_SET:+"$ASSIGNED_TO"} ${_AREA_SET:+"--area"} ${_AREA_SET:+"$AREA"} ${_ITERATION_SET:+"--iteration"} ${_ITERATION_SET:+"$ITERATION"} ${_DESCRIPTION_SET:+"--description"} ${_DESCRIPTION_SET:+"$DESCRIPTION"} ${_DISCUSSION_SET:+"--discussion"} ${_DISCUSSION_SET:+"$DISCUSSION"} ${_FIELDS_SET:+"--fields"} ${_FIELDS_SET:+"$FIELDS"} ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az boards work-item create --type "${TYPE}" --title "${TITLE}" ${ASSIGNED_TO:+"--assigned-to"} ${ASSIGNED_TO:+"$ASSIGNED_TO"} ${AREA:+"--area"} ${AREA:+"$AREA"} ${ITERATION:+"--iteration"} ${ITERATION:+"$ITERATION"} ${DESCRIPTION:+"--description"} ${DESCRIPTION:+"$DESCRIPTION"} ${DISCUSSION:+"--discussion"} ${DISCUSSION:+"$DISCUSSION"} ${FIELDS:+"--fields"} ${FIELDS:+"$FIELDS"} ${PROJECT:+"--project"} ${PROJECT:+"$PROJECT"} --output json
+exec az boards work-item create --type "${TYPE}" --title "${TITLE}" ${_ASSIGNED_TO_SET:+"--assigned-to"} ${_ASSIGNED_TO_SET:+"$ASSIGNED_TO"} ${_AREA_SET:+"--area"} ${_AREA_SET:+"$AREA"} ${_ITERATION_SET:+"--iteration"} ${_ITERATION_SET:+"$ITERATION"} ${_DESCRIPTION_SET:+"--description"} ${_DESCRIPTION_SET:+"$DESCRIPTION"} ${_DISCUSSION_SET:+"--discussion"} ${_DISCUSSION_SET:+"$DISCUSSION"} ${_FIELDS_SET:+"--fields"} ${_FIELDS_SET:+"$FIELDS"} ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json

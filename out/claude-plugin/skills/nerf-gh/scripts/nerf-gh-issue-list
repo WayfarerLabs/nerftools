@@ -71,11 +71,11 @@ if [[ -n "${_LIMIT_SET}" ]] && ! [[ "${LIMIT}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(gh issue list ${STATE:+"--state"} ${STATE:+"$STATE"} ${ASSIGNEE:+"--assignee"} ${ASSIGNEE:+"$ASSIGNEE"} ${LABEL:+"--label"} ${LABEL:+"$LABEL"} ${LIMIT:+"--limit"} ${LIMIT:+"$LIMIT"})
+  _NERF_DRY_CMD=(gh issue list ${_STATE_SET:+"--state"} ${_STATE_SET:+"$STATE"} ${_ASSIGNEE_SET:+"--assignee"} ${_ASSIGNEE_SET:+"$ASSIGNEE"} ${_LABEL_SET:+"--label"} ${_LABEL_SET:+"$LABEL"} ${_LIMIT_SET:+"--limit"} ${_LIMIT_SET:+"$LIMIT"})
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec gh issue list ${STATE:+"--state"} ${STATE:+"$STATE"} ${ASSIGNEE:+"--assignee"} ${ASSIGNEE:+"$ASSIGNEE"} ${LABEL:+"--label"} ${LABEL:+"$LABEL"} ${LIMIT:+"--limit"} ${LIMIT:+"$LIMIT"}
+exec gh issue list ${_STATE_SET:+"--state"} ${_STATE_SET:+"$STATE"} ${_ASSIGNEE_SET:+"--assignee"} ${_ASSIGNEE_SET:+"$ASSIGNEE"} ${_LABEL_SET:+"--label"} ${_LABEL_SET:+"$LABEL"} ${_LIMIT_SET:+"--limit"} ${_LIMIT_SET:+"$LIMIT"}

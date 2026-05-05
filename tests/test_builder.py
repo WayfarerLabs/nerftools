@@ -318,10 +318,77 @@ def test_optional_option_no_required_check() -> None:
     assert "missing required option --remote" not in script
 
 
-def test_optional_option_uses_conditional_expansion() -> None:
+def test_optional_option_uses_presence_gated_expansion() -> None:
     options = {"remote": _option("--remote", required=False)}
     script = build_script_text("t", "p", _template_tool(["git", "fetch", "{{options.remote}}"], options=options))
-    assert '${REMOTE:+"$REMOTE"}' in script
+    # Presence-gated emission lets `--remote ''` reach the tool as a literal
+    # empty token rather than collapsing to nothing.
+    assert '${_REMOTE_SET:+"--remote"} ${_REMOTE_SET:+"$REMOTE"}' in script
+
+
+def test_explicit_empty_option_value_emits_literal_empty_token(tmp_path: Path) -> None:
+    """`--flag ''` should reach the wrapped command as a literal empty token,
+    not collapse out of the argv. Empty values can carry meaning (clearing a
+    config, passing a deliberate empty arg).
+    """
+    options = {"remote": _option("--remote", required=False)}
+    tool = _template_tool(["echo", "{{options.remote}}"], options=options)
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "--nerf-dry-run", "--remote", ""],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "dry-run: echo --remote ''" in result.stdout
+
+
+def test_omitted_optional_option_collapses_out(tmp_path: Path) -> None:
+    """Sanity check: when the user omits the option entirely, no flag/value
+    pair appears in the argv -- otherwise every optional option would always
+    emit the flag.
+    """
+    options = {"remote": _option("--remote", required=False)}
+    tool = _template_tool(["echo", "{{options.remote}}"], options=options)
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "--nerf-dry-run"], capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "--remote" not in result.stdout
+
+
+def test_defaulted_option_emits_unconditionally_even_when_default_is_empty(tmp_path: Path) -> None:
+    """An option with default: '' is meaningfully different from no default --
+    it always emits the flag, with the (default or user-supplied) empty value.
+    """
+    options = {"remote": OptionSpec(flag="--remote", description="Remote.", default="")}
+    tool = _template_tool(["echo", "{{options.remote}}"], options=options)
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "--nerf-dry-run"], capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "dry-run: echo --remote ''" in result.stdout
+
+
+def test_explicit_empty_positional_emits_literal_empty(tmp_path: Path) -> None:
+    """Same presence preservation for positional arguments."""
+    arguments = {"name": ArgSpec(description="Name.", required=False)}
+    tool = _template_tool(["echo", "{{arguments.name}}"], arguments=arguments)
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "--nerf-dry-run", ""], capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "dry-run: echo ''" in result.stdout
 
 
 def test_pattern_validation() -> None:

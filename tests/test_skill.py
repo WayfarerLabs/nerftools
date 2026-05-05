@@ -250,6 +250,26 @@ def test_default_value_shown_in_skill() -> None:
     assert "default `origin`" in skill
 
 
+def test_default_with_backticks_uses_longer_fence() -> None:
+    """A default containing a backtick must be wrapped with a longer fence so
+    the rendered markdown remains valid, instead of breaking the code span.
+    """
+    options = {"x": OptionSpec(flag="--x", description="X.", default="foo`bar")}
+    tool = _template_tool(["echo", "{{options.x}}"], options=options)
+    skill = build_skill_text(_manifest(tools={"t": tool}))
+    assert "default ``foo`bar``" in skill
+
+
+def test_default_starting_with_backtick_pads_with_space() -> None:
+    """A default that starts with a backtick needs boundary padding -- per
+    CommonMark, a code span strips one leading/trailing space.
+    """
+    options = {"x": OptionSpec(flag="--x", description="X.", default="`tilted")}
+    tool = _template_tool(["echo", "{{options.x}}"], options=options)
+    skill = build_skill_text(_manifest(tools={"t": tool}))
+    assert "default `` `tilted ``" in skill
+
+
 def test_pattern_constraint_shown() -> None:
     tool = _template_tool(
         ["echo", "{{options.x}}"], options={"x": _option("--x", pattern="^[a-z]+$")},

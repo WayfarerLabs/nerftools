@@ -87,11 +87,11 @@ if [[ -n "${_TARGET_SET}" ]] && ! [[ "${TARGET}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(kubectl rollout restart ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} "${TARGET}")
+  _NERF_DRY_CMD=(kubectl rollout restart ${_NAMESPACE_SET:+"--namespace"} ${_NAMESPACE_SET:+"$NAMESPACE"} "${TARGET}")
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec kubectl rollout restart ${NAMESPACE:+"--namespace"} ${NAMESPACE:+"$NAMESPACE"} "${TARGET}"
+exec kubectl rollout restart ${_NAMESPACE_SET:+"--namespace"} ${_NAMESPACE_SET:+"$NAMESPACE"} "${TARGET}"
