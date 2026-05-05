@@ -241,6 +241,15 @@ def test_optional_option_labeled() -> None:
     assert "(optional)" in skill
 
 
+def test_default_value_shown_in_skill() -> None:
+    """Defaults must surface in skill docs so agents see them when picking arguments."""
+    options = {"remote": OptionSpec(flag="--remote", description="Remote.", default="origin")}
+    tool = _template_tool(["echo", "{{options.remote}}"], options=options)
+    m = _manifest(tools={"t": tool})
+    skill = build_skill_text(m)
+    assert "default `origin`" in skill
+
+
 def test_pattern_constraint_shown() -> None:
     tool = _template_tool(
         ["echo", "{{options.x}}"], options={"x": _option("--x", pattern="^[a-z]+$")},

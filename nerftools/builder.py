@@ -175,7 +175,9 @@ def _usage_function(tool_name: str, tool_spec: ToolSpec) -> str:
             required_marker = " (required)" if opt.required else ""
             lines.append(f"  {flag_display} <{name}>{required_marker}")
             lines.append(f"      {opt.description}")
-            _append_constraints(lines, opt.pattern, opt.allow, opt.deny, indent="      ")
+            _append_constraints(
+                lines, opt.pattern, opt.allow, opt.deny, indent="      ", default=opt.default
+            )
         lines.append("")
 
     # Arguments
@@ -214,6 +216,7 @@ def _append_constraints(
     allow: tuple[str, ...],
     deny: tuple[str, ...],
     indent: str,
+    default: str | None = None,
 ) -> None:
     if pattern:
         lines.append(f"{indent}Must match: {pattern}")
@@ -221,6 +224,8 @@ def _append_constraints(
         lines.append(f"{indent}Allowed values: {', '.join(allow)}")
     if deny:
         lines.append(f"{indent}Not allowed: {', '.join(deny)}")
+    if default is not None:
+        lines.append(f"{indent}Default: {default}")
 
 
 # -- Variable declarations and parsing ----------------------------------------

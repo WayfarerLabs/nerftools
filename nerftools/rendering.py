@@ -68,7 +68,7 @@ def option_line(name: str, opt: OptionSpec) -> str:
     """Render an option as a markdown bullet for skill docs."""
     flag_display = f"{opt.flag}|{opt.short}" if opt.short else opt.flag
     required = "required" if opt.required else "optional"
-    suffix = _constraints_suffix(opt.pattern, opt.allow, opt.deny)
+    suffix = _constraints_suffix(opt.pattern, opt.allow, opt.deny, default=opt.default)
     return f"- `{flag_display}` ({required}): {opt.description}{suffix}"
 
 
@@ -84,8 +84,9 @@ def _constraints_suffix(
     pattern: str | None,
     allow: tuple[str, ...],
     deny: tuple[str, ...],
+    default: str | None = None,
 ) -> str:
-    """Build a constraint suffix like '. must match ...; one of ...'."""
+    """Build a constraint suffix like '. must match ...; one of ...; default `x`'."""
     constraints: list[str] = []
     if pattern:
         constraints.append(f"must match `{pattern}`")
@@ -95,4 +96,6 @@ def _constraints_suffix(
     if deny:
         vals = ", ".join(f"`{v}`" for v in deny)
         constraints.append(f"not {vals}")
+    if default is not None:
+        constraints.append(f"default `{default}`")
     return ". " + "; ".join(constraints) if constraints else ""

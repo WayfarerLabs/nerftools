@@ -239,6 +239,14 @@ def test_option_default_with_special_chars_is_quoted(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
 
 
+def test_option_default_appears_in_usage_help() -> None:
+    """The default value should be visible in --help output so agents can see it."""
+    options = {"remote": OptionSpec(flag="--remote", description="Remote.", default="origin")}
+    tool = _template_tool(["echo", "{{options.remote}}"], options=options)
+    script = build_script_text("t", "p", tool)
+    assert "Default: origin" in script
+
+
 def test_optional_option_no_required_check() -> None:
     options = {"remote": _option("--remote", required=False)}
     script = build_script_text("t", "p", _template_tool(["echo", "{{options.remote}}"], options=options))
