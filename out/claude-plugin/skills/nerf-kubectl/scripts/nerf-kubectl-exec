@@ -50,12 +50,18 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-POD="${1:-}"
-shift 2>/dev/null || true
+_POD_SET=""
+if [[ $# -gt 0 ]]; then
+  POD="$1"
+  _POD_SET=true
+  shift
+else
+  POD=""
+fi
 COMMAND=("$@")
 
 _NERF_PATTERN='^[a-z0-9-]+$'
-if [[ -n "${NAMESPACE}" ]] && ! [[ "${NAMESPACE}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_NAMESPACE_SET}" ]] && ! [[ "${NAMESPACE}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-kubectl-exec: option --namespace does not match required pattern" >&2
   echo "  value:   \"${NAMESPACE}\"" >&2
   echo "  pattern: ^[a-z0-9-]+$" >&2
@@ -64,7 +70,7 @@ if [[ -n "${NAMESPACE}" ]] && ! [[ "${NAMESPACE}" =~ $_NERF_PATTERN ]]; then
 fi
 
 _NERF_PATTERN='^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
-if [[ -n "${CONTAINER}" ]] && ! [[ "${CONTAINER}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_CONTAINER_SET}" ]] && ! [[ "${CONTAINER}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-kubectl-exec: option --container does not match required pattern" >&2
   echo "  value:   \"${CONTAINER}\"" >&2
   echo "  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" >&2
@@ -72,7 +78,7 @@ if [[ -n "${CONTAINER}" ]] && ! [[ "${CONTAINER}" =~ $_NERF_PATTERN ]]; then
   exit 1
 fi
 
-if [[ -n "${POD}" ]] && [[ "${POD}" == -* ]]; then
+if [[ -n "${_POD_SET}" ]] && [[ "${POD}" == -* ]]; then
   echo "error: nerf-kubectl-exec: <pod> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -85,7 +91,7 @@ if [[ -z "${POD}" ]]; then
 fi
 
 _NERF_PATTERN='^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$'
-if [[ -n "${POD}" ]] && ! [[ "${POD}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_POD_SET}" ]] && ! [[ "${POD}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-kubectl-exec: argument <pod> does not match required pattern" >&2
   echo "  value:   \"${POD}\"" >&2
   echo "  pattern: ^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$" >&2

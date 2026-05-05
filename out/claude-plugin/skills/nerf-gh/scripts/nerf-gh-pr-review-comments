@@ -36,17 +36,29 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-PR="${1:-}"
-shift 2>/dev/null || true
-REVIEW_ID="${1:-}"
-shift 2>/dev/null || true
+_PR_SET=""
+if [[ $# -gt 0 ]]; then
+  PR="$1"
+  _PR_SET=true
+  shift
+else
+  PR=""
+fi
+_REVIEW_ID_SET=""
+if [[ $# -gt 0 ]]; then
+  REVIEW_ID="$1"
+  _REVIEW_ID_SET=true
+  shift
+else
+  REVIEW_ID=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-gh-pr-review-comments: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${PR}" ]] && [[ "${PR}" == -* ]]; then
+if [[ -n "${_PR_SET}" ]] && [[ "${PR}" == -* ]]; then
   echo "error: nerf-gh-pr-review-comments: <pr> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -59,7 +71,7 @@ if [[ -z "${PR}" ]]; then
 fi
 
 _NERF_PATTERN='^[0-9]+$'
-if [[ -n "${PR}" ]] && ! [[ "${PR}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_PR_SET}" ]] && ! [[ "${PR}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-gh-pr-review-comments: argument <pr> does not match required pattern" >&2
   echo "  value:   \"${PR}\"" >&2
   echo "  pattern: ^[0-9]+$" >&2
@@ -67,7 +79,7 @@ if [[ -n "${PR}" ]] && ! [[ "${PR}" =~ $_NERF_PATTERN ]]; then
   exit 1
 fi
 
-if [[ -n "${REVIEW_ID}" ]] && [[ "${REVIEW_ID}" == -* ]]; then
+if [[ -n "${_REVIEW_ID_SET}" ]] && [[ "${REVIEW_ID}" == -* ]]; then
   echo "error: nerf-gh-pr-review-comments: <review_id> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -80,7 +92,7 @@ if [[ -z "${REVIEW_ID}" ]]; then
 fi
 
 _NERF_PATTERN='^[0-9]+$'
-if [[ -n "${REVIEW_ID}" ]] && ! [[ "${REVIEW_ID}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_REVIEW_ID_SET}" ]] && ! [[ "${REVIEW_ID}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-gh-pr-review-comments: argument <review_id> does not match required pattern" >&2
   echo "  value:   \"${REVIEW_ID}\"" >&2
   echo "  pattern: ^[0-9]+$" >&2

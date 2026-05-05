@@ -45,8 +45,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-ZONE_NAME="${1:-}"
-shift 2>/dev/null || true
+_ZONE_NAME_SET=""
+if [[ $# -gt 0 ]]; then
+  ZONE_NAME="$1"
+  _ZONE_NAME_SET=true
+  shift
+else
+  ZONE_NAME=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-az-network-private-dns-record-list: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
@@ -59,7 +65,7 @@ if [[ -z "${RESOURCE_GROUP}" ]]; then
   usage
 fi
 
-if [[ -n "${ZONE_NAME}" ]] && [[ "${ZONE_NAME}" == -* ]]; then
+if [[ -n "${_ZONE_NAME_SET}" ]] && [[ "${ZONE_NAME}" == -* ]]; then
   echo "error: nerf-az-network-private-dns-record-list: <zone_name> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1

@@ -48,17 +48,29 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-TITLE="${1:-}"
-shift 2>/dev/null || true
-DESCRIPTION="${1:-}"
-shift 2>/dev/null || true
+_TITLE_SET=""
+if [[ $# -gt 0 ]]; then
+  TITLE="$1"
+  _TITLE_SET=true
+  shift
+else
+  TITLE=""
+fi
+_DESCRIPTION_SET=""
+if [[ $# -gt 0 ]]; then
+  DESCRIPTION="$1"
+  _DESCRIPTION_SET=true
+  shift
+else
+  DESCRIPTION=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-az-repos-pr-create: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${TITLE}" ]] && [[ "${TITLE}" == -* ]]; then
+if [[ -n "${_TITLE_SET}" ]] && [[ "${TITLE}" == -* ]]; then
   echo "error: nerf-az-repos-pr-create: <title> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -70,7 +82,7 @@ if [[ -z "${TITLE}" ]]; then
   usage
 fi
 
-if [[ -n "${DESCRIPTION}" ]] && [[ "${DESCRIPTION}" == -* ]]; then
+if [[ -n "${_DESCRIPTION_SET}" ]] && [[ "${DESCRIPTION}" == -* ]]; then
   echo "error: nerf-az-repos-pr-create: <description> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1

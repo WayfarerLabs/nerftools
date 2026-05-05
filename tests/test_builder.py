@@ -239,6 +239,53 @@ def test_option_default_with_special_chars_is_quoted(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
 
 
+def test_empty_string_value_runs_through_pattern_validation(tmp_path: Path) -> None:
+    """Regression: validation gates used `[[ -n "$VAR" ]]`, so an explicit
+    `--flag ''` slipped through pattern/allow/deny/path_tests because the
+    empty value made the gate false. With value-independent presence
+    tracking, validation runs whenever the user supplied the flag.
+    """
+    options = {"remote": _option("--remote", required=False, pattern="^[a-z]+$")}
+    tool = _template_tool(["echo", "{{options.remote}}"], options=options)
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "--remote", ""],
+        capture_output=True, text=True,
+    )
+    assert result.returncode != 0
+    assert "does not match required pattern" in result.stderr
+
+
+def test_empty_string_positional_runs_through_pattern_validation(tmp_path: Path) -> None:
+    """Same regression for positional arguments: an explicit empty value
+    must hit pattern validation rather than being silently accepted.
+    """
+    arguments = {"name": ArgSpec(description="Name.", required=False, pattern="^[a-z]+$")}
+    tool = _template_tool(["echo", "{{arguments.name}}"], arguments=arguments)
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run([str(script_path), ""], capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "does not match required pattern" in result.stderr
+
+
+def test_omitted_optional_positional_still_skips_validation(tmp_path: Path) -> None:
+    """Sanity check: when the user omits an optional positional entirely,
+    the marker stays empty and validation does NOT run -- otherwise every
+    optional with a pattern would always fail.
+    """
+    arguments = {"name": ArgSpec(description="Name.", required=False, pattern="^[a-z]+$")}
+    tool = _template_tool(["echo", "{{arguments.name}}"], arguments=arguments)
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run([str(script_path), "--nerf-dry-run"], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+
+
 def test_non_defaulted_option_dup_check_catches_empty_first_value(tmp_path: Path) -> None:
     """Regression: the original dup-check used `[[ -n "$VAR" ]]`, so an agent
     passing `--flag '' --flag second` slipped past because the empty first
@@ -361,7 +408,8 @@ def test_switch_bash_syntax() -> None:
 def test_positional_arg_collected() -> None:
     arguments = {"remote": _arg(required=True)}
     script = build_script_text("t", "p", _template_tool(["git", "fetch", "{{arguments.remote}}"], arguments=arguments))
-    assert 'REMOTE="${1:-}"' in script
+    assert 'REMOTE="$1"' in script
+    assert "_REMOTE_SET=true" in script
 
 
 def test_positional_exec_substitution() -> None:
@@ -948,8 +996,9 @@ def test_path_tests_helper_emitted_once_per_tool() -> None:
 def test_path_tests_option_invocation() -> None:
     script = build_script_text("t", "p", _path_option_tool((PathTest.UNDER_CWD, PathTest.DIR)))
     assert "_nerf_check_path 'option -C' \"${DIR}\" 'under_cwd,dir'" in script
-    # Optional option is gated on non-empty:
-    assert 'if [[ -n "${DIR}" ]]; then' in script
+    # Validation gates on the presence marker, not the value, so an explicit
+    # empty value still hits path validation.
+    assert 'if [[ -n "${_DIR_SET}" ]]; then' in script
 
 
 def test_path_tests_required_argument_invocation() -> None:

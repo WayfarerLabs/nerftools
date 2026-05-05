@@ -32,15 +32,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-PR="${1:-}"
-shift 2>/dev/null || true
+_PR_SET=""
+if [[ $# -gt 0 ]]; then
+  PR="$1"
+  _PR_SET=true
+  shift
+else
+  PR=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-gh-pr-view: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${PR}" ]] && [[ "${PR}" == -* ]]; then
+if [[ -n "${_PR_SET}" ]] && [[ "${PR}" == -* ]]; then
   echo "error: nerf-gh-pr-view: <pr> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1

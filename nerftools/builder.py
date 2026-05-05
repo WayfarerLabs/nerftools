@@ -310,8 +310,17 @@ def _positional_parser(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
         if spec.variadic:
             lines.append(f'{var}=("$@")')
         else:
-            lines.append(f'{var}="${{1:-}}"')
-            lines.append("shift 2>/dev/null || true")
+            # _<VAR>_SET tracks "was a positional consumed for this slot" so
+            # downstream validation can distinguish "user passed empty string"
+            # from "user did not provide an optional positional at all".
+            lines.append(f'_{var}_SET=""')
+            lines.append("if [[ $# -gt 0 ]]; then")
+            lines.append(f'  {var}="$1"')
+            lines.append(f"  _{var}_SET=true")
+            lines.append("  shift")
+            lines.append("else")
+            lines.append(f'  {var}=""')
+            lines.append("fi")
     if not has_variadic:
         # Reject any tokens left after consuming declared positionals. Without
         # this, "tool <pos1> --unknown-flag extra" silently drops the trailing
@@ -444,10 +453,13 @@ def _param_validations(tool_name: str, tool_spec: ToolSpec) -> str:
             lines.append("fi")
             lines.append("")
 
+        # Validation gates use the _<VAR>_SET marker, not [[ -n "$VAR" ]],
+        # so an explicit empty-string value (e.g. --flag '') still goes through
+        # pattern/allow/deny/path_tests rather than slipping through silently.
         if opt.pattern:
             anchored = _anchored_pattern(opt.pattern)
             lines.append(f"_NERF_PATTERN='{_shell_escape_sq(anchored)}'")
-            lines.append(f'if [[ -n "${{{var}}}" ]] && ! [[ "${{{var}}}" =~ $_NERF_PATTERN ]]; then')
+            lines.append(f'if [[ -n "${{_{var}_SET}}" ]] && ! [[ "${{{var}}}" =~ $_NERF_PATTERN ]]; then')
             lines.append(f'  echo "error: {tool_name}: option {opt.flag} does not match required pattern" >&2')
             lines.append(f'  echo "  value:   \\"${{{var}}}\\"" >&2')
             lines.append(f'  echo "  pattern: {opt.pattern}" >&2')
@@ -459,7 +471,7 @@ def _param_validations(tool_name: str, tool_spec: ToolSpec) -> str:
         if opt.allow:
             allow_checks = " && ".join(f'"${{{var}}}" != "{_shell_escape_dq(v)}"' for v in opt.allow)
             vals = ", ".join(opt.allow)
-            lines.append(f'if [[ -n "${{{var}}}" ]] && [[ {allow_checks} ]]; then')
+            lines.append(f'if [[ -n "${{_{var}_SET}}" ]] && [[ {allow_checks} ]]; then')
             lines.append(f'  echo "error: {tool_name}: option {opt.flag} is not an allowed value" >&2')
             lines.append(f'  echo "  value:   \\"${{{var}}}\\"" >&2')
             lines.append(f'  echo "  allowed: {_shell_escape_dq(vals)}" >&2')
@@ -471,7 +483,7 @@ def _param_validations(tool_name: str, tool_spec: ToolSpec) -> str:
         if opt.deny:
             for denied in opt.deny:
                 escaped = _shell_escape_dq(denied)
-                lines.append(f'if [[ "${{{var}}}" == "{escaped}" ]]; then')
+                lines.append(f'if [[ -n "${{_{var}_SET}}" ]] && [[ "${{{var}}}" == "{escaped}" ]]; then')
                 lines.append(f'  echo "error: {tool_name}: option {opt.flag} is not allowed" >&2')
                 lines.append(f'  echo "  value:  \\"{escaped}\\"" >&2')
                 lines.append(f'  echo "  denied: {_shell_escape_dq(", ".join(opt.deny))}" >&2')
@@ -483,7 +495,7 @@ def _param_validations(tool_name: str, tool_spec: ToolSpec) -> str:
         if opt.path_tests:
             csv = _path_tests_csv(opt.path_tests)
             label = f"option {opt.flag}"
-            lines.append(f'if [[ -n "${{{var}}}" ]]; then')
+            lines.append(f'if [[ -n "${{_{var}_SET}}" ]]; then')
             lines.append(f"  _nerf_check_path '{label}' \"${{{var}}}\" '{csv}' || exit 1")
             lines.append("fi")
             lines.append("")
@@ -579,13 +591,17 @@ def _arg_validations(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
                 lines.append("done")
                 lines.append("")
         else:
-            lines.append(f'if [[ -n "${{{var}}}" ]] && [[ "${{{var}}}" == -* ]]; then')
+            # Validation gates use the _<VAR>_SET marker, not [[ -n "$VAR" ]],
+            # so an explicit empty-string positional value still goes through
+            # pattern/allow/deny/path_tests rather than slipping through.
+            lines.append(f'if [[ -n "${{_{var}_SET}}" ]] && [[ "${{{var}}}" == -* ]]; then')
             lines.append(f"  echo \"error: {tool_name}: <{name}> cannot start with '-'\" >&2")
             lines.append('  echo "  hint: use -- before positional arguments if needed" >&2')
             lines.append("  exit 1")
             lines.append("fi")
             lines.append("")
             if spec.required:
+                # Required keeps -z "$VAR" -- a required value must be non-empty.
                 lines.append(f'if [[ -z "${{{var}}}" ]]; then')
                 lines.append(f'  echo "error: {tool_name}: missing required argument <{name}>" >&2')
                 lines.append(f'  echo "  hint: provide a value for <{name}>" >&2')
@@ -595,7 +611,7 @@ def _arg_validations(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
             if spec.pattern:
                 anchored = _anchored_pattern(spec.pattern)
                 lines.append(f"_NERF_PATTERN='{_shell_escape_sq(anchored)}'")
-                lines.append(f'if [[ -n "${{{var}}}" ]] && ! [[ "${{{var}}}" =~ $_NERF_PATTERN ]]; then')
+                lines.append(f'if [[ -n "${{_{var}_SET}}" ]] && ! [[ "${{{var}}}" =~ $_NERF_PATTERN ]]; then')
                 lines.append(f'  echo "error: {tool_name}: argument <{name}> does not match required pattern" >&2')
                 lines.append(f'  echo "  value:   \\"${{{var}}}\\"" >&2')
                 lines.append(f'  echo "  pattern: {spec.pattern}" >&2')
@@ -606,7 +622,7 @@ def _arg_validations(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
             if spec.allow:
                 allow_checks = " && ".join(f'"${{{var}}}" != "{_shell_escape_dq(v)}"' for v in spec.allow)
                 vals = ", ".join(spec.allow)
-                lines.append(f'if [[ -n "${{{var}}}" ]] && [[ {allow_checks} ]]; then')
+                lines.append(f'if [[ -n "${{_{var}_SET}}" ]] && [[ {allow_checks} ]]; then')
                 lines.append(f'  echo "error: {tool_name}: argument <{name}> is not an allowed value" >&2')
                 lines.append(f'  echo "  value:   \\"${{{var}}}\\"" >&2')
                 lines.append(f'  echo "  allowed: {_shell_escape_dq(vals)}" >&2')
@@ -617,7 +633,7 @@ def _arg_validations(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
             if spec.deny:
                 for denied in spec.deny:
                     escaped = _shell_escape_dq(denied)
-                    lines.append(f'if [[ "${{{var}}}" == "{escaped}" ]]; then')
+                    lines.append(f'if [[ -n "${{_{var}_SET}}" ]] && [[ "${{{var}}}" == "{escaped}" ]]; then')
                     lines.append(f'  echo "error: {tool_name}: argument <{name}> is not allowed" >&2')
                     lines.append(f'  echo "  value:  \\"{escaped}\\"" >&2')
                     lines.append(f'  echo "  denied: {_shell_escape_dq(", ".join(spec.deny))}" >&2')
@@ -628,7 +644,7 @@ def _arg_validations(tool_name: str, arguments: dict[str, ArgSpec]) -> str:
             if spec.path_tests:
                 csv = _path_tests_csv(spec.path_tests)
                 label = f"argument <{name}>"
-                lines.append(f'if [[ -n "${{{var}}}" ]]; then')
+                lines.append(f'if [[ -n "${{_{var}_SET}}" ]]; then')
                 lines.append(f"  _nerf_check_path '{label}' \"${{{var}}}\" '{csv}' || exit 1")
                 lines.append("fi")
                 lines.append("")

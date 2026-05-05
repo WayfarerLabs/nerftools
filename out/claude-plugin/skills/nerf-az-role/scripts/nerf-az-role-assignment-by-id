@@ -40,15 +40,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-ASSIGNMENT_ID="${1:-}"
-shift 2>/dev/null || true
+_ASSIGNMENT_ID_SET=""
+if [[ $# -gt 0 ]]; then
+  ASSIGNMENT_ID="$1"
+  _ASSIGNMENT_ID_SET=true
+  shift
+else
+  ASSIGNMENT_ID=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-az-role-assignment-by-id: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${ASSIGNMENT_ID}" ]] && [[ "${ASSIGNMENT_ID}" == -* ]]; then
+if [[ -n "${_ASSIGNMENT_ID_SET}" ]] && [[ "${ASSIGNMENT_ID}" == -* ]]; then
   echo "error: nerf-az-role-assignment-by-id: <assignment_id> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1

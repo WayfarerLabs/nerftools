@@ -53,7 +53,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -n "${STATUS}" ]] && [[ "${STATUS}" != "queued" && "${STATUS}" != "in_progress" && "${STATUS}" != "completed" && "${STATUS}" != "waiting" && "${STATUS}" != "requested" && "${STATUS}" != "action_required" && "${STATUS}" != "cancelled" && "${STATUS}" != "failure" && "${STATUS}" != "neutral" && "${STATUS}" != "skipped" && "${STATUS}" != "stale" && "${STATUS}" != "startup_failure" && "${STATUS}" != "success" && "${STATUS}" != "timed_out" ]]; then
+if [[ -n "${_STATUS_SET}" ]] && [[ "${STATUS}" != "queued" && "${STATUS}" != "in_progress" && "${STATUS}" != "completed" && "${STATUS}" != "waiting" && "${STATUS}" != "requested" && "${STATUS}" != "action_required" && "${STATUS}" != "cancelled" && "${STATUS}" != "failure" && "${STATUS}" != "neutral" && "${STATUS}" != "skipped" && "${STATUS}" != "stale" && "${STATUS}" != "startup_failure" && "${STATUS}" != "success" && "${STATUS}" != "timed_out" ]]; then
   echo "error: nerf-gh-run-list: option --status is not an allowed value" >&2
   echo "  value:   \"${STATUS}\"" >&2
   echo "  allowed: queued, in_progress, completed, waiting, requested, action_required, cancelled, failure, neutral, skipped, stale, startup_failure, success, timed_out" >&2
@@ -62,7 +62,7 @@ if [[ -n "${STATUS}" ]] && [[ "${STATUS}" != "queued" && "${STATUS}" != "in_prog
 fi
 
 _NERF_PATTERN='^[0-9]+$'
-if [[ -n "${LIMIT}" ]] && ! [[ "${LIMIT}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_LIMIT_SET}" ]] && ! [[ "${LIMIT}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-gh-run-list: option --limit does not match required pattern" >&2
   echo "  value:   \"${LIMIT}\"" >&2
   echo "  pattern: ^[0-9]+$" >&2

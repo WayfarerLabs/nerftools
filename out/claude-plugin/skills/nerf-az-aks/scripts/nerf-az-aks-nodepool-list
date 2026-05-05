@@ -45,8 +45,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-CLUSTER_NAME="${1:-}"
-shift 2>/dev/null || true
+_CLUSTER_NAME_SET=""
+if [[ $# -gt 0 ]]; then
+  CLUSTER_NAME="$1"
+  _CLUSTER_NAME_SET=true
+  shift
+else
+  CLUSTER_NAME=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-az-aks-nodepool-list: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
@@ -59,7 +65,7 @@ if [[ -z "${RESOURCE_GROUP}" ]]; then
   usage
 fi
 
-if [[ -n "${CLUSTER_NAME}" ]] && [[ "${CLUSTER_NAME}" == -* ]]; then
+if [[ -n "${_CLUSTER_NAME_SET}" ]] && [[ "${CLUSTER_NAME}" == -* ]]; then
   echo "error: nerf-az-aks-nodepool-list: <cluster_name> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1

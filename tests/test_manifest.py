@@ -863,6 +863,7 @@ def test_builtin_git_loads() -> None:
     "git-branch-delete-merged",
     "git-rebase-unpushed",
     "git-reset-unpushed",
+    "git-push-branch",
 ])
 def test_builtin_git_main_guards_are_case_insensitive(tool_name: str) -> None:
     """Every 'cannot {op} main' guard must lowercase before comparing. On

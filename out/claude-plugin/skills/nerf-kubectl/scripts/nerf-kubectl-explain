@@ -40,15 +40,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-RESOURCE="${1:-}"
-shift 2>/dev/null || true
+_RESOURCE_SET=""
+if [[ $# -gt 0 ]]; then
+  RESOURCE="$1"
+  _RESOURCE_SET=true
+  shift
+else
+  RESOURCE=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-kubectl-explain: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${RESOURCE}" ]] && [[ "${RESOURCE}" == -* ]]; then
+if [[ -n "${_RESOURCE_SET}" ]] && [[ "${RESOURCE}" == -* ]]; then
   echo "error: nerf-kubectl-explain: <resource> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -61,7 +67,7 @@ if [[ -z "${RESOURCE}" ]]; then
 fi
 
 _NERF_PATTERN='^[a-z][a-zA-Z0-9.-]*$'
-if [[ -n "${RESOURCE}" ]] && ! [[ "${RESOURCE}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_RESOURCE_SET}" ]] && ! [[ "${RESOURCE}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-kubectl-explain: argument <resource> does not match required pattern" >&2
   echo "  value:   \"${RESOURCE}\"" >&2
   echo "  pattern: ^[a-z][a-zA-Z0-9.-]*$" >&2

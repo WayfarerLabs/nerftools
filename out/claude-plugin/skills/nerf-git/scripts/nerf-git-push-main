@@ -41,8 +41,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-REMOTE="${1:-}"
-shift 2>/dev/null || true
+_REMOTE_SET=""
+if [[ $# -gt 0 ]]; then
+  REMOTE="$1"
+  _REMOTE_SET=true
+  shift
+else
+  REMOTE=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-git-push-main: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
@@ -126,11 +132,11 @@ _nerf_check_path() {
   fi
 }
 
-if [[ -n "${DIRECTORY}" ]]; then
+if [[ -n "${_DIRECTORY_SET}" ]]; then
   _nerf_check_path 'option -C' "${DIRECTORY}" 'under_cwd' || exit 1
 fi
 
-if [[ -n "${REMOTE}" ]] && [[ "${REMOTE}" == -* ]]; then
+if [[ -n "${_REMOTE_SET}" ]] && [[ "${REMOTE}" == -* ]]; then
   echo "error: nerf-git-push-main: <remote> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -143,7 +149,7 @@ if [[ -z "${REMOTE}" ]]; then
 fi
 
 _NERF_PATTERN='^[a-zA-Z0-9_.-]+$'
-if [[ -n "${REMOTE}" ]] && ! [[ "${REMOTE}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_REMOTE_SET}" ]] && ! [[ "${REMOTE}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-git-push-main: argument <remote> does not match required pattern" >&2
   echo "  value:   \"${REMOTE}\"" >&2
   echo "  pattern: ^[a-zA-Z0-9_.-]+$" >&2

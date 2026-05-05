@@ -41,8 +41,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-NAME="${1:-}"
-shift 2>/dev/null || true
+_NAME_SET=""
+if [[ $# -gt 0 ]]; then
+  NAME="$1"
+  _NAME_SET=true
+  shift
+else
+  NAME=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-git-create-branch: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
@@ -126,11 +132,11 @@ _nerf_check_path() {
   fi
 }
 
-if [[ -n "${DIRECTORY}" ]]; then
+if [[ -n "${_DIRECTORY_SET}" ]]; then
   _nerf_check_path 'option -C' "${DIRECTORY}" 'under_cwd' || exit 1
 fi
 
-if [[ -n "${NAME}" ]] && [[ "${NAME}" == -* ]]; then
+if [[ -n "${_NAME_SET}" ]] && [[ "${NAME}" == -* ]]; then
   echo "error: nerf-git-create-branch: <name> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -143,7 +149,7 @@ if [[ -z "${NAME}" ]]; then
 fi
 
 _NERF_PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)/[a-zA-Z0-9._/-]+$'
-if [[ -n "${NAME}" ]] && ! [[ "${NAME}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_NAME_SET}" ]] && ! [[ "${NAME}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-git-create-branch: argument <name> does not match required pattern" >&2
   echo "  value:   \"${NAME}\"" >&2
   echo "  pattern: ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)/[a-zA-Z0-9._/-]+$" >&2

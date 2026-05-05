@@ -32,15 +32,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-SUBSCRIPTION="${1:-}"
-shift 2>/dev/null || true
+_SUBSCRIPTION_SET=""
+if [[ $# -gt 0 ]]; then
+  SUBSCRIPTION="$1"
+  _SUBSCRIPTION_SET=true
+  shift
+else
+  SUBSCRIPTION=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-az-account-set: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${SUBSCRIPTION}" ]] && [[ "${SUBSCRIPTION}" == -* ]]; then
+if [[ -n "${_SUBSCRIPTION_SET}" ]] && [[ "${SUBSCRIPTION}" == -* ]]; then
   echo "error: nerf-az-account-set: <subscription> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1

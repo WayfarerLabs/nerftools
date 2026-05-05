@@ -34,17 +34,29 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-PR="${1:-}"
-shift 2>/dev/null || true
-BODY="${1:-}"
-shift 2>/dev/null || true
+_PR_SET=""
+if [[ $# -gt 0 ]]; then
+  PR="$1"
+  _PR_SET=true
+  shift
+else
+  PR=""
+fi
+_BODY_SET=""
+if [[ $# -gt 0 ]]; then
+  BODY="$1"
+  _BODY_SET=true
+  shift
+else
+  BODY=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-gh-pr-thread-comment: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${PR}" ]] && [[ "${PR}" == -* ]]; then
+if [[ -n "${_PR_SET}" ]] && [[ "${PR}" == -* ]]; then
   echo "error: nerf-gh-pr-thread-comment: <pr> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -56,7 +68,7 @@ if [[ -z "${PR}" ]]; then
   usage
 fi
 
-if [[ -n "${BODY}" ]] && [[ "${BODY}" == -* ]]; then
+if [[ -n "${_BODY_SET}" ]] && [[ "${BODY}" == -* ]]; then
   echo "error: nerf-gh-pr-thread-comment: <body> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1

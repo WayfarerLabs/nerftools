@@ -45,10 +45,22 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-RESOURCE="${1:-}"
-shift 2>/dev/null || true
-NAME="${1:-}"
-shift 2>/dev/null || true
+_RESOURCE_SET=""
+if [[ $# -gt 0 ]]; then
+  RESOURCE="$1"
+  _RESOURCE_SET=true
+  shift
+else
+  RESOURCE=""
+fi
+_NAME_SET=""
+if [[ $# -gt 0 ]]; then
+  NAME="$1"
+  _NAME_SET=true
+  shift
+else
+  NAME=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-kubectl-describe: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
@@ -56,7 +68,7 @@ if [[ $# -gt 0 ]]; then
 fi
 
 _NERF_PATTERN='^[a-z0-9-]+$'
-if [[ -n "${NAMESPACE}" ]] && ! [[ "${NAMESPACE}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_NAMESPACE_SET}" ]] && ! [[ "${NAMESPACE}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-kubectl-describe: option --namespace does not match required pattern" >&2
   echo "  value:   \"${NAMESPACE}\"" >&2
   echo "  pattern: ^[a-z0-9-]+$" >&2
@@ -64,7 +76,7 @@ if [[ -n "${NAMESPACE}" ]] && ! [[ "${NAMESPACE}" =~ $_NERF_PATTERN ]]; then
   exit 1
 fi
 
-if [[ -n "${RESOURCE}" ]] && [[ "${RESOURCE}" == -* ]]; then
+if [[ -n "${_RESOURCE_SET}" ]] && [[ "${RESOURCE}" == -* ]]; then
   echo "error: nerf-kubectl-describe: <resource> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -77,7 +89,7 @@ if [[ -z "${RESOURCE}" ]]; then
 fi
 
 _NERF_PATTERN='^[a-z][a-zA-Z0-9.-]*$'
-if [[ -n "${RESOURCE}" ]] && ! [[ "${RESOURCE}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_RESOURCE_SET}" ]] && ! [[ "${RESOURCE}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-kubectl-describe: argument <resource> does not match required pattern" >&2
   echo "  value:   \"${RESOURCE}\"" >&2
   echo "  pattern: ^[a-z][a-zA-Z0-9.-]*$" >&2
@@ -85,7 +97,7 @@ if [[ -n "${RESOURCE}" ]] && ! [[ "${RESOURCE}" =~ $_NERF_PATTERN ]]; then
   exit 1
 fi
 
-if [[ -n "${NAME}" ]] && [[ "${NAME}" == -* ]]; then
+if [[ -n "${_NAME_SET}" ]] && [[ "${NAME}" == -* ]]; then
   echo "error: nerf-kubectl-describe: <name> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -98,7 +110,7 @@ if [[ -z "${NAME}" ]]; then
 fi
 
 _NERF_PATTERN='^[a-zA-Z0-9._-]+$'
-if [[ -n "${NAME}" ]] && ! [[ "${NAME}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_NAME_SET}" ]] && ! [[ "${NAME}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-kubectl-describe: argument <name> does not match required pattern" >&2
   echo "  value:   \"${NAME}\"" >&2
   echo "  pattern: ^[a-zA-Z0-9._-]+$" >&2

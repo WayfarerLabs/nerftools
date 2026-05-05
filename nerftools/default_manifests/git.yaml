@@ -221,7 +221,8 @@ tools:
         echo "error: cannot push from detached HEAD state" >&2
         return 1
       fi
-      if [ "$BRANCH" = "main" ]; then
+      BRANCH_LOWER=$(printf '%s' "${BRANCH}" | tr '[:upper:]' '[:lower:]')
+      if [ "${BRANCH_LOWER}" = "main" ]; then
         echo "error: use git-push-main for the main branch" >&2
         return 1
       fi

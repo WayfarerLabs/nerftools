@@ -51,7 +51,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 _NERF_PATTERN='^[0-9]+$'
-if [[ -n "${HOURS_BACK}" ]] && ! [[ "${HOURS_BACK}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_HOURS_BACK_SET}" ]] && ! [[ "${HOURS_BACK}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-az-monitor-activity-log: option --hours-back does not match required pattern" >&2
   echo "  value:   \"${HOURS_BACK}\"" >&2
   echo "  pattern: ^[0-9]+$" >&2

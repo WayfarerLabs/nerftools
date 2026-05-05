@@ -40,15 +40,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-LOCATION="${1:-}"
-shift 2>/dev/null || true
+_LOCATION_SET=""
+if [[ $# -gt 0 ]]; then
+  LOCATION="$1"
+  _LOCATION_SET=true
+  shift
+else
+  LOCATION=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-az-aks-get-versions: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${LOCATION}" ]] && [[ "${LOCATION}" == -* ]]; then
+if [[ -n "${_LOCATION_SET}" ]] && [[ "${LOCATION}" == -* ]]; then
   echo "error: nerf-az-aks-get-versions: <location> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1

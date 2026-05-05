@@ -44,10 +44,22 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-REMOTE="${1:-}"
-shift 2>/dev/null || true
-NAME="${1:-}"
-shift 2>/dev/null || true
+_REMOTE_SET=""
+if [[ $# -gt 0 ]]; then
+  REMOTE="$1"
+  _REMOTE_SET=true
+  shift
+else
+  REMOTE=""
+fi
+_NAME_SET=""
+if [[ $# -gt 0 ]]; then
+  NAME="$1"
+  _NAME_SET=true
+  shift
+else
+  NAME=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-git-branch-checkout-remote: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
@@ -131,11 +143,11 @@ _nerf_check_path() {
   fi
 }
 
-if [[ -n "${DIRECTORY}" ]]; then
+if [[ -n "${_DIRECTORY_SET}" ]]; then
   _nerf_check_path 'option -C' "${DIRECTORY}" 'under_cwd' || exit 1
 fi
 
-if [[ -n "${REMOTE}" ]] && [[ "${REMOTE}" == -* ]]; then
+if [[ -n "${_REMOTE_SET}" ]] && [[ "${REMOTE}" == -* ]]; then
   echo "error: nerf-git-branch-checkout-remote: <remote> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -148,7 +160,7 @@ if [[ -z "${REMOTE}" ]]; then
 fi
 
 _NERF_PATTERN='^[a-zA-Z0-9_.-]+$'
-if [[ -n "${REMOTE}" ]] && ! [[ "${REMOTE}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_REMOTE_SET}" ]] && ! [[ "${REMOTE}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-git-branch-checkout-remote: argument <remote> does not match required pattern" >&2
   echo "  value:   \"${REMOTE}\"" >&2
   echo "  pattern: ^[a-zA-Z0-9_.-]+$" >&2
@@ -156,7 +168,7 @@ if [[ -n "${REMOTE}" ]] && ! [[ "${REMOTE}" =~ $_NERF_PATTERN ]]; then
   exit 1
 fi
 
-if [[ -n "${NAME}" ]] && [[ "${NAME}" == -* ]]; then
+if [[ -n "${_NAME_SET}" ]] && [[ "${NAME}" == -* ]]; then
   echo "error: nerf-git-branch-checkout-remote: <name> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -169,7 +181,7 @@ if [[ -z "${NAME}" ]]; then
 fi
 
 _NERF_PATTERN='^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$'
-if [[ -n "${NAME}" ]] && ! [[ "${NAME}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_NAME_SET}" ]] && ! [[ "${NAME}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-git-branch-checkout-remote: argument <name> does not match required pattern" >&2
   echo "  value:   \"${NAME}\"" >&2
   echo "  pattern: ^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$" >&2

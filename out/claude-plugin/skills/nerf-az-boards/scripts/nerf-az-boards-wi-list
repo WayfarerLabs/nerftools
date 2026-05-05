@@ -40,15 +40,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-WIQL="${1:-}"
-shift 2>/dev/null || true
+_WIQL_SET=""
+if [[ $# -gt 0 ]]; then
+  WIQL="$1"
+  _WIQL_SET=true
+  shift
+else
+  WIQL=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-az-boards-wi-list: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${WIQL}" ]] && [[ "${WIQL}" == -* ]]; then
+if [[ -n "${_WIQL_SET}" ]] && [[ "${WIQL}" == -* ]]; then
   echo "error: nerf-az-boards-wi-list: <wiql> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1

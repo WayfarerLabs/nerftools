@@ -53,7 +53,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -n "${STATE}" ]] && [[ "${STATE}" != "open" && "${STATE}" != "closed" && "${STATE}" != "all" ]]; then
+if [[ -n "${_STATE_SET}" ]] && [[ "${STATE}" != "open" && "${STATE}" != "closed" && "${STATE}" != "all" ]]; then
   echo "error: nerf-gh-issue-list: option --state is not an allowed value" >&2
   echo "  value:   \"${STATE}\"" >&2
   echo "  allowed: open, closed, all" >&2
@@ -62,7 +62,7 @@ if [[ -n "${STATE}" ]] && [[ "${STATE}" != "open" && "${STATE}" != "closed" && "
 fi
 
 _NERF_PATTERN='^[0-9]+$'
-if [[ -n "${LIMIT}" ]] && ! [[ "${LIMIT}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_LIMIT_SET}" ]] && ! [[ "${LIMIT}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-gh-issue-list: option --limit does not match required pattern" >&2
   echo "  value:   \"${LIMIT}\"" >&2
   echo "  pattern: ^[0-9]+$" >&2

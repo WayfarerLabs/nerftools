@@ -50,15 +50,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-TITLE="${1:-}"
-shift 2>/dev/null || true
+_TITLE_SET=""
+if [[ $# -gt 0 ]]; then
+  TITLE="$1"
+  _TITLE_SET=true
+  shift
+else
+  TITLE=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-gh-issue-create: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${TITLE}" ]] && [[ "${TITLE}" == -* ]]; then
+if [[ -n "${_TITLE_SET}" ]] && [[ "${TITLE}" == -* ]]; then
   echo "error: nerf-gh-issue-create: <title> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1

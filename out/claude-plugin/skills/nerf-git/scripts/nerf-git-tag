@@ -41,8 +41,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-TAG="${1:-}"
-shift 2>/dev/null || true
+_TAG_SET=""
+if [[ $# -gt 0 ]]; then
+  TAG="$1"
+  _TAG_SET=true
+  shift
+else
+  TAG=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-git-tag: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
@@ -126,11 +132,11 @@ _nerf_check_path() {
   fi
 }
 
-if [[ -n "${DIRECTORY}" ]]; then
+if [[ -n "${_DIRECTORY_SET}" ]]; then
   _nerf_check_path 'option -C' "${DIRECTORY}" 'under_cwd' || exit 1
 fi
 
-if [[ -n "${TAG}" ]] && [[ "${TAG}" == -* ]]; then
+if [[ -n "${_TAG_SET}" ]] && [[ "${TAG}" == -* ]]; then
   echo "error: nerf-git-tag: <tag> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -143,7 +149,7 @@ if [[ -z "${TAG}" ]]; then
 fi
 
 _NERF_PATTERN='^[a-zA-Z0-9._/-]+$'
-if [[ -n "${TAG}" ]] && ! [[ "${TAG}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_TAG_SET}" ]] && ! [[ "${TAG}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-git-tag: argument <tag> does not match required pattern" >&2
   echo "  value:   \"${TAG}\"" >&2
   echo "  pattern: ^[a-zA-Z0-9._/-]+$" >&2

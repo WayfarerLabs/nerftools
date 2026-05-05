@@ -33,15 +33,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-TARGET="${1:-}"
-shift 2>/dev/null || true
+_TARGET_SET=""
+if [[ $# -gt 0 ]]; then
+  TARGET="$1"
+  _TARGET_SET=true
+  shift
+else
+  TARGET=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-nx-run: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${TARGET}" ]] && [[ "${TARGET}" == -* ]]; then
+if [[ -n "${_TARGET_SET}" ]] && [[ "${TARGET}" == -* ]]; then
   echo "error: nerf-nx-run: <target> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -54,7 +60,7 @@ if [[ -z "${TARGET}" ]]; then
 fi
 
 _NERF_PATTERN='^[a-zA-Z0-9_-]+:[a-zA-Z0-9_-]+$'
-if [[ -n "${TARGET}" ]] && ! [[ "${TARGET}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_TARGET_SET}" ]] && ! [[ "${TARGET}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-nx-run: argument <target> does not match required pattern" >&2
   echo "  value:   \"${TARGET}\"" >&2
   echo "  pattern: ^[a-zA-Z0-9_-]+:[a-zA-Z0-9_-]+$" >&2

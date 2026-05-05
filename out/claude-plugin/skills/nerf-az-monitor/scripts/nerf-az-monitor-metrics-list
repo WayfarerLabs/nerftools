@@ -67,8 +67,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-METRIC="${1:-}"
-shift 2>/dev/null || true
+_METRIC_SET=""
+if [[ $# -gt 0 ]]; then
+  METRIC="$1"
+  _METRIC_SET=true
+  shift
+else
+  METRIC=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-az-monitor-metrics-list: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
@@ -81,7 +87,7 @@ if [[ -z "${RESOURCE_ID}" ]]; then
   usage
 fi
 
-if [[ -n "${AGGREGATION}" ]] && [[ "${AGGREGATION}" != "Average" && "${AGGREGATION}" != "Count" && "${AGGREGATION}" != "Maximum" && "${AGGREGATION}" != "Minimum" && "${AGGREGATION}" != "Total" ]]; then
+if [[ -n "${_AGGREGATION_SET}" ]] && [[ "${AGGREGATION}" != "Average" && "${AGGREGATION}" != "Count" && "${AGGREGATION}" != "Maximum" && "${AGGREGATION}" != "Minimum" && "${AGGREGATION}" != "Total" ]]; then
   echo "error: nerf-az-monitor-metrics-list: option --aggregation is not an allowed value" >&2
   echo "  value:   \"${AGGREGATION}\"" >&2
   echo "  allowed: Average, Count, Maximum, Minimum, Total" >&2
@@ -89,7 +95,7 @@ if [[ -n "${AGGREGATION}" ]] && [[ "${AGGREGATION}" != "Average" && "${AGGREGATI
   exit 1
 fi
 
-if [[ -n "${INTERVAL}" ]] && [[ "${INTERVAL}" != "PT1M" && "${INTERVAL}" != "PT5M" && "${INTERVAL}" != "PT15M" && "${INTERVAL}" != "PT30M" && "${INTERVAL}" != "PT1H" && "${INTERVAL}" != "PT6H" && "${INTERVAL}" != "PT12H" && "${INTERVAL}" != "P1D" && "${INTERVAL}" != "FULL" ]]; then
+if [[ -n "${_INTERVAL_SET}" ]] && [[ "${INTERVAL}" != "PT1M" && "${INTERVAL}" != "PT5M" && "${INTERVAL}" != "PT15M" && "${INTERVAL}" != "PT30M" && "${INTERVAL}" != "PT1H" && "${INTERVAL}" != "PT6H" && "${INTERVAL}" != "PT12H" && "${INTERVAL}" != "P1D" && "${INTERVAL}" != "FULL" ]]; then
   echo "error: nerf-az-monitor-metrics-list: option --interval is not an allowed value" >&2
   echo "  value:   \"${INTERVAL}\"" >&2
   echo "  allowed: PT1M, PT5M, PT15M, PT30M, PT1H, PT6H, PT12H, P1D, FULL" >&2
@@ -97,7 +103,7 @@ if [[ -n "${INTERVAL}" ]] && [[ "${INTERVAL}" != "PT1M" && "${INTERVAL}" != "PT5
   exit 1
 fi
 
-if [[ -n "${METRIC}" ]] && [[ "${METRIC}" == -* ]]; then
+if [[ -n "${_METRIC_SET}" ]] && [[ "${METRIC}" == -* ]]; then
   echo "error: nerf-az-monitor-metrics-list: <metric> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1

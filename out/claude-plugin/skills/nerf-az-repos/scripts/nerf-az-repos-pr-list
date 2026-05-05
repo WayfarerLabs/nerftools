@@ -58,7 +58,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -n "${STATUS}" ]] && [[ "${STATUS}" != "active" && "${STATUS}" != "abandoned" && "${STATUS}" != "completed" && "${STATUS}" != "all" ]]; then
+if [[ -n "${_STATUS_SET}" ]] && [[ "${STATUS}" != "active" && "${STATUS}" != "abandoned" && "${STATUS}" != "completed" && "${STATUS}" != "all" ]]; then
   echo "error: nerf-az-repos-pr-list: option --status is not an allowed value" >&2
   echo "  value:   \"${STATUS}\"" >&2
   echo "  allowed: active, abandoned, completed, all" >&2
@@ -67,7 +67,7 @@ if [[ -n "${STATUS}" ]] && [[ "${STATUS}" != "active" && "${STATUS}" != "abandon
 fi
 
 _NERF_PATTERN='^[0-9]+$'
-if [[ -n "${TOP}" ]] && ! [[ "${TOP}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_TOP_SET}" ]] && ! [[ "${TOP}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-az-repos-pr-list: option --top does not match required pattern" >&2
   echo "  value:   \"${TOP}\"" >&2
   echo "  pattern: ^[0-9]+$" >&2

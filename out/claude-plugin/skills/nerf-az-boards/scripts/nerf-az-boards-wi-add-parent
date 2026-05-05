@@ -44,17 +44,29 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-CHILD_ID="${1:-}"
-shift 2>/dev/null || true
-PARENT_ID="${1:-}"
-shift 2>/dev/null || true
+_CHILD_ID_SET=""
+if [[ $# -gt 0 ]]; then
+  CHILD_ID="$1"
+  _CHILD_ID_SET=true
+  shift
+else
+  CHILD_ID=""
+fi
+_PARENT_ID_SET=""
+if [[ $# -gt 0 ]]; then
+  PARENT_ID="$1"
+  _PARENT_ID_SET=true
+  shift
+else
+  PARENT_ID=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-az-boards-wi-add-parent: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${CHILD_ID}" ]] && [[ "${CHILD_ID}" == -* ]]; then
+if [[ -n "${_CHILD_ID_SET}" ]] && [[ "${CHILD_ID}" == -* ]]; then
   echo "error: nerf-az-boards-wi-add-parent: <child_id> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -67,7 +79,7 @@ if [[ -z "${CHILD_ID}" ]]; then
 fi
 
 _NERF_PATTERN='^[0-9]+$'
-if [[ -n "${CHILD_ID}" ]] && ! [[ "${CHILD_ID}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_CHILD_ID_SET}" ]] && ! [[ "${CHILD_ID}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-az-boards-wi-add-parent: argument <child_id> does not match required pattern" >&2
   echo "  value:   \"${CHILD_ID}\"" >&2
   echo "  pattern: ^[0-9]+$" >&2
@@ -75,7 +87,7 @@ if [[ -n "${CHILD_ID}" ]] && ! [[ "${CHILD_ID}" =~ $_NERF_PATTERN ]]; then
   exit 1
 fi
 
-if [[ -n "${PARENT_ID}" ]] && [[ "${PARENT_ID}" == -* ]]; then
+if [[ -n "${_PARENT_ID_SET}" ]] && [[ "${PARENT_ID}" == -* ]]; then
   echo "error: nerf-az-boards-wi-add-parent: <parent_id> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -88,7 +100,7 @@ if [[ -z "${PARENT_ID}" ]]; then
 fi
 
 _NERF_PATTERN='^[0-9]+$'
-if [[ -n "${PARENT_ID}" ]] && ! [[ "${PARENT_ID}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_PARENT_ID_SET}" ]] && ! [[ "${PARENT_ID}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-az-boards-wi-add-parent: argument <parent_id> does not match required pattern" >&2
   echo "  value:   \"${PARENT_ID}\"" >&2
   echo "  pattern: ^[0-9]+$" >&2

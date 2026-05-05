@@ -33,15 +33,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-CONTEXT="${1:-}"
-shift 2>/dev/null || true
+_CONTEXT_SET=""
+if [[ $# -gt 0 ]]; then
+  CONTEXT="$1"
+  _CONTEXT_SET=true
+  shift
+else
+  CONTEXT=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-kubectl-config-use-context: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${CONTEXT}" ]] && [[ "${CONTEXT}" == -* ]]; then
+if [[ -n "${_CONTEXT_SET}" ]] && [[ "${CONTEXT}" == -* ]]; then
   echo "error: nerf-kubectl-config-use-context: <context> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -54,7 +60,7 @@ if [[ -z "${CONTEXT}" ]]; then
 fi
 
 _NERF_PATTERN='^[a-zA-Z0-9_]([a-zA-Z0-9._-]*[a-zA-Z0-9_])?$'
-if [[ -n "${CONTEXT}" ]] && ! [[ "${CONTEXT}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_CONTEXT_SET}" ]] && ! [[ "${CONTEXT}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-kubectl-config-use-context: argument <context> does not match required pattern" >&2
   echo "  value:   \"${CONTEXT}\"" >&2
   echo "  pattern: ^[a-zA-Z0-9_]([a-zA-Z0-9._-]*[a-zA-Z0-9_])?$" >&2

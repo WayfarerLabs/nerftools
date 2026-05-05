@@ -76,15 +76,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-WI_ID="${1:-}"
-shift 2>/dev/null || true
+_WI_ID_SET=""
+if [[ $# -gt 0 ]]; then
+  WI_ID="$1"
+  _WI_ID_SET=true
+  shift
+else
+  WI_ID=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-az-boards-wi-update: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${WI_ID}" ]] && [[ "${WI_ID}" == -* ]]; then
+if [[ -n "${_WI_ID_SET}" ]] && [[ "${WI_ID}" == -* ]]; then
   echo "error: nerf-az-boards-wi-update: <wi_id> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -97,7 +103,7 @@ if [[ -z "${WI_ID}" ]]; then
 fi
 
 _NERF_PATTERN='^[0-9]+$'
-if [[ -n "${WI_ID}" ]] && ! [[ "${WI_ID}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_WI_ID_SET}" ]] && ! [[ "${WI_ID}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-az-boards-wi-update: argument <wi_id> does not match required pattern" >&2
   echo "  value:   \"${WI_ID}\"" >&2
   echo "  pattern: ^[0-9]+$" >&2

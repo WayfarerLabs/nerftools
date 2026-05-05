@@ -44,17 +44,29 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-PR_ID="${1:-}"
-shift 2>/dev/null || true
-VOTE="${1:-}"
-shift 2>/dev/null || true
+_PR_ID_SET=""
+if [[ $# -gt 0 ]]; then
+  PR_ID="$1"
+  _PR_ID_SET=true
+  shift
+else
+  PR_ID=""
+fi
+_VOTE_SET=""
+if [[ $# -gt 0 ]]; then
+  VOTE="$1"
+  _VOTE_SET=true
+  shift
+else
+  VOTE=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-az-repos-pr-vote: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${PR_ID}" ]] && [[ "${PR_ID}" == -* ]]; then
+if [[ -n "${_PR_ID_SET}" ]] && [[ "${PR_ID}" == -* ]]; then
   echo "error: nerf-az-repos-pr-vote: <pr_id> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -67,7 +79,7 @@ if [[ -z "${PR_ID}" ]]; then
 fi
 
 _NERF_PATTERN='^[0-9]+$'
-if [[ -n "${PR_ID}" ]] && ! [[ "${PR_ID}" =~ $_NERF_PATTERN ]]; then
+if [[ -n "${_PR_ID_SET}" ]] && ! [[ "${PR_ID}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-az-repos-pr-vote: argument <pr_id> does not match required pattern" >&2
   echo "  value:   \"${PR_ID}\"" >&2
   echo "  pattern: ^[0-9]+$" >&2
@@ -75,7 +87,7 @@ if [[ -n "${PR_ID}" ]] && ! [[ "${PR_ID}" =~ $_NERF_PATTERN ]]; then
   exit 1
 fi
 
-if [[ -n "${VOTE}" ]] && [[ "${VOTE}" == -* ]]; then
+if [[ -n "${_VOTE_SET}" ]] && [[ "${VOTE}" == -* ]]; then
   echo "error: nerf-az-repos-pr-vote: <vote> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
@@ -87,7 +99,7 @@ if [[ -z "${VOTE}" ]]; then
   usage
 fi
 
-if [[ -n "${VOTE}" ]] && [[ "${VOTE}" != "approve" && "${VOTE}" != "approve-with-suggestions" && "${VOTE}" != "reject" && "${VOTE}" != "reset" && "${VOTE}" != "wait-for-author" ]]; then
+if [[ -n "${_VOTE_SET}" ]] && [[ "${VOTE}" != "approve" && "${VOTE}" != "approve-with-suggestions" && "${VOTE}" != "reject" && "${VOTE}" != "reset" && "${VOTE}" != "wait-for-author" ]]; then
   echo "error: nerf-az-repos-pr-vote: argument <vote> is not an allowed value" >&2
   echo "  value:   \"${VOTE}\"" >&2
   echo "  allowed: approve, approve-with-suggestions, reject, reset, wait-for-author" >&2

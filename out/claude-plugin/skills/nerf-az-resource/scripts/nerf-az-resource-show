@@ -40,15 +40,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-RESOURCE_ID="${1:-}"
-shift 2>/dev/null || true
+_RESOURCE_ID_SET=""
+if [[ $# -gt 0 ]]; then
+  RESOURCE_ID="$1"
+  _RESOURCE_ID_SET=true
+  shift
+else
+  RESOURCE_ID=""
+fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-az-resource-show: unexpected extra arguments: $*" >&2
   echo "  hint: switches and options must come before positional arguments" >&2
   exit 1
 fi
 
-if [[ -n "${RESOURCE_ID}" ]] && [[ "${RESOURCE_ID}" == -* ]]; then
+if [[ -n "${_RESOURCE_ID_SET}" ]] && [[ "${RESOURCE_ID}" == -* ]]; then
   echo "error: nerf-az-resource-show: <resource_id> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
