@@ -19,7 +19,7 @@ Options:
 Arguments:
   <remote> (required)
       Remote name (e.g. origin)
-      Must match: ^[a-z0-9_-]+$
+      Must match: ^[a-zA-Z0-9_.-]+$
 
 Maps to: git <directory> push --follow-tags <remote> main
 
@@ -141,12 +141,12 @@ if [[ -z "${REMOTE}" ]]; then
   usage
 fi
 
-_NERF_PATTERN='^[a-z0-9_-]+$'
+_NERF_PATTERN='^[a-zA-Z0-9_.-]+$'
 if [[ -n "${REMOTE}" ]] && ! [[ "${REMOTE}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-git-push-main: argument <remote> does not match required pattern" >&2
   echo "  value:   \"${REMOTE}\"" >&2
-  echo "  pattern: ^[a-z0-9_-]+$" >&2
-  echo "  hint: value must match ^[a-z0-9_-]+$" >&2
+  echo "  pattern: ^[a-zA-Z0-9_.-]+$" >&2
+  echo "  hint: value must match ^[a-zA-Z0-9_.-]+$" >&2
   exit 1
 fi
 

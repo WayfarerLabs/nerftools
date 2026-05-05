@@ -155,7 +155,7 @@ tools:
       remote:
         description: Remote name (e.g. origin)
         required: true
-        pattern: "^[a-z0-9_-]+$"
+        pattern: "^[a-zA-Z0-9_.-]+$"
 
   git-pull:
     description: Pull the current branch from a remote.
@@ -173,7 +173,7 @@ tools:
       remote:
         description: Remote name (e.g. origin)
         required: true
-        pattern: "^[a-z0-9_-]+$"
+        pattern: "^[a-zA-Z0-9_.-]+$"
 
   git-push-main:
     description: >-
@@ -193,7 +193,7 @@ tools:
       remote:
         description: Remote name (e.g. origin)
         required: true
-        pattern: "^[a-z0-9_-]+$"
+        pattern: "^[a-zA-Z0-9_.-]+$"
 
   git-push-branch:
     description: >-
@@ -213,7 +213,7 @@ tools:
       remote:
         description: Remote name (e.g. origin)
         required: true
-        pattern: "^[a-z0-9_-]+$"
+        pattern: "^[a-zA-Z0-9_.-]+$"
     pre: |
       BRANCH=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null)
       if [ -z "$BRANCH" ]; then
@@ -396,23 +396,21 @@ tools:
         - "{{options.directory}}"
         - checkout
         - --track
-        - "{{options.remote}}/{{arguments.name}}"
+        - "{{arguments.remote}}/{{arguments.name}}"
     arguments:
       name:
         description: Branch name (must exist as <remote>/<name>)
         required: true
         pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$"
+      remote:
+        description: Remote name (typically origin)
+        required: true
+        pattern: "^[a-zA-Z0-9_.-]+$"
     options:
       directory:
         description: Subdirectory of the workspace to run git in (must be under cwd)
         flag: -C
         path_tests: [under_cwd]
-      remote:
-        description: Remote name
-        flag: --remote
-        short: -r
-        default: origin
-        pattern: "^[a-zA-Z0-9_.-]+$"
 
   git-branch-delete-merged:
     description: >-

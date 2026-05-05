@@ -194,6 +194,37 @@ def test_option_default_does_not_trigger_dup_check_on_first_use(tmp_path: Path) 
     assert "can only be specified once" in result.stderr
 
 
+def test_option_default_in_inline_placeholder(tmp_path: Path) -> None:
+    """The default-feature is most useful in inline placeholders like
+    "{{options.x}}/{{arguments.y}}" where the substituted ${X} must be non-empty
+    for the URL/path to be well-formed. Whole-token placeholders happen to also
+    work, but the inline path is the load-bearing case.
+    """
+    options = {"remote": OptionSpec(flag="--remote", description="Remote.", default="origin")}
+    arguments = {"branch": ArgSpec(description="Branch.", required=True)}
+    tool = _template_tool(
+        ["echo", "{{options.remote}}/{{arguments.branch}}"],
+        options=options,
+        arguments=arguments,
+    )
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+
+    # Default applied when --remote omitted
+    result = subprocess.run([str(script_path), "feat-x"], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert "origin/feat-x" in result.stdout
+
+    # User override
+    result = subprocess.run(
+        [str(script_path), "--remote", "upstream", "feat-x"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "upstream/feat-x" in result.stdout
+
+
 def test_option_default_with_special_chars_is_quoted(tmp_path: Path) -> None:
     """Defaults with shell-special characters must be safely single-quoted."""
     options = {"x": OptionSpec(flag="--x", description="X.", default="it's tricky")}

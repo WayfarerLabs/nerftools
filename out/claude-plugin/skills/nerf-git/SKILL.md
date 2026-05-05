@@ -113,7 +113,7 @@ Fetch all branches and tags from a remote.
 
 **Arguments:**
 
-- `<remote>` (required): Remote name (e.g. origin). must match `^[a-z0-9_-]+$`
+- `<remote>` (required): Remote name (e.g. origin). must match `^[a-zA-Z0-9_.-]+$`
 
 ---
 
@@ -130,7 +130,7 @@ Pull the current branch from a remote.
 
 **Arguments:**
 
-- `<remote>` (required): Remote name (e.g. origin). must match `^[a-z0-9_-]+$`
+- `<remote>` (required): Remote name (e.g. origin). must match `^[a-zA-Z0-9_.-]+$`
 
 ---
 
@@ -147,7 +147,7 @@ Push the local main branch to a remote including annotated tags (no force push).
 
 **Arguments:**
 
-- `<remote>` (required): Remote name (e.g. origin). must match `^[a-z0-9_-]+$`
+- `<remote>` (required): Remote name (e.g. origin). must match `^[a-zA-Z0-9_.-]+$`
 
 ---
 
@@ -164,7 +164,7 @@ Push the current branch to a remote including annotated tags (no force push). Fa
 
 **Arguments:**
 
-- `<remote>` (required): Remote name (e.g. origin). must match `^[a-z0-9_-]+$`
+- `<remote>` (required): Remote name (e.g. origin). must match `^[a-zA-Z0-9_.-]+$`
 
 ---
 
@@ -301,17 +301,17 @@ Create a new branch from the current HEAD and switch to it. The name must start 
 
 Create a local branch that explicitly tracks <remote>/<name>. Use git-switch for the simpler auto-track behavior; reach for this tool when you have multiple remotes with the same branch name (auto-track refuses the ambiguity) or want to be explicit about which remote you are tracking. Skips the Conventional-Commits prefix guard because the branch already exists upstream.
 
-**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-branch-checkout-remote [-C <directory>] [--remote|-r <remote>] <name>`
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-branch-checkout-remote [-C <directory>] <name> <remote>`
 **Maps to:** `git <directory> checkout --track <remote>/<name>`
 
 **Options:**
 
 - `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
-- `--remote|-r` (optional): Remote name. must match `^[a-zA-Z0-9_.-]+$`
 
 **Arguments:**
 
 - `<name>` (required): Branch name (must exist as <remote>/<name>). must match `^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$`
+- `<remote>` (required): Remote name (typically origin). must match `^[a-zA-Z0-9_.-]+$`
 
 ---
 
