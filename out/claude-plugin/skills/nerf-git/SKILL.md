@@ -203,7 +203,7 @@ Create a new annotated git tag at HEAD. Fails if the tag already exists. No forc
 Show the working-tree status in short porcelain format.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-status [-C <directory>]`
-**Maps to:** `git <directory> status --porcelain`
+**Maps to:** `git <directory> status --porcelain=v1`
 
 **Options:**
 

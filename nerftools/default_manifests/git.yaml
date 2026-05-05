@@ -268,7 +268,7 @@ tools:
       read: workspace
       write: none
     template:
-      command: [git, "{{options.directory}}", status, --porcelain]
+      command: [git, "{{options.directory}}", status, --porcelain=v1]
     options:
       directory:
         description: Subdirectory of the workspace to run git in (must be under cwd)

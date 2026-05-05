@@ -536,7 +536,7 @@ def _load_options(raw: dict[str, Any], path: Path, tool_name: str) -> dict[str, 
                 )
             if deny and default in deny:
                 raise ManifestError(
-                    f"{ctx}: 'default' value {default!r} is in 'deny' list"
+                    f"{ctx}: 'default' value {default!r} is in 'deny' list {list(deny)}"
                 )
 
         options[name] = OptionSpec(
