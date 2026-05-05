@@ -34,18 +34,23 @@ EOF
 }
 
 STATUS=""
+_STATUS_SET=""
 TOP=""
+_TOP_SET=""
 CREATOR=""
+_CREATOR_SET=""
 REVIEWER=""
+_REVIEWER_SET=""
 PROJECT=""
+_PROJECT_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --status) if [[ -n "${STATUS}" ]]; then echo "error: --status can only be specified once" >&2; exit 1; fi; STATUS="$2"; shift 2 ;;
-    --top) if [[ -n "${TOP}" ]]; then echo "error: --top can only be specified once" >&2; exit 1; fi; TOP="$2"; shift 2 ;;
-    --creator) if [[ -n "${CREATOR}" ]]; then echo "error: --creator can only be specified once" >&2; exit 1; fi; CREATOR="$2"; shift 2 ;;
-    --reviewer) if [[ -n "${REVIEWER}" ]]; then echo "error: --reviewer can only be specified once" >&2; exit 1; fi; REVIEWER="$2"; shift 2 ;;
-    --project|-p) if [[ -n "${PROJECT}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; shift 2 ;;
+    --status) if [[ -n "${_STATUS_SET}" ]]; then echo "error: --status can only be specified once" >&2; exit 1; fi; STATUS="$2"; _STATUS_SET=true; shift 2 ;;
+    --top) if [[ -n "${_TOP_SET}" ]]; then echo "error: --top can only be specified once" >&2; exit 1; fi; TOP="$2"; _TOP_SET=true; shift 2 ;;
+    --creator) if [[ -n "${_CREATOR_SET}" ]]; then echo "error: --creator can only be specified once" >&2; exit 1; fi; CREATOR="$2"; _CREATOR_SET=true; shift 2 ;;
+    --reviewer) if [[ -n "${_REVIEWER_SET}" ]]; then echo "error: --reviewer can only be specified once" >&2; exit 1; fi; REVIEWER="$2"; _REVIEWER_SET=true; shift 2 ;;
+    --project|-p) if [[ -n "${_PROJECT_SET}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; _PROJECT_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;

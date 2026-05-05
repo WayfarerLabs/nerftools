@@ -25,10 +25,11 @@ EOF
 }
 
 API_GROUP=""
+_API_GROUP_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --api-group) if [[ -n "${API_GROUP}" ]]; then echo "error: --api-group can only be specified once" >&2; exit 1; fi; API_GROUP="$2"; shift 2 ;;
+    --api-group) if [[ -n "${_API_GROUP_SET}" ]]; then echo "error: --api-group can only be specified once" >&2; exit 1; fi; API_GROUP="$2"; _API_GROUP_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;

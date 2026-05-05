@@ -28,10 +28,11 @@ EOF
 }
 
 LIMIT=""
+_LIMIT_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --limit|-L) if [[ -n "${LIMIT}" ]]; then echo "error: --limit can only be specified once" >&2; exit 1; fi; LIMIT="$2"; shift 2 ;;
+    --limit|-L) if [[ -n "${_LIMIT_SET}" ]]; then echo "error: --limit can only be specified once" >&2; exit 1; fi; LIMIT="$2"; _LIMIT_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;

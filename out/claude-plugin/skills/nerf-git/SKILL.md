@@ -9,15 +9,16 @@ targets: ["*"]
 These tools are available as scripts within this plugin. Call them using the absolute paths shown in each usage line.
 
 These tools wrap git operations with safety guardrails. Always stage changes
-with git-add before committing. Commit messages and new local branch names
-(git-create-branch) must follow the Conventional Commits type vocabulary
-(feat/, fix/, docs/, style/, refactor/, perf/, test/, build/, ci/, chore/,
-revert/). Branches that already exist upstream skip this guard. All remote
-operations take the remote name as the first positional argument (typically
-origin). Every tool accepts an optional -C <directory> to operate on a
-different repo subdirectory; the directory must be under the workspace
-root. Several tools refuse operations on main or operations that would
-require force-pushing already-pushed commits.
+with git-add before committing. Commit messages (git-commit) and new local
+branch names (git-create-branch) must follow the Conventional Commits type
+vocabulary (feat/, fix/, docs/, style/, refactor/, perf/, test/, build/,
+ci/, chore/, revert/). Tools that switch to or check out branches that
+already exist (git-switch, git-branch-checkout-remote) do not enforce this
+prefix. All remote operations take the remote name as the first positional
+argument (typically origin). Every tool accepts an optional -C <directory>
+to operate on a different repo subdirectory; the directory must be under
+the workspace root. Several tools refuse operations on main or operations
+that would require force-pushing already-pushed commits.
 
 ## nerf-git-add
 

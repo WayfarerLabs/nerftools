@@ -40,20 +40,26 @@ EOF
 }
 
 RESOURCE_ID=""
+_RESOURCE_ID_SET=""
 AGGREGATION=""
+_AGGREGATION_SET=""
 INTERVAL=""
+_INTERVAL_SET=""
 START_TIME=""
+_START_TIME_SET=""
 END_TIME=""
+_END_TIME_SET=""
 SUBSCRIPTION=""
+_SUBSCRIPTION_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --resource) if [[ -n "${RESOURCE_ID}" ]]; then echo "error: --resource can only be specified once" >&2; exit 1; fi; RESOURCE_ID="$2"; shift 2 ;;
-    --aggregation) if [[ -n "${AGGREGATION}" ]]; then echo "error: --aggregation can only be specified once" >&2; exit 1; fi; AGGREGATION="$2"; shift 2 ;;
-    --interval) if [[ -n "${INTERVAL}" ]]; then echo "error: --interval can only be specified once" >&2; exit 1; fi; INTERVAL="$2"; shift 2 ;;
-    --start-time) if [[ -n "${START_TIME}" ]]; then echo "error: --start-time can only be specified once" >&2; exit 1; fi; START_TIME="$2"; shift 2 ;;
-    --end-time) if [[ -n "${END_TIME}" ]]; then echo "error: --end-time can only be specified once" >&2; exit 1; fi; END_TIME="$2"; shift 2 ;;
-    --subscription) if [[ -n "${SUBSCRIPTION}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; shift 2 ;;
+    --resource) if [[ -n "${_RESOURCE_ID_SET}" ]]; then echo "error: --resource can only be specified once" >&2; exit 1; fi; RESOURCE_ID="$2"; _RESOURCE_ID_SET=true; shift 2 ;;
+    --aggregation) if [[ -n "${_AGGREGATION_SET}" ]]; then echo "error: --aggregation can only be specified once" >&2; exit 1; fi; AGGREGATION="$2"; _AGGREGATION_SET=true; shift 2 ;;
+    --interval) if [[ -n "${_INTERVAL_SET}" ]]; then echo "error: --interval can only be specified once" >&2; exit 1; fi; INTERVAL="$2"; _INTERVAL_SET=true; shift 2 ;;
+    --start-time) if [[ -n "${_START_TIME_SET}" ]]; then echo "error: --start-time can only be specified once" >&2; exit 1; fi; START_TIME="$2"; _START_TIME_SET=true; shift 2 ;;
+    --end-time) if [[ -n "${_END_TIME_SET}" ]]; then echo "error: --end-time can only be specified once" >&2; exit 1; fi; END_TIME="$2"; _END_TIME_SET=true; shift 2 ;;
+    --subscription) if [[ -n "${_SUBSCRIPTION_SET}" ]]; then echo "error: --subscription can only be specified once" >&2; exit 1; fi; SUBSCRIPTION="$2"; _SUBSCRIPTION_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;

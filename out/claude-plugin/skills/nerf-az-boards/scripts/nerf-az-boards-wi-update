@@ -43,24 +43,32 @@ EOF
 }
 
 STATE=""
+_STATE_SET=""
 TITLE=""
+_TITLE_SET=""
 ASSIGNED_TO=""
+_ASSIGNED_TO_SET=""
 AREA=""
+_AREA_SET=""
 ITERATION=""
+_ITERATION_SET=""
 DISCUSSION=""
+_DISCUSSION_SET=""
 FIELDS=""
+_FIELDS_SET=""
 PROJECT=""
+_PROJECT_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --state) if [[ -n "${STATE}" ]]; then echo "error: --state can only be specified once" >&2; exit 1; fi; STATE="$2"; shift 2 ;;
-    --title) if [[ -n "${TITLE}" ]]; then echo "error: --title can only be specified once" >&2; exit 1; fi; TITLE="$2"; shift 2 ;;
-    --assigned-to) if [[ -n "${ASSIGNED_TO}" ]]; then echo "error: --assigned-to can only be specified once" >&2; exit 1; fi; ASSIGNED_TO="$2"; shift 2 ;;
-    --area) if [[ -n "${AREA}" ]]; then echo "error: --area can only be specified once" >&2; exit 1; fi; AREA="$2"; shift 2 ;;
-    --iteration) if [[ -n "${ITERATION}" ]]; then echo "error: --iteration can only be specified once" >&2; exit 1; fi; ITERATION="$2"; shift 2 ;;
-    --discussion) if [[ -n "${DISCUSSION}" ]]; then echo "error: --discussion can only be specified once" >&2; exit 1; fi; DISCUSSION="$2"; shift 2 ;;
-    --fields|-f) if [[ -n "${FIELDS}" ]]; then echo "error: --fields can only be specified once" >&2; exit 1; fi; FIELDS="$2"; shift 2 ;;
-    --project|-p) if [[ -n "${PROJECT}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; shift 2 ;;
+    --state) if [[ -n "${_STATE_SET}" ]]; then echo "error: --state can only be specified once" >&2; exit 1; fi; STATE="$2"; _STATE_SET=true; shift 2 ;;
+    --title) if [[ -n "${_TITLE_SET}" ]]; then echo "error: --title can only be specified once" >&2; exit 1; fi; TITLE="$2"; _TITLE_SET=true; shift 2 ;;
+    --assigned-to) if [[ -n "${_ASSIGNED_TO_SET}" ]]; then echo "error: --assigned-to can only be specified once" >&2; exit 1; fi; ASSIGNED_TO="$2"; _ASSIGNED_TO_SET=true; shift 2 ;;
+    --area) if [[ -n "${_AREA_SET}" ]]; then echo "error: --area can only be specified once" >&2; exit 1; fi; AREA="$2"; _AREA_SET=true; shift 2 ;;
+    --iteration) if [[ -n "${_ITERATION_SET}" ]]; then echo "error: --iteration can only be specified once" >&2; exit 1; fi; ITERATION="$2"; _ITERATION_SET=true; shift 2 ;;
+    --discussion) if [[ -n "${_DISCUSSION_SET}" ]]; then echo "error: --discussion can only be specified once" >&2; exit 1; fi; DISCUSSION="$2"; _DISCUSSION_SET=true; shift 2 ;;
+    --fields|-f) if [[ -n "${_FIELDS_SET}" ]]; then echo "error: --fields can only be specified once" >&2; exit 1; fi; FIELDS="$2"; _FIELDS_SET=true; shift 2 ;;
+    --project|-p) if [[ -n "${_PROJECT_SET}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; _PROJECT_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;

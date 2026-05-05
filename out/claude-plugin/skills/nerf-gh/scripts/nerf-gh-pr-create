@@ -37,15 +37,18 @@ EOF
 
 DRAFT=""
 BODY=""
+_BODY_SET=""
 BASE=""
+_BASE_SET=""
 REVIEWER=""
+_REVIEWER_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --draft|-d) if [[ -n "${DRAFT}" ]]; then echo "error: --draft can only be specified once" >&2; exit 1; fi; DRAFT="true"; shift 1 ;;
-    --body|-b) if [[ -n "${BODY}" ]]; then echo "error: --body can only be specified once" >&2; exit 1; fi; BODY="$2"; shift 2 ;;
-    --base|-B) if [[ -n "${BASE}" ]]; then echo "error: --base can only be specified once" >&2; exit 1; fi; BASE="$2"; shift 2 ;;
-    --reviewer|-r) if [[ -n "${REVIEWER}" ]]; then echo "error: --reviewer can only be specified once" >&2; exit 1; fi; REVIEWER="$2"; shift 2 ;;
+    --body|-b) if [[ -n "${_BODY_SET}" ]]; then echo "error: --body can only be specified once" >&2; exit 1; fi; BODY="$2"; _BODY_SET=true; shift 2 ;;
+    --base|-B) if [[ -n "${_BASE_SET}" ]]; then echo "error: --base can only be specified once" >&2; exit 1; fi; BASE="$2"; _BASE_SET=true; shift 2 ;;
+    --reviewer|-r) if [[ -n "${_REVIEWER_SET}" ]]; then echo "error: --reviewer can only be specified once" >&2; exit 1; fi; REVIEWER="$2"; _REVIEWER_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;

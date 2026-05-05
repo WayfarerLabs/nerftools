@@ -243,13 +243,14 @@ def _var_declarations(tool_spec: ToolSpec) -> str:
         var = _var_name(name)
         if opt.repeatable:
             lines.append(f"{var}=()")
-        elif opt.default is not None:
-            lines.append(f"{var}='{_shell_escape_sq(opt.default)}'")
-            # Separate "user-set" marker so the duplicate-check distinguishes
-            # the default value from a user-provided value.
-            lines.append(f'_{var}_SET=""')
         else:
-            lines.append(f'{var}=""')
+            if opt.default is not None:
+                lines.append(f"{var}='{_shell_escape_sq(opt.default)}'")
+            else:
+                lines.append(f'{var}=""')
+            # Value-independent presence marker so duplicate detection
+            # works for empty-string values and default-seeded values.
+            lines.append(f'_{var}_SET=""')
     return "\n".join(lines)
 
 
@@ -273,20 +274,14 @@ def _flag_parser(tool_spec: ToolSpec, *, has_positional: bool, is_passthrough: b
         pattern = f"{opt.flag}|{opt.short}" if opt.short else opt.flag
         if opt.repeatable:
             cases.append(f'    {pattern}) {var}+=("{opt.flag}" "$2"); shift 2 ;;')
-        elif opt.default is not None:
-            # Use the separate "user-set" marker so the default seed value
-            # doesn't trip the duplicate-check on the first --flag invocation.
+        else:
+            # Presence marker is value-independent so empty-string and
+            # default-seeded values still trigger duplicate detection.
             dup_check = (
                 f'if [[ -n "${{_{var}_SET}}" ]]; then '
                 f'echo "error: {opt.flag} can only be specified once" >&2; exit 1; fi; '
             )
             cases.append(f'    {pattern}) {dup_check}{var}="$2"; _{var}_SET=true; shift 2 ;;')
-        else:
-            dup_check = (
-                f'if [[ -n "${{{var}}}" ]]; then '
-                f'echo "error: {opt.flag} can only be specified once" >&2; exit 1; fi; '
-            )
-            cases.append(f'    {pattern}) {dup_check}{var}="$2"; shift 2 ;;')
 
     cases.append('    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;')
     cases.append("    -h|--help) usage ;;")

@@ -35,12 +35,14 @@ EOF
 }
 
 NAMESPACE=""
+_NAMESPACE_SET=""
 CONTAINER=""
+_CONTAINER_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --namespace|-n) if [[ -n "${NAMESPACE}" ]]; then echo "error: --namespace can only be specified once" >&2; exit 1; fi; NAMESPACE="$2"; shift 2 ;;
-    --container|-c) if [[ -n "${CONTAINER}" ]]; then echo "error: --container can only be specified once" >&2; exit 1; fi; CONTAINER="$2"; shift 2 ;;
+    --namespace|-n) if [[ -n "${_NAMESPACE_SET}" ]]; then echo "error: --namespace can only be specified once" >&2; exit 1; fi; NAMESPACE="$2"; _NAMESPACE_SET=true; shift 2 ;;
+    --container|-c) if [[ -n "${_CONTAINER_SET}" ]]; then echo "error: --container can only be specified once" >&2; exit 1; fi; CONTAINER="$2"; _CONTAINER_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;

@@ -859,18 +859,23 @@ def test_builtin_git_loads() -> None:
     assert m.tools["git-push-branch"].threat.write == ThreatLevel.REMOTE
 
 
-def test_builtin_git_branch_delete_merged_main_guard_is_case_insensitive() -> None:
-    """The 'cannot delete main' guard must reject Main/MAIN/etc. on case-insensitive
-    filesystems (macOS APFS, Windows NTFS), where git resolves any casing to the
-    same ref. Without lowercasing, `git-branch-delete-merged Main` would bypass
-    the guard.
+@pytest.mark.parametrize("tool_name", [
+    "git-branch-delete-merged",
+    "git-rebase-unpushed",
+    "git-reset-unpushed",
+])
+def test_builtin_git_main_guards_are_case_insensitive(tool_name: str) -> None:
+    """Every 'cannot {op} main' guard must lowercase before comparing. On
+    case-insensitive filesystems (macOS APFS, Windows NTFS) git preserves the
+    user's casing in symbolic-ref output, so a literal `= "main"` check misses
+    branches stored as `Main`/`MAIN` even though they resolve to the same ref.
     """
     from nerftools.cli import _DEFAULT_MANIFESTS_DIR
 
     m = load_manifest(_DEFAULT_MANIFESTS_DIR / "git.yaml")
-    pre = m.tools["git-branch-delete-merged"].pre or ""
+    pre = m.tools[tool_name].pre or ""
     assert "tr '[:upper:]' '[:lower:]'" in pre, (
-        "git-branch-delete-merged pre-hook should lowercase NAME before comparing to 'main'"
+        f"{tool_name} pre-hook should lowercase before comparing to 'main'"
     )
 
 

@@ -32,16 +32,20 @@ EOF
 }
 
 STATE=""
+_STATE_SET=""
 ASSIGNEE=""
+_ASSIGNEE_SET=""
 LABEL=""
+_LABEL_SET=""
 LIMIT=""
+_LIMIT_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --state|-s) if [[ -n "${STATE}" ]]; then echo "error: --state can only be specified once" >&2; exit 1; fi; STATE="$2"; shift 2 ;;
-    --assignee|-a) if [[ -n "${ASSIGNEE}" ]]; then echo "error: --assignee can only be specified once" >&2; exit 1; fi; ASSIGNEE="$2"; shift 2 ;;
-    --label|-l) if [[ -n "${LABEL}" ]]; then echo "error: --label can only be specified once" >&2; exit 1; fi; LABEL="$2"; shift 2 ;;
-    --limit|-L) if [[ -n "${LIMIT}" ]]; then echo "error: --limit can only be specified once" >&2; exit 1; fi; LIMIT="$2"; shift 2 ;;
+    --state|-s) if [[ -n "${_STATE_SET}" ]]; then echo "error: --state can only be specified once" >&2; exit 1; fi; STATE="$2"; _STATE_SET=true; shift 2 ;;
+    --assignee|-a) if [[ -n "${_ASSIGNEE_SET}" ]]; then echo "error: --assignee can only be specified once" >&2; exit 1; fi; ASSIGNEE="$2"; _ASSIGNEE_SET=true; shift 2 ;;
+    --label|-l) if [[ -n "${_LABEL_SET}" ]]; then echo "error: --label can only be specified once" >&2; exit 1; fi; LABEL="$2"; _LABEL_SET=true; shift 2 ;;
+    --limit|-L) if [[ -n "${_LIMIT_SET}" ]]; then echo "error: --limit can only be specified once" >&2; exit 1; fi; LIMIT="$2"; _LIMIT_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;

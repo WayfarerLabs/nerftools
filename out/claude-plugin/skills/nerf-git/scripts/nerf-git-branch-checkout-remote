@@ -32,10 +32,11 @@ EOF
 }
 
 DIRECTORY=""
+_DIRECTORY_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -C) if [[ -n "${DIRECTORY}" ]]; then echo "error: -C can only be specified once" >&2; exit 1; fi; DIRECTORY="$2"; shift 2 ;;
+    -C) if [[ -n "${_DIRECTORY_SET}" ]]; then echo "error: -C can only be specified once" >&2; exit 1; fi; DIRECTORY="$2"; _DIRECTORY_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;

@@ -32,16 +32,20 @@ EOF
 }
 
 WORKFLOW=""
+_WORKFLOW_SET=""
 BRANCH=""
+_BRANCH_SET=""
 STATUS=""
+_STATUS_SET=""
 LIMIT=""
+_LIMIT_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --workflow|-w) if [[ -n "${WORKFLOW}" ]]; then echo "error: --workflow can only be specified once" >&2; exit 1; fi; WORKFLOW="$2"; shift 2 ;;
-    --branch|-b) if [[ -n "${BRANCH}" ]]; then echo "error: --branch can only be specified once" >&2; exit 1; fi; BRANCH="$2"; shift 2 ;;
-    --status|-s) if [[ -n "${STATUS}" ]]; then echo "error: --status can only be specified once" >&2; exit 1; fi; STATUS="$2"; shift 2 ;;
-    --limit|-L) if [[ -n "${LIMIT}" ]]; then echo "error: --limit can only be specified once" >&2; exit 1; fi; LIMIT="$2"; shift 2 ;;
+    --workflow|-w) if [[ -n "${_WORKFLOW_SET}" ]]; then echo "error: --workflow can only be specified once" >&2; exit 1; fi; WORKFLOW="$2"; _WORKFLOW_SET=true; shift 2 ;;
+    --branch|-b) if [[ -n "${_BRANCH_SET}" ]]; then echo "error: --branch can only be specified once" >&2; exit 1; fi; BRANCH="$2"; _BRANCH_SET=true; shift 2 ;;
+    --status|-s) if [[ -n "${_STATUS_SET}" ]]; then echo "error: --status can only be specified once" >&2; exit 1; fi; STATUS="$2"; _STATUS_SET=true; shift 2 ;;
+    --limit|-L) if [[ -n "${_LIMIT_SET}" ]]; then echo "error: --limit can only be specified once" >&2; exit 1; fi; LIMIT="$2"; _LIMIT_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;

@@ -24,10 +24,11 @@ EOF
 }
 
 SELECTOR=""
+_SELECTOR_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --selector|-l) if [[ -n "${SELECTOR}" ]]; then echo "error: --selector can only be specified once" >&2; exit 1; fi; SELECTOR="$2"; shift 2 ;;
+    --selector|-l) if [[ -n "${_SELECTOR_SET}" ]]; then echo "error: --selector can only be specified once" >&2; exit 1; fi; SELECTOR="$2"; _SELECTOR_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;

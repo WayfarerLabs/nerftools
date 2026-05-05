@@ -239,6 +239,24 @@ def test_option_default_with_special_chars_is_quoted(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
 
 
+def test_non_defaulted_option_dup_check_catches_empty_first_value(tmp_path: Path) -> None:
+    """Regression: the original dup-check used `[[ -n "$VAR" ]]`, so an agent
+    passing `--flag '' --flag second` slipped past because the empty first
+    value left VAR empty. Presence tracking must be value-independent.
+    """
+    options = {"remote": _option("--remote", required=False)}
+    tool = _template_tool(["echo", "{{options.remote}}"], options=options)
+    script_path = tmp_path / "nerf-t"
+    script_path.write_text(build_script_text("nerf-t", "p", tool))
+    script_path.chmod(0o755)
+    result = subprocess.run(
+        [str(script_path), "--remote", "", "--remote", "second"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode != 0
+    assert "can only be specified once" in result.stderr
+
+
 def test_option_default_appears_in_usage_help() -> None:
     """The default value should be visible in --help output so agents can see it."""
     options = {"remote": OptionSpec(flag="--remote", description="Remote.", default="origin")}

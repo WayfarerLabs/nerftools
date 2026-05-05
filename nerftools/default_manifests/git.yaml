@@ -6,15 +6,16 @@ package:
   skill_group: git
   skill_intro: |
     These tools wrap git operations with safety guardrails. Always stage changes
-    with git-add before committing. Commit messages and new local branch names
-    (git-create-branch) must follow the Conventional Commits type vocabulary
-    (feat/, fix/, docs/, style/, refactor/, perf/, test/, build/, ci/, chore/,
-    revert/). Branches that already exist upstream skip this guard. All remote
-    operations take the remote name as the first positional argument (typically
-    origin). Every tool accepts an optional -C <directory> to operate on a
-    different repo subdirectory; the directory must be under the workspace
-    root. Several tools refuse operations on main or operations that would
-    require force-pushing already-pushed commits.
+    with git-add before committing. Commit messages (git-commit) and new local
+    branch names (git-create-branch) must follow the Conventional Commits type
+    vocabulary (feat/, fix/, docs/, style/, refactor/, perf/, test/, build/,
+    ci/, chore/, revert/). Tools that switch to or check out branches that
+    already exist (git-switch, git-branch-checkout-remote) do not enforce this
+    prefix. All remote operations take the remote name as the first positional
+    argument (typically origin). Every tool accepts an optional -C <directory>
+    to operate on a different repo subdirectory; the directory must be under
+    the workspace root. Several tools refuse operations on main or operations
+    that would require force-pushing already-pushed commits.
 
 tools:
   git-add:
@@ -474,7 +475,8 @@ tools:
         echo "error: cannot rebase from a detached HEAD state" >&2
         return 1
       fi
-      if [ "${BRANCH}" = "main" ]; then
+      BRANCH_LOWER=$(printf '%s' "${BRANCH}" | tr '[:upper:]' '[:lower:]')
+      if [ "${BRANCH_LOWER}" = "main" ]; then
         echo "error: cannot rebase main" >&2
         return 1
       fi
@@ -525,7 +527,8 @@ tools:
         echo "error: cannot reset from a detached HEAD state" >&2
         return 1
       fi
-      if [ "${BRANCH}" = "main" ]; then
+      BRANCH_LOWER=$(printf '%s' "${BRANCH}" | tr '[:upper:]' '[:lower:]')
+      if [ "${BRANCH_LOWER}" = "main" ]; then
         echo "error: cannot reset main" >&2
         return 1
       fi

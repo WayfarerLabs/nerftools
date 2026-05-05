@@ -27,10 +27,11 @@ EOF
 }
 
 PROJECT=""
+_PROJECT_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --project|-p) if [[ -n "${PROJECT}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; shift 2 ;;
+    --project|-p) if [[ -n "${_PROJECT_SET}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; _PROJECT_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;

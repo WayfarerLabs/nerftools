@@ -34,11 +34,12 @@ EOF
 
 SOFT=""
 DIRECTORY=""
+_DIRECTORY_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --soft|-s) if [[ -n "${SOFT}" ]]; then echo "error: --soft can only be specified once" >&2; exit 1; fi; SOFT="true"; shift 1 ;;
-    -C) if [[ -n "${DIRECTORY}" ]]; then echo "error: -C can only be specified once" >&2; exit 1; fi; DIRECTORY="$2"; shift 2 ;;
+    -C) if [[ -n "${_DIRECTORY_SET}" ]]; then echo "error: -C can only be specified once" >&2; exit 1; fi; DIRECTORY="$2"; _DIRECTORY_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -162,7 +163,8 @@ _nerf_pre() {
     echo "error: cannot reset from a detached HEAD state" >&2
     return 1
   fi
-  if [ "${BRANCH}" = "main" ]; then
+  BRANCH_LOWER=$(printf '%s' "${BRANCH}" | tr '[:upper:]' '[:lower:]')
+  if [ "${BRANCH_LOWER}" = "main" ]; then
     echo "error: cannot reset main" >&2
     return 1
   fi
