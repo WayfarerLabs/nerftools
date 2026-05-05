@@ -1,5 +1,53 @@
 # Changelog
 
+## [1.1.0](https://github.com/WayfarerLabs/nerftools/compare/v1.0.0...v1.1.0) (2026-05-04)
+
+
+### Features
+
+* **az-devops:** new package with az-devops-set-default-project tool ([0fb4a15](https://github.com/WayfarerLabs/nerftools/commit/0fb4a15347edd279481f51a85506e3ad254a7479))
+* **azdo:** --project everywhere, new pipelines/repos tools, area listing ([a42f7e7](https://github.com/WayfarerLabs/nerftools/commit/a42f7e71eab7e3d5dcc04de50377ef504c7fefaa))
+* **azdo:** --project everywhere, new tools, set-default-project ([2dab02d](https://github.com/WayfarerLabs/nerftools/commit/2dab02df9d885d6636e37bfe718b57a3617dbded))
+* **gh:** differentiate the four PR comment surfaces ([567b64d](https://github.com/WayfarerLabs/nerftools/commit/567b64dc18444ff3df17e2f0ee04e67d24469dfc))
+* **gh:** differentiate the four PR comment surfaces; add reviews tool ([ca9ab91](https://github.com/WayfarerLabs/nerftools/commit/ca9ab910ebd7e426b4704b47994cbdc1b4518232))
+* **manifest:** add path_tests for filesystem-typed parameters ([e035eac](https://github.com/WayfarerLabs/nerftools/commit/e035eac70eabf84a6b02ef508b7995fe943708ec))
+* **manifest:** add path_tests for filesystem-typed parameters ([fdb64cd](https://github.com/WayfarerLabs/nerftools/commit/fdb64cde6201f3d567cdfb04ff8e1c955c08d0a7))
+* massive add of az-related default tools ([818fe04](https://github.com/WayfarerLabs/nerftools/commit/818fe04326be536924de4e7450e202db759df362))
+
+
+### Bug Fixes
+
+* address PR review feedback on az and kubectl tools ([4395484](https://github.com/WayfarerLabs/nerftools/commit/4395484f4388f99ee760a774ae7be406d40d586b))
+* address two minor PR review nits ([adad61d](https://github.com/WayfarerLabs/nerftools/commit/adad61d071fc325325e12148b8e58104def93b0e))
+* **az-aks:** split admin credential fetch, mark command-invoke admin, fix variadic ([f152896](https://github.com/WayfarerLabs/nerftools/commit/f152896f4af595b235be0d3af1d5d1e1b7e1cd91))
+* **az-keyvault:** drop secret fingerprint and tighten masked output ([242f8d7](https://github.com/WayfarerLabs/nerftools/commit/242f8d79e4c9a3d3a34a59dd6ab58d12476409b5))
+* **az-monitor:** dry-run honors validation; --interval allows P1D and FULL ([c246266](https://github.com/WayfarerLabs/nerftools/commit/c2462661def1d26d9556925b359ef79d2fa43b88))
+* **builder:** add hint lines to path_tests errors; doc symlink semantics ([a1e602b](https://github.com/WayfarerLabs/nerftools/commit/a1e602b691091c1b08f5017074467d397f3bb382))
+* **builder:** preserve shell quoting in dry-run output via printf %q ([5ef4816](https://github.com/WayfarerLabs/nerftools/commit/5ef4816f086833445310674d4f9d157c609ad91d))
+* **builder:** reject --nerf-dry-run tokens inside variadic+allow_flags args ([854519c](https://github.com/WayfarerLabs/nerftools/commit/854519c4070a35592b0f5358e223e270d812ad3d))
+* **builder:** reject trailing tokens after declared positionals ([9580f8b](https://github.com/WayfarerLabs/nerftools/commit/9580f8b32dcc41332caca08d7bbebffd2a643409))
+* **builder:** revert ineffective set -e in _nerf_pre, document the limitation ([7e6787a](https://github.com/WayfarerLabs/nerftools/commit/7e6787a788a58b37ae63bd5486c068af2238ea17))
+* **builder:** under_cwd accepts paths under root when cwd is "/" ([3b05ccd](https://github.com/WayfarerLabs/nerftools/commit/3b05ccd02c0ffa8e91cefcad6a3112228b281d0a))
+* cross-platform date in az-monitor, drop None aggregation, simplify timeout msg ([616385d](https://github.com/WayfarerLabs/nerftools/commit/616385d7f411cfc091c6c8ef81ecbcd94b33ca45))
+* **gh-pr-reviews:** use --paginate; fix Changes-requested wording ([97e5f41](https://github.com/WayfarerLabs/nerftools/commit/97e5f412d9d37378e366b25b8044b2cd8274ec10))
+* **gh:** add --slurp so paginated jq aggregates across pages ([8ebd3eb](https://github.com/WayfarerLabs/nerftools/commit/8ebd3eb00bcb3b7687306fdcdde5263599b8dac5))
+* high-impact security and correctness from second-pass review ([022af82](https://github.com/WayfarerLabs/nerftools/commit/022af82533d88258680c7ca02b9d9b95302e35e1))
+* **kubectl:** convert read-only tools from passthrough to template ([782b3a7](https://github.com/WayfarerLabs/nerftools/commit/782b3a7c0f97fd9feda09d6c363c66c0d93c2768))
+* **kubectl:** kubectl-config-use-context is admin-threat, tighten pattern ([f1265ce](https://github.com/WayfarerLabs/nerftools/commit/f1265ce1b67f5396829879a3c39d75f23f389edf))
+* more PR review feedback (rename misleading tool, guard external deps) ([6c101a4](https://github.com/WayfarerLabs/nerftools/commit/6c101a48b08560acc44342dc0c3d763ce2e72a20))
+* paginate the remaining gh read tools; tighten cross-refs and doc ([8d48ed5](https://github.com/WayfarerLabs/nerftools/commit/8d48ed5d8c11abb5c72c73aee032ac1d23ef1a82))
+* require 3+ word tool descriptions to catch trivial placeholders ([3433ffd](https://github.com/WayfarerLabs/nerftools/commit/3433ffd6a79c92a91743968639311be9b199a6a9))
+* smaller hardening from second-pass review ([5079b21](https://github.com/WayfarerLabs/nerftools/commit/5079b21039265787dfc63721a47c6b3cf358c089))
+* stop appending "." to descriptions; require terminal punctuation in manifest ([2ce0f11](https://github.com/WayfarerLabs/nerftools/commit/2ce0f11f514e57e4e0a029a786686cb5b54cdd04))
+
+
+### Documentation
+
+* address review feedback on coverage gap and template paragraph ([dec48de](https://github.com/WayfarerLabs/nerftools/commit/dec48def42011233452ed7b85d0e85697c78431a))
+* **az-account:** document --subscription scope boundary ([b105f2b](https://github.com/WayfarerLabs/nerftools/commit/b105f2b008cafe9d548a743885c5fa93b2cf02b8))
+* correct --nerf-dry-run position claim and warn against local in pre ([9231598](https://github.com/WayfarerLabs/nerftools/commit/923159816725486aa12c3f9f26442b75da5f04cb))
+* document passthrough security limitations around alternative flag syntax ([44031d5](https://github.com/WayfarerLabs/nerftools/commit/44031d5a71864313a6dbc1362d547ac6ddb6ccca))
+
 ## [1.0.0](https://github.com/WayfarerLabs/nerftools/compare/v0.3.2...v1.0.0) (2026-04-19)
 
 
