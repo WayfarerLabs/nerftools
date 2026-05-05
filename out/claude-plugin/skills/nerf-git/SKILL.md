@@ -301,7 +301,7 @@ Create a new branch from the current HEAD and switch to it. The name must start 
 
 Create a local branch that explicitly tracks <remote>/<name>. Use git-switch for the simpler auto-track behavior; reach for this tool when you have multiple remotes with the same branch name (auto-track refuses the ambiguity) or want to be explicit about which remote you are tracking. Skips the Conventional-Commits prefix guard because the branch already exists upstream.
 
-**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-branch-checkout-remote [-C <directory>] <name> <remote>`
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-branch-checkout-remote [-C <directory>] <remote> <name>`
 **Maps to:** `git <directory> checkout --track <remote>/<name>`
 
 **Options:**
@@ -310,8 +310,8 @@ Create a local branch that explicitly tracks <remote>/<name>. Use git-switch for
 
 **Arguments:**
 
+- `<remote>` (required): Remote name (e.g. origin). must match `^[a-zA-Z0-9_.-]+$`
 - `<name>` (required): Branch name (must exist as <remote>/<name>). must match `^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$`
-- `<remote>` (required): Remote name (typically origin). must match `^[a-zA-Z0-9_.-]+$`
 
 ---
 

@@ -398,14 +398,14 @@ tools:
         - --track
         - "{{arguments.remote}}/{{arguments.name}}"
     arguments:
+      remote:
+        description: Remote name (e.g. origin)
+        required: true
+        pattern: "^[a-zA-Z0-9_.-]+$"
       name:
         description: Branch name (must exist as <remote>/<name>)
         required: true
         pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$"
-      remote:
-        description: Remote name (typically origin)
-        required: true
-        pattern: "^[a-zA-Z0-9_.-]+$"
     options:
       directory:
         description: Subdirectory of the workspace to run git in (must be under cwd)
