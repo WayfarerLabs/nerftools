@@ -5,8 +5,8 @@
   },
   "plugins": [
     {
-      "name": "nerftools",
-      "description": "Limited scope wrappers for common CLI utilities, allows for fine-grained control over agent execution",
+      "name": "nerftools-default",
+      "description": "Limited scope wrappers for common CLI utilities based on default manifests",
       "source": "./out/claude-plugin"
     }
   ]
