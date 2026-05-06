@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/WayfarerLabs/nerftools/compare/v1.1.0...v1.2.0) (2026-05-06)
+
+
+### Features
+
+* rename plugin to indicate default tools ([a4b1271](https://github.com/WayfarerLabs/nerftools/commit/a4b127171cd352eab167b7358d7ea9044663c1b0))
+* rename plugin to indicate default tools ([48fac3b](https://github.com/WayfarerLabs/nerftools/commit/48fac3b3da996ef2815bcbd0216c6ad1775c36c3))
+
 ## [1.1.0](https://github.com/WayfarerLabs/nerftools/compare/v1.0.0...v1.1.0) (2026-05-04)
 
 
