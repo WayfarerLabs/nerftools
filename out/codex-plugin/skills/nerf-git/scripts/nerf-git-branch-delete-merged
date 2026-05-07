@@ -1,0 +1,189 @@
+#!/usr/bin/env bash
+# nerf-git-branch-delete-merged -- Delete a local branch using "git branch -d", which refuses to delete a branch that has unmerged commits. Cannot delete main or the currently-checked-out branch.
+# Generated from git manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=workspace
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-git-branch-delete-merged [-C <directory>] <name>
+
+Options:
+  -C <directory>
+      Subdirectory of the workspace to run git in (must be under cwd)
+
+Arguments:
+  <name> (required)
+      Branch name to delete (must be fully merged)
+      Must match: ^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$
+
+Maps to: git <directory> branch --delete <name>
+
+Delete a local branch using "git branch -d", which refuses to delete a branch that has unmerged commits. Cannot delete main or the currently-checked-out branch.
+EOF
+  exit 1
+}
+
+DIRECTORY=""
+_DIRECTORY_SET=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -C) if [[ -n "${_DIRECTORY_SET}" ]]; then echo "error: -C can only be specified once" >&2; exit 1; fi; DIRECTORY="$2"; _DIRECTORY_SET=true; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+_NAME_SET=""
+if [[ $# -gt 0 ]]; then
+  NAME="$1"
+  _NAME_SET=true
+  shift
+else
+  NAME=""
+fi
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-git-branch-delete-merged: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+_nerf_check_path() {
+  local _label=$1 _input=$2 _tests=$3
+  local _cwd _canonical
+  case "$_input" in
+    *$'\n'*|*$'\r'*|*$'\t'*)
+      echo "error: nerf-git-branch-delete-merged: ${_label}: contains illegal control character" >&2
+      echo "  hint: paths must not contain newlines, carriage returns, or tabs" >&2
+      return 1 ;;
+  esac
+  _cwd=$(realpath -- "$PWD") || {
+    echo "error: nerf-git-branch-delete-merged: failed to canonicalize cwd '$PWD'" >&2
+    echo "  hint: invoke from a valid directory" >&2
+    return 1
+  }
+  _canonical=$(realpath -m -- "$_input") || {
+    echo "error: nerf-git-branch-delete-merged: ${_label}: failed to canonicalize '${_input}'" >&2
+    echo "  hint: pass a syntactically valid path" >&2
+    return 1
+  }
+  if [[ ",$_tests," == *",under_cwd,"* ]]; then
+    # Skip the prefix check when cwd is root: every absolute path qualifies, and the
+    # naive prefix comparison would build "//" and reject otherwise-valid paths.
+    if [[ "$_cwd" != "/" && "$_canonical" != "$_cwd" && "$_canonical" != "$_cwd"/* ]]; then
+      echo "error: nerf-git-branch-delete-merged: ${_label}: 'under_cwd' failed: '${_input}'" >&2
+      echo "  resolves to '${_canonical}', not under '${_cwd}'" >&2
+      echo "  hint: pass a path inside the current workspace" >&2
+      echo "  hint: symlinks are followed -- if the link's target is outside the workspace it is rejected" >&2
+      return 1
+    fi
+  fi
+  if [[ ",$_tests," == *",exists,"* ]] && [[ ! -e "$_input" ]]; then
+    echo "error: nerf-git-branch-delete-merged: ${_label}: 'exists' failed: '${_input}' does not exist" >&2
+    echo "  hint: create the path or pass an existing one" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",not_exists,"* ]] && [[ -e "$_input" ]]; then
+    echo "error: nerf-git-branch-delete-merged: ${_label}: 'not_exists' failed: '${_input}' already exists" >&2
+    echo "  hint: choose a different path or remove the existing one first" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",file,"* ]] && [[ ! -f "$_input" ]]; then
+    echo "error: nerf-git-branch-delete-merged: ${_label}: 'file' failed: '${_input}' is not a regular file" >&2
+    echo "  hint: pass a regular file path (not a directory, symlink-to-dir, device, or missing path)" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",dir,"* ]] && [[ ! -d "$_input" ]]; then
+    echo "error: nerf-git-branch-delete-merged: ${_label}: 'dir' failed: '${_input}' is not a directory" >&2
+    echo "  hint: pass a directory path (not a regular file or missing path)" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",symlink,"* ]] && [[ ! -L "$_input" ]]; then
+    echo "error: nerf-git-branch-delete-merged: ${_label}: 'symlink' failed: '${_input}' is not a symlink" >&2
+    echo "  hint: pass a symbolic link (the test does not follow the link)" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",not_symlink,"* ]] && [[ -L "$_input" ]]; then
+    echo "error: nerf-git-branch-delete-merged: ${_label}: 'not_symlink' failed: '${_input}' is a symlink" >&2
+    echo "  hint: pass a real path, not a symlink (the test does not follow the link)" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",readable,"* ]] && [[ ! -r "$_input" ]]; then
+    echo "error: nerf-git-branch-delete-merged: ${_label}: 'readable' failed: '${_input}' is not readable" >&2
+    echo "  hint: check filesystem permissions for the current user" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",writable,"* ]] && [[ ! -w "$_input" ]]; then
+    echo "error: nerf-git-branch-delete-merged: ${_label}: 'writable' failed: '${_input}' is not writable" >&2
+    echo "  hint: check filesystem permissions for the current user" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",executable,"* ]] && [[ ! -x "$_input" ]]; then
+    echo "error: nerf-git-branch-delete-merged: ${_label}: 'executable' failed: '${_input}' is not executable" >&2
+    echo "  hint: check filesystem permissions for the current user" >&2
+    return 1
+  fi
+}
+
+if [[ -n "${_DIRECTORY_SET}" ]]; then
+  _nerf_check_path 'option -C' "${DIRECTORY}" 'under_cwd' || exit 1
+fi
+
+if [[ -n "${_NAME_SET}" ]] && [[ "${NAME}" == -* ]]; then
+  echo "error: nerf-git-branch-delete-merged: <name> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${NAME}" ]]; then
+  echo "error: nerf-git-branch-delete-merged: missing required argument <name>" >&2
+  echo "  hint: provide a value for <name>" >&2
+  usage
+fi
+
+_NERF_PATTERN='^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$'
+if [[ -n "${_NAME_SET}" ]] && ! [[ "${NAME}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-git-branch-delete-merged: argument <name> does not match required pattern" >&2
+  echo "  value:   \"${NAME}\"" >&2
+  echo "  pattern: ^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$" >&2
+  echo "  hint: value must match ^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$" >&2
+  exit 1
+fi
+
+_nerf_pre() {
+  NAME_LOWER=$(printf '%s' "${NAME}" | tr '[:upper:]' '[:lower:]')
+  if [ "${NAME_LOWER}" = "main" ]; then
+    echo "error: cannot delete main" >&2
+    return 1
+  fi
+  CURRENT=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
+  if [ "${NAME}" = "${CURRENT}" ]; then
+    echo "error: cannot delete the current branch (${CURRENT})" >&2
+    echo "  hint: switch to another branch first (e.g., git-switch main)" >&2
+    return 1
+  fi
+}
+
+_nerf_pre_rc=0
+_nerf_pre || _nerf_pre_rc=$?
+if [ $_nerf_pre_rc -ne 0 ]; then
+  echo "error: nerf-git-branch-delete-merged: pre-hook failed (exit code $_nerf_pre_rc)" >&2
+  exit $_nerf_pre_rc
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} branch --delete "${NAME}")
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} branch --delete "${NAME}"

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from nerftools.config import Author, MarketplaceMetadata, PluginMetadata
-from nerftools.formats import build_claude_plugin
+from nerftools.formats import build_claude_plugin, build_codex_plugin
 from nerftools.manifest import (
     ArgSpec,
     NerfManifest,
@@ -234,3 +234,108 @@ def test_claude_plugin_passthrough_skill(tmp_path: Path) -> None:
     assert "**Denied patterns:**" in content
     assert '**Maps to:** `find . "$@"`' in content
     assert "[tokens...]" in content
+
+
+# -- codex-plugin format -------------------------------------------------------
+
+
+def _build_codex(manifests: list[NerfManifest], out: Path, **kwargs: object) -> None:
+    build_codex_plugin(manifests, out, kwargs.pop("plugin_meta", _plugin_meta()), **kwargs)  # type: ignore[arg-type]
+
+
+def test_codex_plugin_creates_plugin_json(tmp_path: Path) -> None:
+    _build_codex([_manifest()], tmp_path)
+    plugin_json = tmp_path / ".codex-plugin" / "plugin.json"
+    assert plugin_json.exists()
+    data = json.loads(plugin_json.read_text())
+    assert data["name"] == "test-plugin"
+    assert data["version"] == "0.0.1"
+    assert data["description"] == "Test plugin"
+    assert data["skills"] == "./skills/"
+
+
+def test_codex_plugin_creates_skills_with_scripts(tmp_path: Path) -> None:
+    tools = {"git-add": _template_tool(
+        ["git", "add", "{{arguments.files}}"],
+        arguments={"files": ArgSpec(description="files", variadic=True)},
+    )}
+    _build_codex([_manifest(skill_group="git", tools=tools)], tmp_path, prefix="nerf-")
+
+    skill_md = tmp_path / "skills" / "nerf-git" / "SKILL.md"
+    assert skill_md.exists()
+
+    script = tmp_path / "skills" / "nerf-git" / "scripts" / "nerf-git-add"
+    assert script.exists()
+    assert script.stat().st_mode & 0o111  # executable
+
+
+def test_codex_plugin_skill_uses_relative_paths(tmp_path: Path) -> None:
+    tools = {"git-log": _template_tool(["git", "log"])}
+    _build_codex([_manifest(skill_group="git", tools=tools)], tmp_path, prefix="nerf-")
+
+    content = (tmp_path / "skills" / "nerf-git" / "SKILL.md").read_text()
+    assert "${CLAUDE_PLUGIN_ROOT}" not in content
+    assert "scripts/nerf-git-log" in content
+
+
+def test_codex_plugin_overview_skill(tmp_path: Path) -> None:
+    tools = {"git-log": _template_tool(["git", "log"])}
+    _build_codex(
+        [_manifest(skill_group="git", tools=tools)],
+        tmp_path,
+        prefix="nerf-",
+        plugin_meta=_plugin_meta("my-plugin"),
+    )
+
+    overview = tmp_path / "skills" / "my-plugin" / "SKILL.md"
+    assert overview.exists()
+    content = overview.read_text()
+    assert "# my-plugin" in content
+    assert "nerf-git" in content
+
+
+def test_codex_plugin_no_nerfctl(tmp_path: Path) -> None:
+    _build_codex([_manifest()], tmp_path)
+
+    # No top-level scripts/ dir
+    assert not (tmp_path / "scripts").exists()
+    # No nerfctl skill directories
+    for name in (
+        "nerfctl-grant-allow", "nerfctl-grant-deny", "nerfctl-grant-reset",
+        "nerfctl-grant-by-threat", "nerfctl-grant-list",
+    ):
+        assert not (tmp_path / "skills" / name).exists()
+
+
+def test_codex_plugin_no_marketplace_json(tmp_path: Path) -> None:
+    _build_codex([_manifest()], tmp_path)
+    assert not (tmp_path / ".codex-plugin" / "marketplace.json").exists()
+
+
+def test_codex_plugin_cleans_output(tmp_path: Path) -> None:
+    stale = tmp_path / "old-stuff"
+    stale.mkdir()
+    (stale / "file.txt").write_text("stale")
+    _build_codex([_manifest()], tmp_path)
+    assert not stale.exists()
+
+
+def test_codex_plugin_maps_to_line(tmp_path: Path) -> None:
+    tools = {"git-push": _template_tool(["git", "push", "{{arguments.remote}}", "HEAD"])}
+    _build_codex([_manifest(skill_group="git", tools=tools)], tmp_path, prefix="nerf-")
+
+    content = (tmp_path / "skills" / "nerf-git" / "SKILL.md").read_text()
+    assert "**Maps to:** `git push <remote> HEAD`" in content
+
+
+def test_codex_plugin_threat_metadata_in_script(tmp_path: Path) -> None:
+    tool = ToolSpec(
+        description="Git log",
+        threat=ThreatSpec(read=ThreatLevel.WORKSPACE, write=ThreatLevel.NONE),
+        template=TemplateSpec(command=("git", "log")),
+    )
+    _build_codex([_manifest(skill_group="git", tools={"git-log": tool})], tmp_path, prefix="nerf-")
+
+    script_content = (tmp_path / "skills" / "nerf-git" / "scripts" / "nerf-git-log").read_text()
+    assert "# nerf:threat:read=workspace" in script_content
+    assert "# nerf:threat:write=none" in script_content
