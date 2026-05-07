@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from nerftools.config import Author, MarketplaceMetadata, PluginMetadata
 from nerftools.formats import build_claude_plugin, build_codex_plugin
 from nerftools.manifest import (
@@ -318,6 +320,23 @@ def test_codex_plugin_cleans_output(tmp_path: Path) -> None:
     (stale / "file.txt").write_text("stale")
     _build_codex([_manifest()], tmp_path)
     assert not stale.exists()
+
+
+def test_codex_plugin_rejects_symlink_in_output_dir(tmp_path: Path) -> None:
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    marker = outside / "do-not-delete.txt"
+    marker.write_text("keep")
+
+    (output_dir / "linked").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="symlink"):
+        _build_codex([_manifest()], output_dir)
+
+    assert marker.exists()
 
 
 def test_codex_plugin_maps_to_line(tmp_path: Path) -> None:
