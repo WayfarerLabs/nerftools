@@ -444,7 +444,10 @@ def build_codex_plugin(
     output_dir.mkdir(parents=True, exist_ok=True)
     for item in output_dir.iterdir():
         if item.is_symlink():
-            raise ValueError(f"refusing to clean symlink in output directory: {item}")
+            raise ValueError(
+                f"refusing to clean symlink in output directory: {item}. "
+                "Please remove the symlink manually before proceeding."
+            )
         if item.is_dir():
             shutil.rmtree(item)
         elif item.is_file():

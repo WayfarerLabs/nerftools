@@ -322,7 +322,7 @@ def test_codex_plugin_cleans_output(tmp_path: Path) -> None:
     assert not stale.exists()
 
 
-def test_codex_plugin_rejects_symlink_in_output_dir(tmp_path: Path) -> None:
+def test_codex_plugin_rejects_symlink_in_output_directory(tmp_path: Path) -> None:
     output_dir = tmp_path / "out"
     output_dir.mkdir()
 
