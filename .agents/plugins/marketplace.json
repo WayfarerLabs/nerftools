@@ -1,0 +1,12 @@
+{
+  "name": "nerftools",
+  "plugins": [
+    {
+      "name": "nerftools-default",
+      "source": {
+        "source": "local",
+        "path": "./out/codex-plugin"
+      }
+    }
+  ]
+}

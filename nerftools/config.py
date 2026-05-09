@@ -346,20 +346,13 @@ def _parse_marketplace_config(raw: Any) -> MarketplaceConfig:
 # -- Defaults resolution -------------------------------------------------------
 
 
-def resolve_claude_plugin_meta(
-    config: NerfConfig,
-) -> tuple[PluginMetadata, MarketplaceMetadata | None]:
-    """Build ``PluginMetadata`` and optional ``MarketplaceMetadata`` from config.
+def resolve_plugin_meta(config: NerfConfig) -> PluginMetadata:
+    """Build ``PluginMetadata`` from package config.
 
-    Applies defaults cascade:
-    - marketplace.name ← package.name
-    - marketplace.description ← package.description
-    - marketplace.owner.name ← package.author.name if present, else package.name
+    Shared by all plugin targets (claude-plugin, codex-plugin).
     """
     pkg = config.package
-    mkt = config.targets.claude_plugin.marketplace
-
-    plugin = PluginMetadata(
+    return PluginMetadata(
         name=pkg.name,
         version=pkg.version,
         description=pkg.description,
@@ -370,10 +363,25 @@ def resolve_claude_plugin_meta(
         keywords=list(pkg.keywords),
     )
 
+
+def resolve_claude_plugin_meta(
+    config: NerfConfig,
+) -> tuple[PluginMetadata, MarketplaceMetadata | None]:
+    """Build ``PluginMetadata`` and optional ``MarketplaceMetadata`` from config.
+
+    Applies defaults cascade:
+    - marketplace.name ← package.name
+    - marketplace.description ← package.description
+    - marketplace.owner.name ← package.author.name if present, else package.name
+    """
+    plugin = resolve_plugin_meta(config)
+
+    mkt = config.targets.claude_plugin.marketplace
     if not mkt.embed:
         return plugin, None
 
     # Cascade marketplace fields from package.
+    pkg = config.package
     mp_name = mkt.name or pkg.name
     mp_description = mkt.description or pkg.description
     mp_owner = mkt.owner

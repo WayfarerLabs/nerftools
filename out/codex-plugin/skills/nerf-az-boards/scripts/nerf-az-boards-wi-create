@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# nerf-az-boards-wi-create -- Create a new work item. Requires a type and title. Optionally set assigned-to, area, iteration, description, and a discussion comment. Returns the created work item as JSON.
+# Generated from az-boards manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=remote
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-boards-wi-create [--assigned-to <assigned_to>] [--area <area>] [--iteration <iteration>] [--description|-d <description>] [--discussion <discussion>] [--fields|-f <fields>] [--project|-p <project>] <type> <title>
+
+Options:
+  --assigned-to <assigned_to>
+      Person to assign to (e.g. user@example.com)
+  --area <area>
+      Area path (e.g. MyProject\MyArea)
+  --iteration <iteration>
+      Iteration path (e.g. MyProject\Sprint 1)
+  --description, -d <description>
+      Description of the work item. Stored as HTML, so HTML markup renders (e.g. "<p>Steps:</p><ol><li>...</li></ol>"). Plain text is stored verbatim and renders as-is.
+  --discussion <discussion>
+      Comment to add to the work item discussion. Stored as HTML, so HTML markup renders; plain text renders as-is.
+  --fields, -f <fields>
+      Custom field assignment (e.g. "System.Tags=Rock")
+  --project, -p <project>
+      Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+
+Arguments:
+  <type> (required)
+      Work item type (e.g. Bug, Task, User Story, Feature)
+  <title> (required)
+      Title of the work item
+
+Maps to: az boards work-item create --type <type> --title <title> <assigned_to> <area> <iteration> <description> <discussion> <fields> <project> --output json
+
+Create a new work item. Requires a type and title. Optionally set assigned-to, area, iteration, description, and a discussion comment. Returns the created work item as JSON.
+EOF
+  exit 1
+}
+
+ASSIGNED_TO=""
+_ASSIGNED_TO_SET=""
+AREA=""
+_AREA_SET=""
+ITERATION=""
+_ITERATION_SET=""
+DESCRIPTION=""
+_DESCRIPTION_SET=""
+DISCUSSION=""
+_DISCUSSION_SET=""
+FIELDS=""
+_FIELDS_SET=""
+PROJECT=""
+_PROJECT_SET=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --assigned-to) if [[ -n "${_ASSIGNED_TO_SET}" ]]; then echo "error: --assigned-to can only be specified once" >&2; exit 1; fi; ASSIGNED_TO="$2"; _ASSIGNED_TO_SET=true; shift 2 ;;
+    --area) if [[ -n "${_AREA_SET}" ]]; then echo "error: --area can only be specified once" >&2; exit 1; fi; AREA="$2"; _AREA_SET=true; shift 2 ;;
+    --iteration) if [[ -n "${_ITERATION_SET}" ]]; then echo "error: --iteration can only be specified once" >&2; exit 1; fi; ITERATION="$2"; _ITERATION_SET=true; shift 2 ;;
+    --description|-d) if [[ -n "${_DESCRIPTION_SET}" ]]; then echo "error: --description can only be specified once" >&2; exit 1; fi; DESCRIPTION="$2"; _DESCRIPTION_SET=true; shift 2 ;;
+    --discussion) if [[ -n "${_DISCUSSION_SET}" ]]; then echo "error: --discussion can only be specified once" >&2; exit 1; fi; DISCUSSION="$2"; _DISCUSSION_SET=true; shift 2 ;;
+    --fields|-f) if [[ -n "${_FIELDS_SET}" ]]; then echo "error: --fields can only be specified once" >&2; exit 1; fi; FIELDS="$2"; _FIELDS_SET=true; shift 2 ;;
+    --project|-p) if [[ -n "${_PROJECT_SET}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; _PROJECT_SET=true; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+_TYPE_SET=""
+if [[ $# -gt 0 ]]; then
+  TYPE="$1"
+  _TYPE_SET=true
+  shift
+else
+  TYPE=""
+fi
+_TITLE_SET=""
+if [[ $# -gt 0 ]]; then
+  TITLE="$1"
+  _TITLE_SET=true
+  shift
+else
+  TITLE=""
+fi
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-az-boards-wi-create: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+if [[ -n "${_TYPE_SET}" ]] && [[ "${TYPE}" == -* ]]; then
+  echo "error: nerf-az-boards-wi-create: <type> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${TYPE}" ]]; then
+  echo "error: nerf-az-boards-wi-create: missing required argument <type>" >&2
+  echo "  hint: provide a value for <type>" >&2
+  usage
+fi
+
+if [[ -n "${_TITLE_SET}" ]] && [[ "${TITLE}" == -* ]]; then
+  echo "error: nerf-az-boards-wi-create: <title> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${TITLE}" ]]; then
+  echo "error: nerf-az-boards-wi-create: missing required argument <title>" >&2
+  echo "  hint: provide a value for <title>" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(az boards work-item create --type "${TYPE}" --title "${TITLE}" ${_ASSIGNED_TO_SET:+"--assigned-to"} ${_ASSIGNED_TO_SET:+"$ASSIGNED_TO"} ${_AREA_SET:+"--area"} ${_AREA_SET:+"$AREA"} ${_ITERATION_SET:+"--iteration"} ${_ITERATION_SET:+"$ITERATION"} ${_DESCRIPTION_SET:+"--description"} ${_DESCRIPTION_SET:+"$DESCRIPTION"} ${_DISCUSSION_SET:+"--discussion"} ${_DISCUSSION_SET:+"$DISCUSSION"} ${_FIELDS_SET:+"--fields"} ${_FIELDS_SET:+"$FIELDS"} ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec az boards work-item create --type "${TYPE}" --title "${TITLE}" ${_ASSIGNED_TO_SET:+"--assigned-to"} ${_ASSIGNED_TO_SET:+"$ASSIGNED_TO"} ${_AREA_SET:+"--area"} ${_AREA_SET:+"$AREA"} ${_ITERATION_SET:+"--iteration"} ${_ITERATION_SET:+"$ITERATION"} ${_DESCRIPTION_SET:+"--description"} ${_DESCRIPTION_SET:+"$DESCRIPTION"} ${_DISCUSSION_SET:+"--discussion"} ${_DISCUSSION_SET:+"$DISCUSSION"} ${_FIELDS_SET:+"--fields"} ${_FIELDS_SET:+"$FIELDS"} ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json

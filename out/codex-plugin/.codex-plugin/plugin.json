@@ -1,0 +1,18 @@
+{
+  "name": "nerftools",
+  "version": "1.2.0",
+  "description": "Scoped, safety-constrained CLI wrappers for AI agents",
+  "skills": "./skills/",
+  "author": {
+    "name": "WayfarerLabs"
+  },
+  "homepage": "https://github.com/WayfarerLabs/nerftools",
+  "repository": "https://github.com/WayfarerLabs/nerftools",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "agent-tools",
+    "safety",
+    "cli-wrappers"
+  ]
+}

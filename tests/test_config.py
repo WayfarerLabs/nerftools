@@ -14,6 +14,7 @@ from nerftools.config import (
     PluginMetadata,
     load_config,
     resolve_claude_plugin_meta,
+    resolve_plugin_meta,
 )
 
 
@@ -225,6 +226,36 @@ targets:
 """)
     config = load_config(path)
     assert config.targets.claude_plugin.marketplace.embed is False
+
+
+# -- resolve_plugin_meta -------------------------------------------------------
+
+
+def test_resolve_plugin_meta_defaults() -> None:
+    plugin = resolve_plugin_meta(NerfConfig())
+    assert plugin.name == "nerftools"
+    assert plugin.version == "0.1.0"
+    assert plugin.description == "Nerf tools"
+    assert plugin.author is None
+    assert plugin.keywords == []
+
+
+def test_resolve_plugin_meta_from_package(tmp_path: Path) -> None:
+    config = load_config(_write(tmp_path, """
+package:
+  name: my-tools
+  version: 2.0.0
+  description: Custom tools
+  author:
+    name: TeamName
+  keywords: [a, b]
+"""))
+    plugin = resolve_plugin_meta(config)
+    assert plugin.name == "my-tools"
+    assert plugin.version == "2.0.0"
+    assert plugin.description == "Custom tools"
+    assert plugin.author == Author(name="TeamName")
+    assert plugin.keywords == ["a", "b"]
 
 
 # -- resolve_claude_plugin_meta ------------------------------------------------

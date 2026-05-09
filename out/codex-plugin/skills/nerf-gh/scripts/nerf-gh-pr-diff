@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# nerf-gh-pr-diff -- Show the diff for a pull request.
+# Generated from gh manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-gh-pr-diff <pr>
+
+Arguments:
+  <pr> (required)
+      PR number, URL, or branch name
+
+Maps to: gh pr diff <pr>
+
+Show the diff for a pull request.
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+_PR_SET=""
+if [[ $# -gt 0 ]]; then
+  PR="$1"
+  _PR_SET=true
+  shift
+else
+  PR=""
+fi
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-gh-pr-diff: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+if [[ -n "${_PR_SET}" ]] && [[ "${PR}" == -* ]]; then
+  echo "error: nerf-gh-pr-diff: <pr> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${PR}" ]]; then
+  echo "error: nerf-gh-pr-diff: missing required argument <pr>" >&2
+  echo "  hint: provide a value for <pr>" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(gh pr diff "${PR}")
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec gh pr diff "${PR}"
