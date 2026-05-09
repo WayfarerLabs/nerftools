@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.3.0](https://github.com/WayfarerLabs/nerftools/compare/v1.2.0...v1.3.0) (2026-05-09)
+
+
+### Features
+
+* add codex marketplace registration ([dedd5f4](https://github.com/WayfarerLabs/nerftools/commit/dedd5f49b9d7ef303e92baaf6a3a1e87cc6c28be))
+* add codex-plugin target for OpenAI Codex agent support ([8b7e655](https://github.com/WayfarerLabs/nerftools/commit/8b7e6555b73a635cc890e4ab753de874983a8db4))
+* add codex-plugin target for OpenAI Codex support ([85cf792](https://github.com/WayfarerLabs/nerftools/commit/85cf792477234354537e7ec25c393c0b5c771086))
+
+
+### Bug Fixes
+
+* guard codex cleanup against symlinked directories ([ebdf2fd](https://github.com/WayfarerLabs/nerftools/commit/ebdf2fd41c1ac251d776ab41180284ba391a675a))
+
 ## [1.2.0](https://github.com/WayfarerLabs/nerftools/compare/v1.1.0...v1.2.0) (2026-05-06)
 
 
