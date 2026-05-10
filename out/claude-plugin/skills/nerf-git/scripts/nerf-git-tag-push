@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-git-tag-push -- Push a single tag to a remote. Tag must already exist locally. Does not allow force-pushing; tag is rejected by the remote if it already exists upstream.
+# nerf-git-tag-push -- Push a single tag to a remote. Does not allow force-pushing; tag is rejected by the remote if it already exists upstream.
 # Generated from git manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=remote
@@ -26,7 +26,7 @@ Arguments:
 
 Maps to: git <directory> push <remote> <tag_name>
 
-Push a single tag to a remote. Tag must already exist locally. Does not allow force-pushing; tag is rejected by the remote if it already exists upstream.
+Push a single tag to a remote. Does not allow force-pushing; tag is rejected by the remote if it already exists upstream.
 EOF
   exit 1
 }

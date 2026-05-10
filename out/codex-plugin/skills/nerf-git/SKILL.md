@@ -171,7 +171,7 @@ Push the current branch to a remote including annotated tags (no force push). Fa
 
 ## nerf-git-tag-push
 
-Push a single tag to a remote. Tag must already exist locally. Does not allow force-pushing; tag is rejected by the remote if it already exists upstream.
+Push a single tag to a remote. Does not allow force-pushing; tag is rejected by the remote if it already exists upstream.
 
 **Usage:** `scripts/nerf-git-tag-push [-C <directory>] <remote> <tag_name>`
 **Maps to:** `git <directory> push <remote> <tag_name>`
@@ -214,7 +214,7 @@ Create a new annotated git tag at HEAD, or at a specific commit-ish if <ref> is 
 **Arguments:**
 
 - `<tag>` (required): Tag name to create (e.g. v1.2.3 or tf/aks/cluster/v2.0.0). must match `^[a-zA-Z0-9._/-]+$`
-- `<ref>` (optional): Commit-ish to tag (default HEAD). must match `^[a-zA-Z0-9_.@/-]+$`
+- `<ref>` (optional): Commit-ish to tag (default HEAD). must match `^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$`
 
 ---
 

@@ -22,7 +22,7 @@ Arguments:
       Must match: ^[a-zA-Z0-9._/-]+$
   <ref>
       Commit-ish to tag (default HEAD)
-      Must match: ^[a-zA-Z0-9_.@/-]+$
+      Must match: ^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$
 
 Maps to: git <directory> tag -a <tag> -m <tag> <ref>
 
@@ -174,12 +174,12 @@ if [[ -n "${_REF_SET}" ]] && [[ "${REF}" == -* ]]; then
   exit 1
 fi
 
-_NERF_PATTERN='^[a-zA-Z0-9_.@/-]+$'
+_NERF_PATTERN='^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$'
 if [[ -n "${_REF_SET}" ]] && ! [[ "${REF}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-git-tag: argument <ref> does not match required pattern" >&2
   echo "  value:   \"${REF}\"" >&2
-  echo "  pattern: ^[a-zA-Z0-9_.@/-]+$" >&2
-  echo "  hint: value must match ^[a-zA-Z0-9_.@/-]+$" >&2
+  echo "  pattern: ^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$" >&2
+  echo "  hint: value must match ^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$" >&2
   exit 1
 fi
 

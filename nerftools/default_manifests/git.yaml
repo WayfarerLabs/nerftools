@@ -229,8 +229,8 @@ tools:
 
   git-tag-push:
     description: >-
-      Push a single tag to a remote. Tag must already exist locally. Does not allow
-      force-pushing; tag is rejected by the remote if it already exists upstream.
+      Push a single tag to a remote. Does not allow force-pushing; tag is
+      rejected by the remote if it already exists upstream.
     threat:
       read: workspace
       write: remote
@@ -290,7 +290,7 @@ tools:
       ref:
         description: Commit-ish to tag (default HEAD)
         required: false
-        pattern: "^[a-zA-Z0-9_.@/-]+$"
+        pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$"
     guards:
       - script: |
           ! git ${DIRECTORY:+-C "${DIRECTORY}"} rev-parse "refs/tags/{{arguments.tag}}" > /dev/null 2>&1
