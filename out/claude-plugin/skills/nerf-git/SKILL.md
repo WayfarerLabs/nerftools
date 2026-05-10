@@ -169,6 +169,24 @@ Push the current branch to a remote including annotated tags (no force push). Fa
 
 ---
 
+## nerf-git-tag-push
+
+Push a single tag to a remote. Does not allow force-pushing; tag is rejected by the remote if it already exists upstream.
+
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-tag-push [-C <directory>] <remote> <tag_name>`
+**Maps to:** `git <directory> push <remote> <tag_name>`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+**Arguments:**
+
+- `<remote>` (required): Remote name (e.g. origin). must match `^[a-zA-Z0-9_.-]+$`
+- `<tag_name>` (required): Tag name to push. must match `^[a-zA-Z0-9_./-]+$`
+
+---
+
 ## nerf-git-log
 
 Show a short one-line log of recent commits.
@@ -184,10 +202,10 @@ Show a short one-line log of recent commits.
 
 ## nerf-git-tag
 
-Create a new annotated git tag at HEAD. Fails if the tag already exists. No force, delete, or other destructive operations.
+Create a new annotated git tag at HEAD, or at a specific commit-ish if <ref> is given. Tag names may include `/` so subdirectory-style schemes (e.g. tf/aks/cluster/v2.0.0) are accepted. Fails if the tag already exists. Does not push; use git-tag-push afterward. No force, delete, or other destructive operations.
 
-**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-tag [-C <directory>] <tag>`
-**Maps to:** `git <directory> tag -a <tag> -m <tag>`
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-tag [-C <directory>] <tag> [<ref>]`
+**Maps to:** `git <directory> tag -a <tag> -m <tag> <ref>`
 
 **Options:**
 
@@ -195,7 +213,8 @@ Create a new annotated git tag at HEAD. Fails if the tag already exists. No forc
 
 **Arguments:**
 
-- `<tag>` (required): Tag name to create (e.g. v1.2.3). must match `^[a-zA-Z0-9._/-]+$`
+- `<tag>` (required): Tag name to create (e.g. v1.2.3 or tf/aks/cluster/v2.0.0). must match `^[a-zA-Z0-9._/-]+$`
+- `<ref>` (optional): Commit-ish to tag (default HEAD). must match `^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$`
 
 ---
 
@@ -347,6 +366,32 @@ Rebase the current branch onto a target ref. Refuses if the current branch is ma
 **Arguments:**
 
 - `<target>` (required): Ref to rebase onto (e.g. origin/main, main). must match `^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$`
+
+---
+
+## nerf-git-rebase-continue
+
+Resume a rebase after conflicts have been resolved and staged. Pairs with git-rebase-unpushed when the rebase stops with conflicts.
+
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-rebase-continue [-C <directory>]`
+**Maps to:** `git <directory> rebase --continue`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+---
+
+## nerf-git-rebase-abort
+
+Abort an in-progress rebase and restore the branch to the state before the rebase began.
+
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-rebase-abort [-C <directory>]`
+**Maps to:** `git <directory> rebase --abort`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
 
 ---
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-git-tag -- Create a new annotated git tag at HEAD. Fails if the tag already exists. No force, delete, or other destructive operations.
+# nerf-git-tag -- Create a new annotated git tag at HEAD, or at a specific commit-ish if <ref> is given. Tag names may include `/` so subdirectory-style schemes (e.g. tf/aks/cluster/v2.0.0) are accepted. Fails if the tag already exists. Does not push; use git-tag-push afterward. No force, delete, or other destructive operations.
 # Generated from git manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=workspace
@@ -10,7 +10,7 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-git-tag [-C <directory>] <tag>
+Usage: nerf-git-tag [-C <directory>] <tag> [<ref>]
 
 Options:
   -C <directory>
@@ -18,12 +18,15 @@ Options:
 
 Arguments:
   <tag> (required)
-      Tag name to create (e.g. v1.2.3)
+      Tag name to create (e.g. v1.2.3 or tf/aks/cluster/v2.0.0)
       Must match: ^[a-zA-Z0-9._/-]+$
+  <ref>
+      Commit-ish to tag (default HEAD)
+      Must match: ^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$
 
-Maps to: git <directory> tag -a <tag> -m <tag>
+Maps to: git <directory> tag -a <tag> -m <tag> <ref>
 
-Create a new annotated git tag at HEAD. Fails if the tag already exists. No force, delete, or other destructive operations.
+Create a new annotated git tag at HEAD, or at a specific commit-ish if <ref> is given. Tag names may include `/` so subdirectory-style schemes (e.g. tf/aks/cluster/v2.0.0) are accepted. Fails if the tag already exists. Does not push; use git-tag-push afterward. No force, delete, or other destructive operations.
 EOF
   exit 1
 }
@@ -48,6 +51,14 @@ if [[ $# -gt 0 ]]; then
   shift
 else
   TAG=""
+fi
+_REF_SET=""
+if [[ $# -gt 0 ]]; then
+  REF="$1"
+  _REF_SET=true
+  shift
+else
+  REF=""
 fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-git-tag: unexpected extra arguments: $*" >&2
@@ -157,14 +168,29 @@ if [[ -n "${_TAG_SET}" ]] && ! [[ "${TAG}" =~ $_NERF_PATTERN ]]; then
   exit 1
 fi
 
+if [[ -n "${_REF_SET}" ]] && [[ "${REF}" == -* ]]; then
+  echo "error: nerf-git-tag: <ref> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+_NERF_PATTERN='^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$'
+if [[ -n "${_REF_SET}" ]] && ! [[ "${REF}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-git-tag: argument <ref> does not match required pattern" >&2
+  echo "  value:   \"${REF}\"" >&2
+  echo "  pattern: ^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$" >&2
+  echo "  hint: value must match ^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$" >&2
+  exit 1
+fi
+
 ( ! git ${DIRECTORY:+-C "${DIRECTORY}"} rev-parse "refs/tags/${TAG}" > /dev/null 2>&1 ) || { echo 'error: nerf-git-tag: Tag already exists. Use a different version.' >&2; exit 1; }
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} tag -a "${TAG}" -m "${TAG}")
+  _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} tag -a "${TAG}" -m "${TAG}" ${_REF_SET:+"$REF"})
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} tag -a "${TAG}" -m "${TAG}"
+exec git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} tag -a "${TAG}" -m "${TAG}" ${_REF_SET:+"$REF"}

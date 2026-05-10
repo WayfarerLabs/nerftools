@@ -2,7 +2,7 @@
 # nerf-tg-fmt-all -- Run terragrunt HCL format across all units under the current directory.
 # Generated from tg manifest. Do not edit directly.
 # nerf:threat:read=workspace
-# nerf:threat:write=none
+# nerf:threat:write=workspace
 
 set -euo pipefail
 

@@ -13,6 +13,7 @@ and project are auto-detected from the git remote; pass --project to
 target a different project in the same org. Use az-repos-pr-list to
 see open PRs, az-repos-pr-show to inspect a specific PR, and
 az-repos-pr-create to create a new PR from the current branch.
+az-repos-pr-edit updates a PR's title and/or description.
 az-repos-pr-set-status changes a PR's lifecycle state
 (active / abandoned / completed). az-repos-pr-vote casts or resets
 a review vote on a PR.
@@ -69,10 +70,10 @@ List all comment threads on a pull request as JSON. Project and repository are a
 
 ## nerf-az-repos-pr-create
 
-Create a pull request from the current branch to the default target branch. Source branch is auto-detected from HEAD. Cannot be run from detached HEAD or from main.
+Create a pull request from the current branch. Source branch is auto-detected from HEAD. The target branch defaults to the repo's default branch unless --target-branch is given. Cannot be run from detached HEAD or from main.
 
-**Usage:** `scripts/nerf-az-repos-pr-create [--draft] [--project|-p <project>] <title> <description>`
-**Maps to:** `az repos pr create --title <title> --description <description> <draft> <project> --output json`
+**Usage:** `scripts/nerf-az-repos-pr-create [--draft] [--target-branch|-t <target_branch>] [--project|-p <project>] <title> <description>`
+**Maps to:** `az repos pr create --title <title> --description <description> <draft> <target_branch> <project> --output json`
 
 **Switches:**
 
@@ -80,6 +81,7 @@ Create a pull request from the current branch to the default target branch. Sour
 
 **Options:**
 
+- `--target-branch|-t` (optional): Target branch for the PR (defaults to the repo's default branch). must match `^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$`
 - `--project|-p` (optional): Azure DevOps project name or ID (auto-detected from the git remote if omitted)
 
 **Arguments:**
@@ -104,6 +106,25 @@ Update a pull request's lifecycle status. Use "abandoned" to close a PR without 
 
 - `<pr_id>` (required): Pull request ID (numeric). must match `^[0-9]+$`
 - `<status>` (required): New status. one of `active`, `abandoned`, `completed`
+
+---
+
+## nerf-az-repos-pr-edit
+
+Edit a pull request's title and/or description. At least one of --title or --description must be provided. Useful for keeping a PR's metadata in sync with its scope as the branch evolves. Does not change the PR's status, target branch, or reviewers.
+
+**Usage:** `scripts/nerf-az-repos-pr-edit [--title <title>] [--description <description>] [--project|-p <project>] <pr_id>`
+**Maps to:** `az repos pr update --id <pr_id> <title> <description> <project> --output json`
+
+**Options:**
+
+- `--title` (optional): New PR title
+- `--description` (optional): New PR description (body text; supports markdown)
+- `--project|-p` (optional): Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+
+**Arguments:**
+
+- `<pr_id>` (required): Pull request ID (numeric). must match `^[0-9]+$`
 
 ---
 

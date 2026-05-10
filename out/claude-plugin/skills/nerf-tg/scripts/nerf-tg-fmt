@@ -2,7 +2,7 @@
 # nerf-tg-fmt -- Run terragrunt HCL format in the current module directory.
 # Generated from tg manifest. Do not edit directly.
 # nerf:threat:read=workspace
-# nerf:threat:write=none
+# nerf:threat:write=workspace
 
 set -euo pipefail
 

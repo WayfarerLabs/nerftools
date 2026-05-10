@@ -34,6 +34,7 @@ Each tool's usage line shows the path to call it relative to this skill's direct
 - **nerf-nx**: Nx workspace tools for building, testing, and inspecting projects
 - **nerf-pkgrun**: Package runner tools for cspell, markdownlint, and prettier at locked versions
 - **nerf-stdutils**: Safe wrappers for common Unix utilities
+- **nerf-tf**: Terraform workflow tools (currently scoped to formatting helpers)
 - **nerf-tg**: Terragrunt workflow tools for infrastructure management
 - **nerf-uv**: Python development tools via uv run
 

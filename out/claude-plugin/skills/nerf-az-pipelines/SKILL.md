@@ -14,6 +14,8 @@ project in the same org. Use az-pipelines-list to see all pipelines,
 az-pipelines-runs to see recent runs across all pipelines, and
 az-pipelines-check to inspect a specific pipeline with its recent run
 history. Use az-pipelines-run-show to drill into a single run.
+Use az-pipelines-run-timeline to see step-by-step status for a failed run
+and az-pipelines-run-log to fetch a specific step's log content.
 
 ## nerf-az-pipelines-list
 
@@ -75,11 +77,11 @@ Show details for a single pipeline run (by run ID). Returns the run's status, re
 
 ---
 
-## nerf-az-pipelines-timeline
+## nerf-az-pipelines-run-timeline
 
-Fetch the stage/job/task tree for a pipeline run, highlighting failures. Failed tasks include their log ID for use with az-pipelines-log. Pass --json for raw timeline output instead of the formatted tree.
+Fetch the stage/job/task tree for a pipeline run, highlighting failures. Failed tasks include their log ID for use with az-pipelines-run-log. Pass --json for raw timeline output instead of the formatted tree.
 
-**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-pipelines/scripts/nerf-az-pipelines-timeline [--json] [--project|-p <project>] <run_id>`
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-pipelines/scripts/nerf-az-pipelines-run-timeline [--json] [--project|-p <project>] <run_id>`
 
 **Switches:**
 
@@ -95,11 +97,11 @@ Fetch the stage/job/task tree for a pipeline run, highlighting failures. Failed 
 
 ---
 
-## nerf-az-pipelines-log
+## nerf-az-pipelines-run-log
 
-Fetch log content for a specific task in a pipeline run. By default shows ##[error] lines plus the last 100 lines. Use --tail N for a different window, --errors-only to filter to error/exception lines, or --full for the complete log. The log ID for a failed task comes from az-pipelines-timeline.
+Fetch log content for a specific task in a pipeline run. By default shows ##[error] lines plus the last 100 lines. Use --tail N for a different window, --errors-only to filter to error/exception lines, or --full for the complete log. The log ID for a failed task comes from az-pipelines-run-timeline.
 
-**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-pipelines/scripts/nerf-az-pipelines-log [--full] [--errors-only] [--tail <tail>] [--project|-p <project>] <run_id> <log_id>`
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-pipelines/scripts/nerf-az-pipelines-run-log [--full] [--errors-only] [--tail <tail>] [--project|-p <project>] <run_id> <log_id>`
 
 **Switches:**
 
@@ -114,6 +116,6 @@ Fetch log content for a specific task in a pipeline run. By default shows ##[err
 **Arguments:**
 
 - `<run_id>` (required): Pipeline run ID (numeric, from az-pipelines-runs or az-pipelines-check). must match `^[0-9]+$`
-- `<log_id>` (required): Log ID (numeric, from az-pipelines-timeline output). must match `^[0-9]+$`
+- `<log_id>` (required): Log ID (numeric, from az-pipelines-run-timeline output). must match `^[0-9]+$`
 
 ---

@@ -1,0 +1,38 @@
+version: 1
+
+package:
+  name: tf
+  description: Terraform workflow tools (currently scoped to formatting helpers)
+  skill_group: tf
+  skill_intro: |
+    These tools run Terraform commands in the current directory. Today they
+    only cover canonical HCL formatting via `terraform fmt`. Planning and
+    applying for this codebase are done through Terragrunt (see the tg-*
+    tools).
+
+tools:
+  tf-fmt:
+    description: >-
+      Run terraform fmt to canonically format Terraform files. Operates on
+      the current directory by default; pass a target directory positionally
+      to format elsewhere under the workspace.
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command: [terraform, fmt, "{{switches.check}}", "{{switches.recursive}}", "{{switches.diff}}", "{{arguments.directory}}"]
+    switches:
+      check:
+        description: Check formatting without modifying files (exits non-zero if files are unformatted)
+        flag: -check
+      recursive:
+        description: Process files in subdirectories
+        flag: -recursive
+      diff:
+        description: Display diffs of formatting changes
+        flag: -diff
+    arguments:
+      directory:
+        description: Subdirectory of the workspace to format (default current)
+        required: false
+        path_tests: [under_cwd]

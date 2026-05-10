@@ -88,7 +88,7 @@ tools:
     description: Run terragrunt HCL format in the current module directory.
     threat:
       read: workspace
-      write: none
+      write: workspace
     template:
       command: [terragrunt, hcl, format, --non-interactive, "{{switches.check}}"]
     switches:
@@ -99,7 +99,7 @@ tools:
     description: Run terragrunt HCL format across all units under the current directory.
     threat:
       read: workspace
-      write: none
+      write: workspace
     template:
       command: [terragrunt, run, --all, hcl, format, --non-interactive, "{{switches.check}}"]
     switches:

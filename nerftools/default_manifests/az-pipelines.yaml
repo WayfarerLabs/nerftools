@@ -11,6 +11,8 @@ package:
     az-pipelines-runs to see recent runs across all pipelines, and
     az-pipelines-check to inspect a specific pipeline with its recent run
     history. Use az-pipelines-run-show to drill into a single run.
+    Use az-pipelines-run-timeline to see step-by-step status for a failed run
+    and az-pipelines-run-log to fetch a specific step's log content.
 
 tools:
   az-pipelines-list:
@@ -113,11 +115,11 @@ tools:
         flag: --project
         short: -p
 
-  az-pipelines-timeline:
+  az-pipelines-run-timeline:
     description: >-
       Fetch the stage/job/task tree for a pipeline run, highlighting failures.
-      Failed tasks include their log ID for use with az-pipelines-log. Pass
-      --json for raw timeline output instead of the formatted tree.
+      Failed tasks include their log ID for use with az-pipelines-run-log.
+      Pass --json for raw timeline output instead of the formatted tree.
     threat:
       read: remote
       write: none
@@ -132,7 +134,7 @@ tools:
       else
         PROJECT_NAME=$(az pipelines runs show --id "${RUN_ID}" --output json | jq -r '.project.name')
         if [[ -z "${PROJECT_NAME}" || "${PROJECT_NAME}" == "null" ]]; then
-          echo "error: az-pipelines-timeline: could not resolve project for run ${RUN_ID}" >&2
+          echo "error: az-pipelines-run-timeline: could not resolve project for run ${RUN_ID}" >&2
           exit 1
         fi
       fi
@@ -140,7 +142,7 @@ tools:
         --area build --resource timeline \
         --route-parameters "project=${PROJECT_NAME}" "buildId=${RUN_ID}" \
         --output json) || {
-        echo "error: az-pipelines-timeline: failed to fetch timeline for run ${RUN_ID}" >&2
+        echo "error: az-pipelines-run-timeline: failed to fetch timeline for run ${RUN_ID}" >&2
         exit 1
       }
       if [[ -n "${JSON}" ]]; then
@@ -194,13 +196,13 @@ tools:
         flag: --project
         short: -p
 
-  az-pipelines-log:
+  az-pipelines-run-log:
     description: >-
       Fetch log content for a specific task in a pipeline run. By default
       shows ##[error] lines plus the last 100 lines. Use --tail N for a
       different window, --errors-only to filter to error/exception lines, or
       --full for the complete log. The log ID for a failed task comes from
-      az-pipelines-timeline.
+      az-pipelines-run-timeline.
     threat:
       read: remote
       write: none
@@ -215,7 +217,7 @@ tools:
       else
         PROJECT_NAME=$(az pipelines runs show --id "${RUN_ID}" --output json | jq -r '.project.name')
         if [[ -z "${PROJECT_NAME}" || "${PROJECT_NAME}" == "null" ]]; then
-          echo "error: az-pipelines-log: could not resolve project for run ${RUN_ID}" >&2
+          echo "error: az-pipelines-run-log: could not resolve project for run ${RUN_ID}" >&2
           exit 1
         fi
       fi
@@ -223,7 +225,7 @@ tools:
         --area build --resource logs \
         --route-parameters "project=${PROJECT_NAME}" "buildId=${RUN_ID}" "logId=${LOG_ID}" \
         --output json) || {
-        echo "error: az-pipelines-log: failed to fetch log ${LOG_ID} for run ${RUN_ID}" >&2
+        echo "error: az-pipelines-run-log: failed to fetch log ${LOG_ID} for run ${RUN_ID}" >&2
         exit 1
       }
       MODE="tail"
@@ -272,7 +274,7 @@ tools:
         required: true
         pattern: "^[0-9]+$"
       log_id:
-        description: Log ID (numeric, from az-pipelines-timeline output)
+        description: Log ID (numeric, from az-pipelines-run-timeline output)
         required: true
         pattern: "^[0-9]+$"
     switches:
