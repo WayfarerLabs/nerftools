@@ -74,3 +74,46 @@ Show details for a single pipeline run (by run ID). Returns the run's status, re
 - `<run_id>` (required): Pipeline run ID (numeric, from az-pipelines-runs or az-pipelines-check). must match `^[0-9]+$`
 
 ---
+
+## nerf-az-pipelines-timeline
+
+Fetch the stage/job/task tree for a pipeline run, highlighting failures. Failed tasks include their log ID for use with az-pipelines-log. Pass --json for raw timeline output instead of the formatted tree.
+
+**Usage:** `scripts/nerf-az-pipelines-timeline [--json] [--project|-p <project>] <run_id>`
+
+**Switches:**
+
+- `--json`: Output raw timeline JSON instead of the formatted tree
+
+**Options:**
+
+- `--project|-p` (optional): Azure DevOps project name or ID (auto-detected from the run if omitted)
+
+**Arguments:**
+
+- `<run_id>` (required): Pipeline run ID (numeric, from az-pipelines-runs or az-pipelines-check). must match `^[0-9]+$`
+
+---
+
+## nerf-az-pipelines-log
+
+Fetch log content for a specific task in a pipeline run. By default shows ##[error] lines plus the last 100 lines. Use --tail N for a different window, --errors-only to filter to error/exception lines, or --full for the complete log. The log ID for a failed task comes from az-pipelines-timeline.
+
+**Usage:** `scripts/nerf-az-pipelines-log [--full] [--errors-only] [--tail <tail>] [--project|-p <project>] <run_id> <log_id>`
+
+**Switches:**
+
+- `--full`: Show the complete log instead of the default error+tail view
+- `--errors-only`: Show only lines containing errors/exceptions
+
+**Options:**
+
+- `--tail` (optional): Number of trailing lines to show in the default view (default 100). must match `^[0-9]+$`
+- `--project|-p` (optional): Azure DevOps project name or ID (auto-detected from the run if omitted)
+
+**Arguments:**
+
+- `<run_id>` (required): Pipeline run ID (numeric, from az-pipelines-runs or az-pipelines-check). must match `^[0-9]+$`
+- `<log_id>` (required): Log ID (numeric, from az-pipelines-timeline output). must match `^[0-9]+$`
+
+---

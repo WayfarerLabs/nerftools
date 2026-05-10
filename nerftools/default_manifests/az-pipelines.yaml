@@ -112,3 +112,182 @@ tools:
         description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
         flag: --project
         short: -p
+
+  az-pipelines-timeline:
+    description: >-
+      Fetch the stage/job/task tree for a pipeline run, highlighting failures.
+      Failed tasks include their log ID for use with az-pipelines-log. Pass
+      --json for raw timeline output instead of the formatted tree.
+    threat:
+      read: remote
+      write: none
+    guards:
+      - command: [which, jq]
+        fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
+      - command: [which, python3]
+        fail_message: 'python3 is required but not installed.'
+    script: |
+      if [[ -n "${PROJECT}" ]]; then
+        PROJECT_NAME="${PROJECT}"
+      else
+        PROJECT_NAME=$(az pipelines runs show --id "${RUN_ID}" --output json | jq -r '.project.name')
+        if [[ -z "${PROJECT_NAME}" || "${PROJECT_NAME}" == "null" ]]; then
+          echo "error: az-pipelines-timeline: could not resolve project for run ${RUN_ID}" >&2
+          exit 1
+        fi
+      fi
+      TIMELINE=$(az devops invoke \
+        --area build --resource timeline \
+        --route-parameters "project=${PROJECT_NAME}" "buildId=${RUN_ID}" \
+        --output json) || {
+        echo "error: az-pipelines-timeline: failed to fetch timeline for run ${RUN_ID}" >&2
+        exit 1
+      }
+      if [[ -n "${JSON}" ]]; then
+        echo "${TIMELINE}"
+        exit 0
+      fi
+      export TIMELINE
+      python3 - <<'PYEOF'
+      import json, os
+      data = json.loads(os.environ["TIMELINE"])
+      records = data.get("records", [])
+      stages = sorted([r for r in records if r.get("type") == "Stage"], key=lambda r: r.get("order", 0))
+      jobs = [r for r in records if r.get("type") in ("Job", "Phase")]
+      tasks = [r for r in records if r.get("type") == "Task"]
+      by_parent = {}
+      for r in jobs + tasks:
+          by_parent.setdefault(r.get("parentId", ""), []).append(r)
+
+      def icon(result):
+          return {"failed": "FAILED", "succeeded": "ok", "skipped": "skipped",
+                  "canceled": "canceled"}.get(result, result or "?")
+
+      for s in stages:
+          print(f"[{icon(s.get('result'))}] Stage: {s['name']}")
+          for j in by_parent.get(s["id"], []):
+              print(f"  [{icon(j.get('result'))}] Job: {j['name']}")
+              for t in by_parent.get(j["id"], []):
+                  log_id = (t.get("log") or {}).get("id", "")
+                  hint = f" (log:{log_id})" if log_id and t.get("result") == "failed" else ""
+                  print(f"    [{icon(t.get('result'))}] {t['name']}{hint}")
+
+      failed = [t for t in tasks if t.get("result") == "failed"]
+      if failed:
+          print()
+          print("=== Failed Tasks ===")
+          for t in failed:
+              print(f"  {t['name']} -- log ID: {(t.get('log') or {}).get('id', '')}")
+      PYEOF
+    arguments:
+      run_id:
+        description: Pipeline run ID (numeric, from az-pipelines-runs or az-pipelines-check)
+        required: true
+        pattern: "^[0-9]+$"
+    switches:
+      json:
+        description: Output raw timeline JSON instead of the formatted tree
+        flag: --json
+    options:
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the run if omitted)
+        flag: --project
+        short: -p
+
+  az-pipelines-log:
+    description: >-
+      Fetch log content for a specific task in a pipeline run. By default
+      shows ##[error] lines plus the last 100 lines. Use --tail N for a
+      different window, --errors-only to filter to error/exception lines, or
+      --full for the complete log. The log ID for a failed task comes from
+      az-pipelines-timeline.
+    threat:
+      read: remote
+      write: none
+    guards:
+      - command: [which, jq]
+        fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
+      - command: [which, python3]
+        fail_message: 'python3 is required but not installed.'
+    script: |
+      if [[ -n "${PROJECT}" ]]; then
+        PROJECT_NAME="${PROJECT}"
+      else
+        PROJECT_NAME=$(az pipelines runs show --id "${RUN_ID}" --output json | jq -r '.project.name')
+        if [[ -z "${PROJECT_NAME}" || "${PROJECT_NAME}" == "null" ]]; then
+          echo "error: az-pipelines-log: could not resolve project for run ${RUN_ID}" >&2
+          exit 1
+        fi
+      fi
+      LOG_DATA=$(az devops invoke \
+        --area build --resource logs \
+        --route-parameters "project=${PROJECT_NAME}" "buildId=${RUN_ID}" "logId=${LOG_ID}" \
+        --output json) || {
+        echo "error: az-pipelines-log: failed to fetch log ${LOG_ID} for run ${RUN_ID}" >&2
+        exit 1
+      }
+      MODE="tail"
+      [[ -n "${FULL}" ]] && MODE="full"
+      [[ -n "${ERRORS_ONLY}" ]] && MODE="errors_only"
+      TAIL_N="${TAIL:-100}"
+      export LOG_DATA MODE TAIL_N
+      python3 - <<'PYEOF'
+      import json, os
+      data = json.loads(os.environ["LOG_DATA"])
+      mode = os.environ["MODE"]
+      tail_n = int(os.environ["TAIL_N"])
+      lines = data.get("value", [])
+      total = len(lines)
+      if mode == "errors_only":
+          keys = ("##[error]", "Error", "FAILED", "Exception", "error:")
+          errs = [l for l in lines if any(k in l for k in keys)]
+          if errs:
+              print(f"Found {len(errs)} error line(s) out of {total} total:")
+              print()
+              for l in errs:
+                  print(l.rstrip())
+          else:
+              print(f"No error lines found in {total} total lines.")
+      elif mode == "full":
+          for l in lines:
+              print(l.rstrip())
+      else:
+          errs = [l for l in lines if "##[error]" in l]
+          if errs:
+              print("=== Error Lines ===")
+              for l in errs:
+                  print(l.rstrip())
+              print()
+          if total > tail_n:
+              print(f"=== Last {tail_n} of {total} lines ===")
+              for l in lines[-tail_n:]:
+                  print(l.rstrip())
+          else:
+              for l in lines:
+                  print(l.rstrip())
+      PYEOF
+    arguments:
+      run_id:
+        description: Pipeline run ID (numeric, from az-pipelines-runs or az-pipelines-check)
+        required: true
+        pattern: "^[0-9]+$"
+      log_id:
+        description: Log ID (numeric, from az-pipelines-timeline output)
+        required: true
+        pattern: "^[0-9]+$"
+    switches:
+      full:
+        description: Show the complete log instead of the default error+tail view
+        flag: --full
+      errors_only:
+        description: Show only lines containing errors/exceptions
+        flag: --errors-only
+    options:
+      tail:
+        description: Number of trailing lines to show in the default view (default 100)
+        flag: --tail
+        pattern: "^[0-9]+$"
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the run if omitted)
+        flag: --project
+        short: -p
