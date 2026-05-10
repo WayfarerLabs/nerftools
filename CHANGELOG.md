@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.4.0](https://github.com/WayfarerLabs/nerftools/compare/v1.3.0...v1.4.0) (2026-05-10)
+
+
+### Features
+
+* **az-boards:** enforce assignee on mywi-* tools and add mywi-list/update ([76c7af6](https://github.com/WayfarerLabs/nerftools/commit/76c7af61ce8eba60843a73111f30880acdb6c7af))
+* **az-pipelines:** add timeline and log tools for run debugging ([0a20e5e](https://github.com/WayfarerLabs/nerftools/commit/0a20e5e8f94453aeab634f83b28d9656f95e3071))
+* **git:** add git-rebase-continue and git-rebase-abort ([0879574](https://github.com/WayfarerLabs/nerftools/commit/0879574f48b0cc5bc52ddc1967b36bca09c04c49))
+* new tools from prod standup work ([f71278f](https://github.com/WayfarerLabs/nerftools/commit/f71278f58ae8940251c50278567edd5412599102))
+* pipeline debugging tools and mywi-* enforcement ([805f30e](https://github.com/WayfarerLabs/nerftools/commit/805f30ef03a1929cae5ff06d446c2c57d4afb5c7))
+* prod standup tools (pipelines, repos, git, tf) ([2deb2ac](https://github.com/WayfarerLabs/nerftools/commit/2deb2ac97f264aaa5137e838aba58d1dcc65c74d))
+
+
+### Bug Fixes
+
+* align git-tag ref pattern, give tf-fmt a target dir arg, drop unenforced claim from git-tag-push ([8aea729](https://github.com/WayfarerLabs/nerftools/commit/8aea729e2e8ceb89ee9da434224017c0cec6e2ba))
+* **az-boards:** quote WIQL in mywi-list and use tr for bash 3 case folding ([f2831be](https://github.com/WayfarerLabs/nerftools/commit/f2831be4fb059955035d967ef9d4d2b54fa7fa6b))
+* **az-pipelines:** pipe JSON to python via process substitution and reject conflicting log modes ([4b6601e](https://github.com/WayfarerLabs/nerftools/commit/4b6601e408039491a66cfd7ab1e4f6e5d6b66822))
+* reject --tail 0 and correct mywi-show description ([1c82a69](https://github.com/WayfarerLabs/nerftools/commit/1c82a6982424f86743576686eb1eea4c64b00f9b))
+
 ## [1.3.0](https://github.com/WayfarerLabs/nerftools/compare/v1.2.0...v1.3.0) (2026-05-09)
 
 
