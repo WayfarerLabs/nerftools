@@ -1,0 +1,197 @@
+#!/usr/bin/env bash
+# nerf-az-pipelines-log -- Fetch log content for a specific task in a pipeline run. By default shows ##[error] lines plus the last 100 lines. Use --tail N for a different window, --errors-only to filter to error/exception lines, or --full for the complete log. The log ID for a failed task comes from az-pipelines-timeline.
+# Generated from az-pipelines manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-pipelines-log [--full] [--errors-only] [--tail <tail>] [--project|-p <project>] <run_id> <log_id>
+
+Switches:
+  --full
+      Show the complete log instead of the default error+tail view
+  --errors-only
+      Show only lines containing errors/exceptions
+
+Options:
+  --tail <tail>
+      Number of trailing lines to show in the default view (default 100)
+      Must match: ^[1-9][0-9]*$
+  --project, -p <project>
+      Azure DevOps project name or ID (auto-detected from the run if omitted)
+
+Arguments:
+  <run_id> (required)
+      Pipeline run ID (numeric, from az-pipelines-runs or az-pipelines-check)
+      Must match: ^[0-9]+$
+  <log_id> (required)
+      Log ID (numeric, from az-pipelines-timeline output)
+      Must match: ^[0-9]+$
+
+Fetch log content for a specific task in a pipeline run. By default shows ##[error] lines plus the last 100 lines. Use --tail N for a different window, --errors-only to filter to error/exception lines, or --full for the complete log. The log ID for a failed task comes from az-pipelines-timeline.
+EOF
+  exit 1
+}
+
+FULL=""
+ERRORS_ONLY=""
+TAIL=""
+_TAIL_SET=""
+PROJECT=""
+_PROJECT_SET=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --full) if [[ -n "${FULL}" ]]; then echo "error: --full can only be specified once" >&2; exit 1; fi; FULL="true"; shift 1 ;;
+    --errors-only) if [[ -n "${ERRORS_ONLY}" ]]; then echo "error: --errors-only can only be specified once" >&2; exit 1; fi; ERRORS_ONLY="true"; shift 1 ;;
+    --tail) if [[ -n "${_TAIL_SET}" ]]; then echo "error: --tail can only be specified once" >&2; exit 1; fi; TAIL="$2"; _TAIL_SET=true; shift 2 ;;
+    --project|-p) if [[ -n "${_PROJECT_SET}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; _PROJECT_SET=true; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+_RUN_ID_SET=""
+if [[ $# -gt 0 ]]; then
+  RUN_ID="$1"
+  _RUN_ID_SET=true
+  shift
+else
+  RUN_ID=""
+fi
+_LOG_ID_SET=""
+if [[ $# -gt 0 ]]; then
+  LOG_ID="$1"
+  _LOG_ID_SET=true
+  shift
+else
+  LOG_ID=""
+fi
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-az-pipelines-log: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+_NERF_PATTERN='^[1-9][0-9]*$'
+if [[ -n "${_TAIL_SET}" ]] && ! [[ "${TAIL}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-az-pipelines-log: option --tail does not match required pattern" >&2
+  echo "  value:   \"${TAIL}\"" >&2
+  echo "  pattern: ^[1-9][0-9]*$" >&2
+  echo "  hint: value must match ^[1-9][0-9]*$" >&2
+  exit 1
+fi
+
+if [[ -n "${_RUN_ID_SET}" ]] && [[ "${RUN_ID}" == -* ]]; then
+  echo "error: nerf-az-pipelines-log: <run_id> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${RUN_ID}" ]]; then
+  echo "error: nerf-az-pipelines-log: missing required argument <run_id>" >&2
+  echo "  hint: provide a value for <run_id>" >&2
+  usage
+fi
+
+_NERF_PATTERN='^[0-9]+$'
+if [[ -n "${_RUN_ID_SET}" ]] && ! [[ "${RUN_ID}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-az-pipelines-log: argument <run_id> does not match required pattern" >&2
+  echo "  value:   \"${RUN_ID}\"" >&2
+  echo "  pattern: ^[0-9]+$" >&2
+  echo "  hint: value must match ^[0-9]+$" >&2
+  exit 1
+fi
+
+if [[ -n "${_LOG_ID_SET}" ]] && [[ "${LOG_ID}" == -* ]]; then
+  echo "error: nerf-az-pipelines-log: <log_id> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${LOG_ID}" ]]; then
+  echo "error: nerf-az-pipelines-log: missing required argument <log_id>" >&2
+  echo "  hint: provide a value for <log_id>" >&2
+  usage
+fi
+
+_NERF_PATTERN='^[0-9]+$'
+if [[ -n "${_LOG_ID_SET}" ]] && ! [[ "${LOG_ID}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-az-pipelines-log: argument <log_id> does not match required pattern" >&2
+  echo "  value:   \"${LOG_ID}\"" >&2
+  echo "  pattern: ^[0-9]+$" >&2
+  echo "  hint: value must match ^[0-9]+$" >&2
+  exit 1
+fi
+
+which jq > /dev/null 2>&1 || { echo 'error: nerf-az-pipelines-log: jq is required but not installed (e.g. apt-get install jq, brew install jq).' >&2; exit 1; }
+which python3 > /dev/null 2>&1 || { echo 'error: nerf-az-pipelines-log: python3 is required but not installed.' >&2; exit 1; }
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: nerf-az-pipelines-log would run inline script"
+  exit 0
+fi
+
+if [[ -n "${PROJECT}" ]]; then
+  PROJECT_NAME="${PROJECT}"
+else
+  PROJECT_NAME=$(az pipelines runs show --id "${RUN_ID}" --output json | jq -r '.project.name')
+  if [[ -z "${PROJECT_NAME}" || "${PROJECT_NAME}" == "null" ]]; then
+    echo "error: az-pipelines-log: could not resolve project for run ${RUN_ID}" >&2
+    exit 1
+  fi
+fi
+LOG_DATA=$(az devops invoke \
+  --area build --resource logs \
+  --route-parameters "project=${PROJECT_NAME}" "buildId=${RUN_ID}" "logId=${LOG_ID}" \
+  --output json) || {
+  echo "error: az-pipelines-log: failed to fetch log ${LOG_ID} for run ${RUN_ID}" >&2
+  exit 1
+}
+MODE="tail"
+[[ -n "${FULL}" ]] && MODE="full"
+[[ -n "${ERRORS_ONLY}" ]] && MODE="errors_only"
+TAIL_N="${TAIL:-100}"
+python3 - <(printf '%s' "${LOG_DATA}") "${MODE}" "${TAIL_N}" <<'PYEOF'
+import json, sys
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+mode = sys.argv[2]
+tail_n = int(sys.argv[3])
+lines = data.get("value", [])
+total = len(lines)
+if mode == "errors_only":
+    keys = ("##[error]", "Error", "FAILED", "Exception", "error:")
+    errs = [l for l in lines if any(k in l for k in keys)]
+    if errs:
+        print(f"Found {len(errs)} error line(s) out of {total} total:")
+        print()
+        for l in errs:
+            print(l.rstrip())
+    else:
+        print(f"No error lines found in {total} total lines.")
+elif mode == "full":
+    for l in lines:
+        print(l.rstrip())
+else:
+    errs = [l for l in lines if "##[error]" in l]
+    if errs:
+        print("=== Error Lines ===")
+        for l in errs:
+            print(l.rstrip())
+        print()
+    if total > tail_n:
+        print(f"=== Last {tail_n} of {total} lines ===")
+        for l in lines[-tail_n:]:
+            print(l.rstrip())
+    else:
+        for l in lines:
+            print(l.rstrip())
+PYEOF
