@@ -21,7 +21,7 @@ Switches:
 Options:
   --tail <tail>
       Number of trailing lines to show in the default view (default 100)
-      Must match: ^[0-9]+$
+      Must match: ^[1-9][0-9]*$
   --project, -p <project>
       Azure DevOps project name or ID (auto-detected from the run if omitted)
 
@@ -80,12 +80,12 @@ if [[ $# -gt 0 ]]; then
   exit 1
 fi
 
-_NERF_PATTERN='^[0-9]+$'
+_NERF_PATTERN='^[1-9][0-9]*$'
 if [[ -n "${_TAIL_SET}" ]] && ! [[ "${TAIL}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-az-pipelines-log: option --tail does not match required pattern" >&2
   echo "  value:   \"${TAIL}\"" >&2
-  echo "  pattern: ^[0-9]+$" >&2
-  echo "  hint: value must match ^[0-9]+$" >&2
+  echo "  pattern: ^[1-9][0-9]*$" >&2
+  echo "  hint: value must match ^[1-9][0-9]*$" >&2
   exit 1
 fi
 

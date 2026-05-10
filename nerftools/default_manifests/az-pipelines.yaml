@@ -286,7 +286,7 @@ tools:
       tail:
         description: Number of trailing lines to show in the default view (default 100)
         flag: --tail
-        pattern: "^[0-9]+$"
+        pattern: "^[1-9][0-9]*$"
       project:
         description: Azure DevOps project name or ID (auto-detected from the run if omitted)
         flag: --project

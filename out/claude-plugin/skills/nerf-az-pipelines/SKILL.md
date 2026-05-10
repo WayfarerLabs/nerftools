@@ -108,7 +108,7 @@ Fetch log content for a specific task in a pipeline run. By default shows ##[err
 
 **Options:**
 
-- `--tail` (optional): Number of trailing lines to show in the default view (default 100). must match `^[0-9]+$`
+- `--tail` (optional): Number of trailing lines to show in the default view (default 100). must match `^[1-9][0-9]*$`
 - `--project|-p` (optional): Azure DevOps project name or ID (auto-detected from the run if omitted)
 
 **Arguments:**

@@ -147,7 +147,7 @@ List work items assigned to you that are not Closed or Removed, ordered by most 
 
 ## nerf-az-boards-mywi-show
 
-Show details and comments for a work item assigned to you. Verifies that System.AssignedTo matches the current user before fetching; refuses items assigned to anyone else (use az-boards-wi-show for those).
+Show details and comments for a work item assigned to you. Verifies that System.AssignedTo matches the current user; refuses items assigned to anyone else (use az-boards-wi-show for those).
 
 **Usage:** `scripts/nerf-az-boards-mywi-show [--project|-p <project>] <wi_id>`
 

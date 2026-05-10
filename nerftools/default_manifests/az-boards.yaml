@@ -292,9 +292,8 @@ tools:
   az-boards-mywi-show:
     description: >-
       Show details and comments for a work item assigned to you. Verifies
-      that System.AssignedTo matches the current user before fetching;
-      refuses items assigned to anyone else (use az-boards-wi-show for
-      those).
+      that System.AssignedTo matches the current user; refuses items
+      assigned to anyone else (use az-boards-wi-show for those).
     threat:
       read: remote
       write: none

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-boards-mywi-show -- Show details and comments for a work item assigned to you. Verifies that System.AssignedTo matches the current user before fetching; refuses items assigned to anyone else (use az-boards-wi-show for those).
+# nerf-az-boards-mywi-show -- Show details and comments for a work item assigned to you. Verifies that System.AssignedTo matches the current user; refuses items assigned to anyone else (use az-boards-wi-show for those).
 # Generated from az-boards manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none
@@ -21,7 +21,7 @@ Arguments:
       Work item ID (numeric, must be assigned to you)
       Must match: ^[0-9]+$
 
-Show details and comments for a work item assigned to you. Verifies that System.AssignedTo matches the current user before fetching; refuses items assigned to anyone else (use az-boards-wi-show for those).
+Show details and comments for a work item assigned to you. Verifies that System.AssignedTo matches the current user; refuses items assigned to anyone else (use az-boards-wi-show for those).
 EOF
   exit 1
 }
