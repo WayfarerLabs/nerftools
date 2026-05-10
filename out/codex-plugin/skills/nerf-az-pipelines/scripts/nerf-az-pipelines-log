@@ -139,6 +139,10 @@ if [[ "$_NERF_DRY_RUN" == "true" ]]; then
   exit 0
 fi
 
+if [[ -n "${FULL}" && -n "${ERRORS_ONLY}" ]]; then
+  echo "error: az-pipelines-log: --full and --errors-only are mutually exclusive" >&2
+  exit 1
+fi
 if [[ -n "${PROJECT}" ]]; then
   PROJECT_NAME="${PROJECT}"
 else
@@ -159,12 +163,12 @@ MODE="tail"
 [[ -n "${FULL}" ]] && MODE="full"
 [[ -n "${ERRORS_ONLY}" ]] && MODE="errors_only"
 TAIL_N="${TAIL:-100}"
-export LOG_DATA MODE TAIL_N
-python3 - <<'PYEOF'
-import json, os
-data = json.loads(os.environ["LOG_DATA"])
-mode = os.environ["MODE"]
-tail_n = int(os.environ["TAIL_N"])
+python3 - <(printf '%s' "${LOG_DATA}") "${MODE}" "${TAIL_N}" <<'PYEOF'
+import json, sys
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+mode = sys.argv[2]
+tail_n = int(sys.argv[3])
 lines = data.get("value", [])
 total = len(lines)
 if mode == "errors_only":
