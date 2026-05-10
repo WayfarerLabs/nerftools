@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-boards-mywi-comment -- Add a comment to a work item assigned to you.
+# nerf-az-boards-mywi-comment -- Add a comment to a work item assigned to you. Verifies that System.AssignedTo matches the current user; refuses items assigned to anyone else (use az-boards-wi-comment for those).
 # Generated from az-boards manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=remote
@@ -23,9 +23,7 @@ Arguments:
   <comment> (required)
       Comment text. Stored as HTML on the work item, so HTML markup renders (e.g. "<p>See <a href='...'>this</a></p>"). Plain text is stored verbatim and renders as-is.
 
-Maps to: az boards work-item update --id <wi_id> --discussion <comment> <project> --output none
-
-Add a comment to a work item assigned to you.
+Add a comment to a work item assigned to you. Verifies that System.AssignedTo matches the current user; refuses items assigned to anyone else (use az-boards-wi-comment for those).
 EOF
   exit 1
 }
@@ -98,12 +96,34 @@ if [[ -z "${COMMENT}" ]]; then
   usage
 fi
 
+which jq > /dev/null 2>&1 || { echo 'error: nerf-az-boards-mywi-comment: jq is required but not installed (e.g. apt-get install jq, brew install jq).' >&2; exit 1; }
+
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az boards work-item update --id "${WI_ID}" --discussion "${COMMENT}" ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output none)
-  printf 'dry-run:'
-  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
-  echo
+  echo "dry-run: nerf-az-boards-mywi-comment would run inline script"
   exit 0
 fi
 
-exec az boards work-item update --id "${WI_ID}" --discussion "${COMMENT}" ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output none
+CURRENT_USER=$(az devops invoke --area connectionData --resource connectionData --output json \
+  | jq -r '.authenticatedUser.uniqueName // ""')
+if [[ -z "${CURRENT_USER}" ]]; then
+  echo "error: az-boards-mywi-comment: could not determine current Azure DevOps user (try 'az login')" >&2
+  exit 1
+fi
+SHOW_ARGS=(az boards work-item show --id "${WI_ID}" --output json)
+[[ -n "${PROJECT}" ]] && SHOW_ARGS+=(--project "${PROJECT}")
+WI_JSON=$("${SHOW_ARGS[@]}") || {
+  echo "error: az-boards-mywi-comment: could not fetch work item ${WI_ID}" >&2
+  exit 1
+}
+ASSIGNED=$(printf '%s' "${WI_JSON}" | jq -r '.fields["System.AssignedTo"].uniqueName // ""')
+if [[ -z "${ASSIGNED}" ]]; then
+  echo "error: az-boards-mywi-comment: work item ${WI_ID} is not assigned to anyone" >&2
+  exit 1
+fi
+if [[ "${ASSIGNED,,}" != "${CURRENT_USER,,}" ]]; then
+  echo "error: az-boards-mywi-comment: work item ${WI_ID} is assigned to ${ASSIGNED}, not you (${CURRENT_USER}). Use az-boards-wi-comment for items assigned to others." >&2
+  exit 1
+fi
+UPDATE_ARGS=(az boards work-item update --id "${WI_ID}" --discussion "${COMMENT}" --output none)
+[[ -n "${PROJECT}" ]] && UPDATE_ARGS+=(--project "${PROJECT}")
+"${UPDATE_ARGS[@]}"

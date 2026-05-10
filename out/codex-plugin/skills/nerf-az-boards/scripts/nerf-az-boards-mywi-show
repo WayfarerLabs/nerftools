@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-boards-mywi-show -- Show details and comments for a work item assigned to you.
+# nerf-az-boards-mywi-show -- Show details and comments for a work item assigned to you. Verifies that System.AssignedTo matches the current user before fetching; refuses items assigned to anyone else (use az-boards-wi-show for those).
 # Generated from az-boards manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none
@@ -21,9 +21,7 @@ Arguments:
       Work item ID (numeric, must be assigned to you)
       Must match: ^[0-9]+$
 
-Maps to: az boards work-item show --id <wi_id> <project> --output json
-
-Show details and comments for a work item assigned to you.
+Show details and comments for a work item assigned to you. Verifies that System.AssignedTo matches the current user before fetching; refuses items assigned to anyone else (use az-boards-wi-show for those).
 EOF
   exit 1
 }
@@ -76,12 +74,32 @@ if [[ -n "${_WI_ID_SET}" ]] && ! [[ "${WI_ID}" =~ $_NERF_PATTERN ]]; then
   exit 1
 fi
 
+which jq > /dev/null 2>&1 || { echo 'error: nerf-az-boards-mywi-show: jq is required but not installed (e.g. apt-get install jq, brew install jq).' >&2; exit 1; }
+
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az boards work-item show --id "${WI_ID}" ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json)
-  printf 'dry-run:'
-  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
-  echo
+  echo "dry-run: nerf-az-boards-mywi-show would run inline script"
   exit 0
 fi
 
-exec az boards work-item show --id "${WI_ID}" ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json
+CURRENT_USER=$(az devops invoke --area connectionData --resource connectionData --output json \
+  | jq -r '.authenticatedUser.uniqueName // ""')
+if [[ -z "${CURRENT_USER}" ]]; then
+  echo "error: az-boards-mywi-show: could not determine current Azure DevOps user (try 'az login')" >&2
+  exit 1
+fi
+ARGS=(az boards work-item show --id "${WI_ID}" --output json)
+[[ -n "${PROJECT}" ]] && ARGS+=(--project "${PROJECT}")
+WI_JSON=$("${ARGS[@]}") || {
+  echo "error: az-boards-mywi-show: could not fetch work item ${WI_ID}" >&2
+  exit 1
+}
+ASSIGNED=$(printf '%s' "${WI_JSON}" | jq -r '.fields["System.AssignedTo"].uniqueName // ""')
+if [[ -z "${ASSIGNED}" ]]; then
+  echo "error: az-boards-mywi-show: work item ${WI_ID} is not assigned to anyone" >&2
+  exit 1
+fi
+if [[ "${ASSIGNED,,}" != "${CURRENT_USER,,}" ]]; then
+  echo "error: az-boards-mywi-show: work item ${WI_ID} is assigned to ${ASSIGNED}, not you (${CURRENT_USER}). Use az-boards-wi-show for items assigned to others." >&2
+  exit 1
+fi
+echo "${WI_JSON}"

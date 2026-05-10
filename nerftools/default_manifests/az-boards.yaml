@@ -270,8 +270,11 @@ tools:
         flag: --project
         short: -p
 
-  az-boards-mywi-show:
-    description: Show details and comments for a work item assigned to you.
+  az-boards-mywi-list:
+    description: >-
+      List work items assigned to you that are not Closed or Removed,
+      ordered by most recently changed. Returns matching work items as
+      JSON.
     threat:
       read: remote
       write: none
@@ -279,13 +282,60 @@ tools:
       command:
         - az
         - boards
-        - work-item
-        - show
-        - --id
-        - "{{arguments.wi_id}}"
+        - query
+        - --wiql
+        - >-
+          SELECT [System.Id], [System.Title], [System.State],
+          [System.WorkItemType], [System.ChangedDate]
+          FROM WorkItems
+          WHERE [System.AssignedTo] = @Me
+          AND [System.State] <> 'Closed'
+          AND [System.State] <> 'Removed'
+          ORDER BY [System.ChangedDate] DESC
         - "{{options.project}}"
         - --output
         - json
+    options:
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
+
+  az-boards-mywi-show:
+    description: >-
+      Show details and comments for a work item assigned to you. Verifies
+      that System.AssignedTo matches the current user before fetching;
+      refuses items assigned to anyone else (use az-boards-wi-show for
+      those).
+    threat:
+      read: remote
+      write: none
+    guards:
+      - command: [which, jq]
+        fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
+    script: |
+      CURRENT_USER=$(az devops invoke --area connectionData --resource connectionData --output json \
+        | jq -r '.authenticatedUser.uniqueName // ""')
+      if [[ -z "${CURRENT_USER}" ]]; then
+        echo "error: az-boards-mywi-show: could not determine current Azure DevOps user (try 'az login')" >&2
+        exit 1
+      fi
+      ARGS=(az boards work-item show --id "${WI_ID}" --output json)
+      [[ -n "${PROJECT}" ]] && ARGS+=(--project "${PROJECT}")
+      WI_JSON=$("${ARGS[@]}") || {
+        echo "error: az-boards-mywi-show: could not fetch work item ${WI_ID}" >&2
+        exit 1
+      }
+      ASSIGNED=$(printf '%s' "${WI_JSON}" | jq -r '.fields["System.AssignedTo"].uniqueName // ""')
+      if [[ -z "${ASSIGNED}" ]]; then
+        echo "error: az-boards-mywi-show: work item ${WI_ID} is not assigned to anyone" >&2
+        exit 1
+      fi
+      if [[ "${ASSIGNED,,}" != "${CURRENT_USER,,}" ]]; then
+        echo "error: az-boards-mywi-show: work item ${WI_ID} is assigned to ${ASSIGNED}, not you (${CURRENT_USER}). Use az-boards-wi-show for items assigned to others." >&2
+        exit 1
+      fi
+      echo "${WI_JSON}"
     arguments:
       wi_id:
         description: Work item ID (numeric, must be assigned to you)
@@ -298,23 +348,41 @@ tools:
         short: -p
 
   az-boards-mywi-comment:
-    description: Add a comment to a work item assigned to you.
+    description: >-
+      Add a comment to a work item assigned to you. Verifies that
+      System.AssignedTo matches the current user; refuses items assigned to
+      anyone else (use az-boards-wi-comment for those).
     threat:
       read: remote
       write: remote
-    template:
-      command:
-        - az
-        - boards
-        - work-item
-        - update
-        - --id
-        - "{{arguments.wi_id}}"
-        - --discussion
-        - "{{arguments.comment}}"
-        - "{{options.project}}"
-        - --output
-        - none
+    guards:
+      - command: [which, jq]
+        fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
+    script: |
+      CURRENT_USER=$(az devops invoke --area connectionData --resource connectionData --output json \
+        | jq -r '.authenticatedUser.uniqueName // ""')
+      if [[ -z "${CURRENT_USER}" ]]; then
+        echo "error: az-boards-mywi-comment: could not determine current Azure DevOps user (try 'az login')" >&2
+        exit 1
+      fi
+      SHOW_ARGS=(az boards work-item show --id "${WI_ID}" --output json)
+      [[ -n "${PROJECT}" ]] && SHOW_ARGS+=(--project "${PROJECT}")
+      WI_JSON=$("${SHOW_ARGS[@]}") || {
+        echo "error: az-boards-mywi-comment: could not fetch work item ${WI_ID}" >&2
+        exit 1
+      }
+      ASSIGNED=$(printf '%s' "${WI_JSON}" | jq -r '.fields["System.AssignedTo"].uniqueName // ""')
+      if [[ -z "${ASSIGNED}" ]]; then
+        echo "error: az-boards-mywi-comment: work item ${WI_ID} is not assigned to anyone" >&2
+        exit 1
+      fi
+      if [[ "${ASSIGNED,,}" != "${CURRENT_USER,,}" ]]; then
+        echo "error: az-boards-mywi-comment: work item ${WI_ID} is assigned to ${ASSIGNED}, not you (${CURRENT_USER}). Use az-boards-wi-comment for items assigned to others." >&2
+        exit 1
+      fi
+      UPDATE_ARGS=(az boards work-item update --id "${WI_ID}" --discussion "${COMMENT}" --output none)
+      [[ -n "${PROJECT}" ]] && UPDATE_ARGS+=(--project "${PROJECT}")
+      "${UPDATE_ARGS[@]}"
     arguments:
       wi_id:
         description: Work item ID (numeric, must be assigned to you)
@@ -327,6 +395,66 @@ tools:
           is stored verbatim and renders as-is.
         required: true
     options:
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
+
+  az-boards-mywi-update:
+    description: >-
+      Update state or title on a work item assigned to you. Verifies that
+      System.AssignedTo matches the current user; refuses items assigned to
+      anyone else (use az-boards-wi-update for those). To reassign, use
+      az-boards-wi-update.
+    threat:
+      read: remote
+      write: remote
+    guards:
+      - command: [which, jq]
+        fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
+    script: |
+      if [[ -z "${STATE}" && -z "${TITLE}" ]]; then
+        echo "error: az-boards-mywi-update: at least one of --state or --title is required" >&2
+        exit 1
+      fi
+      CURRENT_USER=$(az devops invoke --area connectionData --resource connectionData --output json \
+        | jq -r '.authenticatedUser.uniqueName // ""')
+      if [[ -z "${CURRENT_USER}" ]]; then
+        echo "error: az-boards-mywi-update: could not determine current Azure DevOps user (try 'az login')" >&2
+        exit 1
+      fi
+      SHOW_ARGS=(az boards work-item show --id "${WI_ID}" --output json)
+      [[ -n "${PROJECT}" ]] && SHOW_ARGS+=(--project "${PROJECT}")
+      WI_JSON=$("${SHOW_ARGS[@]}") || {
+        echo "error: az-boards-mywi-update: could not fetch work item ${WI_ID}" >&2
+        exit 1
+      }
+      ASSIGNED=$(printf '%s' "${WI_JSON}" | jq -r '.fields["System.AssignedTo"].uniqueName // ""')
+      if [[ -z "${ASSIGNED}" ]]; then
+        echo "error: az-boards-mywi-update: work item ${WI_ID} is not assigned to anyone" >&2
+        exit 1
+      fi
+      if [[ "${ASSIGNED,,}" != "${CURRENT_USER,,}" ]]; then
+        echo "error: az-boards-mywi-update: work item ${WI_ID} is assigned to ${ASSIGNED}, not you (${CURRENT_USER}). Use az-boards-wi-update for items assigned to others." >&2
+        exit 1
+      fi
+      UPDATE_ARGS=(az boards work-item update --id "${WI_ID}" --output json)
+      [[ -n "${STATE}" ]] && UPDATE_ARGS+=(--state "${STATE}")
+      [[ -n "${TITLE}" ]] && UPDATE_ARGS+=(--title "${TITLE}")
+      [[ -n "${PROJECT}" ]] && UPDATE_ARGS+=(--project "${PROJECT}")
+      "${UPDATE_ARGS[@]}"
+    arguments:
+      wi_id:
+        description: Work item ID (numeric, must be assigned to you)
+        required: true
+        pattern: "^[0-9]+$"
+    options:
+      state:
+        description: New work item state (e.g. Active, Resolved, Closed)
+        flag: --state
+      title:
+        description: New work item title
+        flag: --title
       project:
         description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
         flag: --project

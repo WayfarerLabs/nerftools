@@ -133,12 +133,24 @@ Set the parent of a work item. Takes the child ID and parent ID as positional ar
 
 ---
 
+## nerf-az-boards-mywi-list
+
+List work items assigned to you that are not Closed or Removed, ordered by most recently changed. Returns matching work items as JSON.
+
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-boards/scripts/nerf-az-boards-mywi-list [--project|-p <project>]`
+**Maps to:** `az boards query --wiql SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType], [System.ChangedDate] FROM WorkItems WHERE [System.AssignedTo] = @Me AND [System.State] <> 'Closed' AND [System.State] <> 'Removed' ORDER BY [System.ChangedDate] DESC <project> --output json`
+
+**Options:**
+
+- `--project|-p` (optional): Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+
+---
+
 ## nerf-az-boards-mywi-show
 
-Show details and comments for a work item assigned to you.
+Show details and comments for a work item assigned to you. Verifies that System.AssignedTo matches the current user before fetching; refuses items assigned to anyone else (use az-boards-wi-show for those).
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-boards/scripts/nerf-az-boards-mywi-show [--project|-p <project>] <wi_id>`
-**Maps to:** `az boards work-item show --id <wi_id> <project> --output json`
 
 **Options:**
 
@@ -152,10 +164,9 @@ Show details and comments for a work item assigned to you.
 
 ## nerf-az-boards-mywi-comment
 
-Add a comment to a work item assigned to you.
+Add a comment to a work item assigned to you. Verifies that System.AssignedTo matches the current user; refuses items assigned to anyone else (use az-boards-wi-comment for those).
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-boards/scripts/nerf-az-boards-mywi-comment [--project|-p <project>] <wi_id> <comment>`
-**Maps to:** `az boards work-item update --id <wi_id> --discussion <comment> <project> --output none`
 
 **Options:**
 
@@ -165,6 +176,24 @@ Add a comment to a work item assigned to you.
 
 - `<wi_id>` (required): Work item ID (numeric, must be assigned to you). must match `^[0-9]+$`
 - `<comment>` (required): Comment text. Stored as HTML on the work item, so HTML markup renders (e.g. "<p>See <a href='...'>this</a></p>"). Plain text is stored verbatim and renders as-is.
+
+---
+
+## nerf-az-boards-mywi-update
+
+Update state or title on a work item assigned to you. Verifies that System.AssignedTo matches the current user; refuses items assigned to anyone else (use az-boards-wi-update for those). To reassign, use az-boards-wi-update.
+
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-boards/scripts/nerf-az-boards-mywi-update [--state <state>] [--title <title>] [--project|-p <project>] <wi_id>`
+
+**Options:**
+
+- `--state` (optional): New work item state (e.g. Active, Resolved, Closed)
+- `--title` (optional): New work item title
+- `--project|-p` (optional): Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+
+**Arguments:**
+
+- `<wi_id>` (required): Work item ID (numeric, must be assigned to you). must match `^[0-9]+$`
 
 ---
 
