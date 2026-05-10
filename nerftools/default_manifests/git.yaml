@@ -520,6 +520,36 @@ tools:
         return 1
       fi
 
+  git-rebase-continue:
+    description: >-
+      Resume a rebase after conflicts have been resolved and staged. Pairs
+      with git-rebase-unpushed when the rebase stops with conflicts.
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command: [git, "{{options.directory}}", rebase, --continue]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+
+  git-rebase-abort:
+    description: >-
+      Abort an in-progress rebase and restore the branch to the state
+      before the rebase began.
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command: [git, "{{options.directory}}", rebase, --abort]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+
   git-reset-unpushed:
     description: >-
       Reset HEAD to a target ref. Default mode is mixed (changes left

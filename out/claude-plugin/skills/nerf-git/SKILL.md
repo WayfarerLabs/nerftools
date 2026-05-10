@@ -369,6 +369,32 @@ Rebase the current branch onto a target ref. Refuses if the current branch is ma
 
 ---
 
+## nerf-git-rebase-continue
+
+Resume a rebase after conflicts have been resolved and staged. Pairs with git-rebase-unpushed when the rebase stops with conflicts.
+
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-rebase-continue [-C <directory>]`
+**Maps to:** `git <directory> rebase --continue`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+---
+
+## nerf-git-rebase-abort
+
+Abort an in-progress rebase and restore the branch to the state before the rebase began.
+
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-rebase-abort [-C <directory>]`
+**Maps to:** `git <directory> rebase --abort`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+---
+
 ## nerf-git-reset-unpushed
 
 Reset HEAD to a target ref. Default mode is mixed (changes left unstaged); pass --soft to keep them staged. Refuses if the current branch is main or if any commit in target..HEAD is already reachable from a remote (which would orphan pushed commits). Hard reset is intentionally not exposed -- use git-reset-hard-last when you specifically want to discard the last commit.
