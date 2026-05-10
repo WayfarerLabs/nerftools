@@ -139,10 +139,6 @@ if [[ "$_NERF_DRY_RUN" == "true" ]]; then
   exit 0
 fi
 
-if [[ -n "${FULL}" && -n "${ERRORS_ONLY}" ]]; then
-  echo "error: az-pipelines-log: --full and --errors-only are mutually exclusive" >&2
-  exit 1
-fi
 if [[ -n "${PROJECT}" ]]; then
   PROJECT_NAME="${PROJECT}"
 else

@@ -210,10 +210,6 @@ tools:
       - command: [which, python3]
         fail_message: 'python3 is required but not installed.'
     script: |
-      if [[ -n "${FULL}" && -n "${ERRORS_ONLY}" ]]; then
-        echo "error: az-pipelines-log: --full and --errors-only are mutually exclusive" >&2
-        exit 1
-      fi
       if [[ -n "${PROJECT}" ]]; then
         PROJECT_NAME="${PROJECT}"
       else
