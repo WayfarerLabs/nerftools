@@ -11,6 +11,8 @@ package:
     az-pipelines-runs to see recent runs across all pipelines, and
     az-pipelines-check to inspect a specific pipeline with its recent run
     history. Use az-pipelines-run-show to drill into a single run.
+    Use az-pipelines-run-timeline to see step-by-step status for a failed run
+    and az-pipelines-run-log to fetch a specific step's log content.
 
 tools:
   az-pipelines-list:
@@ -110,5 +112,98 @@ tools:
     options:
       project:
         description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
+
+  az-pipelines-run-timeline:
+    description: >-
+      Show the timeline for a pipeline run as JSON: every stage, job, task,
+      and step with its status, result, start/finish times, and (for failed
+      records) error issue messages. Each task record includes a `log.id` you
+      can pass to az-pipelines-run-log to fetch its log content. Project is
+      auto-detected from the git remote; pass --project to override.
+    threat:
+      read: remote
+      write: none
+    script: |
+      REMOTE_URL=$(git remote get-url origin 2>/dev/null || true)
+      if [ -z "$REMOTE_URL" ]; then
+        echo "error: could not detect git remote 'origin'" >&2
+        exit 1
+      fi
+      if echo "$REMOTE_URL" | grep -q '/_git/'; then
+        DETECTED_PROJECT=$(echo "$REMOTE_URL" | sed -E 's|.*dev.azure.com/[^/]+/([^/]+)/_git/.*|\1|')
+      elif echo "$REMOTE_URL" | grep -q 'ssh.dev.azure.com'; then
+        DETECTED_PROJECT=$(echo "$REMOTE_URL" | sed -E 's|.*:v3/[^/]+/([^/]+)/.*|\1|')
+      else
+        echo "error: unrecognized Azure DevOps remote URL format: '$REMOTE_URL'" >&2
+        exit 1
+      fi
+      PROJECT="${PROJECT:-$DETECTED_PROJECT}"
+      if [ -z "$PROJECT" ]; then
+        echo "error: could not extract project from remote URL '$REMOTE_URL'" >&2
+        exit 1
+      fi
+      exec az devops invoke \
+        --area build \
+        --resource Timeline \
+        --route-parameters "project=$PROJECT" "buildId=$RUN_ID" \
+        --output json
+    arguments:
+      run_id:
+        description: Pipeline run ID (numeric, from az-pipelines-runs or az-pipelines-check)
+        required: true
+        pattern: "^[0-9]+$"
+    options:
+      project:
+        description: Azure DevOps project name or ID (overrides auto-detection from the origin remote)
+        flag: --project
+        short: -p
+
+  az-pipelines-run-log:
+    description: >-
+      Fetch the raw log text for a single task within a pipeline run. The log
+      ID comes from a task record in az-pipelines-run-timeline (each task's
+      `log.id` field). Project is auto-detected from the git remote; pass
+      --project to override.
+    threat:
+      read: remote
+      write: none
+    script: |
+      REMOTE_URL=$(git remote get-url origin 2>/dev/null || true)
+      if [ -z "$REMOTE_URL" ]; then
+        echo "error: could not detect git remote 'origin'" >&2
+        exit 1
+      fi
+      if echo "$REMOTE_URL" | grep -q '/_git/'; then
+        DETECTED_PROJECT=$(echo "$REMOTE_URL" | sed -E 's|.*dev.azure.com/[^/]+/([^/]+)/_git/.*|\1|')
+      elif echo "$REMOTE_URL" | grep -q 'ssh.dev.azure.com'; then
+        DETECTED_PROJECT=$(echo "$REMOTE_URL" | sed -E 's|.*:v3/[^/]+/([^/]+)/.*|\1|')
+      else
+        echo "error: unrecognized Azure DevOps remote URL format: '$REMOTE_URL'" >&2
+        exit 1
+      fi
+      PROJECT="${PROJECT:-$DETECTED_PROJECT}"
+      if [ -z "$PROJECT" ]; then
+        echo "error: could not extract project from remote URL '$REMOTE_URL'" >&2
+        exit 1
+      fi
+      exec az devops invoke \
+        --area build \
+        --resource logs \
+        --route-parameters "project=$PROJECT" "buildId=$RUN_ID" "logId=$LOG_ID" \
+        --output text
+    arguments:
+      run_id:
+        description: Pipeline run ID (numeric, from az-pipelines-runs or az-pipelines-check)
+        required: true
+        pattern: "^[0-9]+$"
+      log_id:
+        description: Log ID for a specific task (numeric, from a task record's `log.id` in the timeline)
+        required: true
+        pattern: "^[0-9]+$"
+    options:
+      project:
+        description: Azure DevOps project name or ID (overrides auto-detection from the origin remote)
         flag: --project
         short: -p

@@ -227,6 +227,56 @@ tools:
         return 1
       fi
 
+  git-tag-create:
+    description: >-
+      Create a lightweight tag pointing at HEAD (or at an explicit commit-ish via --ref). Tag names
+      may include `/` so subdirectory-style schemes (e.g., `tf/aks/cluster/v2.0.0`) are accepted.
+      Does not push the tag; use git-tag-push afterward.
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command: [git, "{{options.directory}}", tag, "{{arguments.tag_name}}", "{{options.ref}}"]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+      ref:
+        description: Commit-ish to tag (default HEAD)
+        flag: ""
+        pattern: "^[a-zA-Z0-9_.@/-]+$"
+    arguments:
+      tag_name:
+        description: Tag name (e.g. v1.2.3 or tf/aks/cluster/v2.0.0)
+        required: true
+        pattern: "^[a-zA-Z0-9_./-]+$"
+
+  git-tag-push:
+    description: >-
+      Push a single tag to a remote. Tag must already exist locally. Does not allow
+      force-pushing; tag is rejected by the remote if it already exists upstream.
+    threat:
+      read: workspace
+      write: remote
+    template:
+      command:
+        [git, "{{options.directory}}", push, "{{arguments.remote}}", "{{arguments.tag_name}}"]
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    arguments:
+      remote:
+        description: Remote name (e.g. origin)
+        required: true
+        pattern: "^[a-zA-Z0-9_.-]+$"
+      tag_name:
+        description: Tag name to push
+        required: true
+        pattern: "^[a-zA-Z0-9_./-]+$"
+
   git-log:
     description: Show a short one-line log of recent commits.
     threat:

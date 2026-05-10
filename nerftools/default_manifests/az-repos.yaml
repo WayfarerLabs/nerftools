@@ -10,6 +10,7 @@ package:
     target a different project in the same org. Use az-repos-pr-list to
     see open PRs, az-repos-pr-show to inspect a specific PR, and
     az-repos-pr-create to create a new PR from the current branch.
+    az-repos-pr-edit updates a PR's title and/or description.
     az-repos-pr-set-status changes a PR's lifecycle state
     (active / abandoned / completed). az-repos-pr-vote casts or resets
     a review vote on a PR.
@@ -132,8 +133,9 @@ tools:
 
   az-repos-pr-create:
     description: >-
-      Create a pull request from the current branch to the default target
-      branch. Source branch is auto-detected from HEAD. Cannot be run from
+      Create a pull request from the current branch. Source branch is
+      auto-detected from HEAD. The target branch defaults to the repo's
+      default branch unless --target-branch is given. Cannot be run from
       detached HEAD or from main.
     threat:
       read: remote
@@ -149,6 +151,7 @@ tools:
         - --description
         - "{{arguments.description}}"
         - "{{switches.draft}}"
+        - "{{options.target_branch}}"
         - "{{options.project}}"
         - --output
         - json
@@ -163,6 +166,11 @@ tools:
       draft:
         description: Create the PR as a draft
     options:
+      target_branch:
+        description: Target branch for the PR (defaults to the repo's default branch)
+        flag: --target-branch
+        short: -t
+        pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$"
       project:
         description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
         flag: --project
@@ -210,6 +218,49 @@ tools:
         description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
         flag: --project
         short: -p
+
+  az-repos-pr-edit:
+    description: >-
+      Edit a pull request's title and/or description. At least one of
+      --title or --description must be provided. Useful for keeping a PR's
+      metadata in sync with its scope as the branch evolves. Does not
+      change the PR's status, target branch, or reviewers.
+    threat:
+      read: remote
+      write: remote
+    template:
+      command:
+        - az
+        - repos
+        - pr
+        - update
+        - --id
+        - "{{arguments.pr_id}}"
+        - "{{options.title}}"
+        - "{{options.description}}"
+        - "{{options.project}}"
+        - --output
+        - json
+    arguments:
+      pr_id:
+        description: Pull request ID (numeric)
+        required: true
+        pattern: "^[0-9]+$"
+    options:
+      title:
+        description: New PR title
+        flag: --title
+      description:
+        description: New PR description (body text; supports markdown)
+        flag: --description
+      project:
+        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+        flag: --project
+        short: -p
+    guards:
+      - script: |
+          [ -n "$TITLE" ] || [ -n "$DESCRIPTION" ]
+        fail_message: At least one of --title or --description must be provided.
 
   az-repos-pr-vote:
     description: >-
