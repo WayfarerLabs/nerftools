@@ -1,7 +1,7 @@
-"""Claude Code plugin builder for nerf tools (v1).
+"""Plugin builders for nerf tools (v1).
 
-Generates a self-contained Claude Code plugin from nerf manifests, including
-skills, scripts, plugin manifest, and marketplace metadata.
+Generates self-contained plugins from nerf manifests for Claude Code and
+Codex, including skills, scripts, plugin manifests, and marketplace metadata.
 """
 
 from __future__ import annotations
@@ -280,15 +280,18 @@ def _build_claude_plugin_skill_text(manifest: NerfManifest, prefix: str = "") ->
     return "\n".join(parts).rstrip() + "\n"
 
 
-def _claude_plugin_tool_section(tool_name: str, skill_group: str, tool_spec: ToolSpec) -> str:
-    """Generate a tool section for the claude-plugin format."""
+def _tool_section(tool_name: str, tool_spec: ToolSpec, *, script_path: str) -> str:
+    """Generate a tool section for a plugin skill.
+
+    Shared by all plugin targets — the caller passes the resolved *script_path*
+    (absolute for Claude, relative for Codex).
+    """
     parts: list[str] = []
     parts.append(f"## {tool_name}")
     parts.append("")
     parts.append(tool_spec.description)
     parts.append("")
 
-    script_path = f"${{CLAUDE_PLUGIN_ROOT}}/skills/{skill_group}/scripts/{tool_name}"
     usage = " ".join([script_path, *usage_tokens(tool_spec)])
     parts.append(f"**Usage:** `{usage}`")
 
@@ -334,12 +337,20 @@ def _claude_plugin_tool_section(tool_name: str, skill_group: str, tool_spec: Too
     return "\n".join(parts)
 
 
-def _build_claude_plugin_overview_text(
+def _claude_plugin_tool_section(tool_name: str, skill_group: str, tool_spec: ToolSpec) -> str:
+    """Generate a tool section using ``${CLAUDE_PLUGIN_ROOT}`` paths."""
+    script_path = f"${{CLAUDE_PLUGIN_ROOT}}/skills/{skill_group}/scripts/{tool_name}"
+    return _tool_section(tool_name, tool_spec, script_path=script_path)
+
+
+def _overview_text(
     manifests: list[NerfManifest],
     plugin_meta: PluginMetadata,
     prefix: str = "",
+    *,
+    path_instruction: str,
 ) -> str:
-    """Generate the overview SKILL.md for the claude-plugin format."""
+    """Generate the overview SKILL.md shared by all plugin targets."""
     parts: list[str] = []
 
     parts.append("---")
@@ -363,9 +374,7 @@ def _build_claude_plugin_overview_text(
         "rather than using raw `git` commands."
     )
     parts.append("")
-    parts.append(
-        "Each tool's usage line shows the full absolute path to call it. Use that path directly in Bash commands."
-    )
+    parts.append(path_instruction)
     parts.append("")
     parts.append("## Available tool packages")
     parts.append("")
@@ -376,5 +385,158 @@ def _build_claude_plugin_overview_text(
 
     parts.append("")
     parts.append("Use the corresponding `nerf-*` skill for full usage details on each package.")
+
+    return "\n".join(parts).rstrip() + "\n"
+
+
+def _build_claude_plugin_overview_text(
+    manifests: list[NerfManifest],
+    plugin_meta: PluginMetadata,
+    prefix: str = "",
+) -> str:
+    """Generate the overview SKILL.md for the claude-plugin format."""
+    return _overview_text(
+        manifests,
+        plugin_meta,
+        prefix,
+        path_instruction=(
+            "Each tool's usage line shows the full absolute path to call it. "
+            "Use that path directly in Bash commands."
+        ),
+    )
+
+
+# -- Codex plugin format -------------------------------------------------------
+
+
+def build_codex_plugin(
+    manifests: list[NerfManifest],
+    output_dir: Path,
+    plugin_meta: PluginMetadata,
+    *,
+    prefix: str = "nerf-",
+) -> list[Path]:
+    """Build a self-contained Codex plugin.
+
+    Layout::
+
+        output_dir/
+        ├── .codex-plugin/
+        │   └── plugin.json
+        └── skills/
+            ├── <plugin-name>/SKILL.md       (overview)
+            ├── <prefix><group>/
+            │   ├── SKILL.md
+            │   └── scripts/<prefix><tool>   (executable scripts)
+            └── ...
+
+    Script paths in SKILL.md are relative to the skill directory — Codex
+    resolves them from the absolute path it injects into the system prompt.
+    """
+    import json
+    import shutil
+
+    from nerftools.builder import build_script_text
+
+    written: list[Path] = []
+
+    # Always start clean
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for item in output_dir.iterdir():
+        if item.is_symlink():
+            raise ValueError(
+                f"refusing to clean symlink in output directory: {item}. "
+                "Please remove the symlink manually before proceeding."
+            )
+        if item.is_dir():
+            shutil.rmtree(item)
+        elif item.is_file():
+            item.unlink()
+
+    # Plugin manifest
+    plugin_dir = output_dir / ".codex-plugin"
+    plugin_dir.mkdir(exist_ok=True)
+
+    p = plugin_dir / "plugin.json"
+    p.write_text(json.dumps(plugin_meta.to_json(), indent=2) + "\n")
+    written.append(p)
+
+    skills_dir = output_dir / "skills"
+    skills_dir.mkdir(exist_ok=True)
+
+    # Per-package: skill + scripts
+    for manifest in manifests:
+        group = prefix + manifest.package.skill_group
+        skill_dir = skills_dir / group
+        skill_dir.mkdir(exist_ok=True)
+        scripts_dir = skill_dir / "scripts"
+        scripts_dir.mkdir(exist_ok=True)
+
+        # Generate scripts into the skill's scripts/ dir
+        for tool_name, tool_spec in manifest.tools.items():
+            full_name = prefix + tool_name
+            script_text = build_script_text(full_name, manifest.package.name, tool_spec)
+            out = scripts_dir / full_name
+            out.write_bytes(script_text.encode("utf-8"))
+            out.chmod(0o755)
+            written.append(out)
+
+        # Generate skill with relative path references
+        skill_text = _build_codex_plugin_skill_text(manifest, prefix=prefix)
+        out = skill_dir / "SKILL.md"
+        out.write_text(skill_text)
+        written.append(out)
+
+    # Overview skill
+    if manifests:
+        overview_text = _overview_text(
+            manifests,
+            plugin_meta,
+            prefix,
+            path_instruction=(
+                "Each tool's usage line shows the path to call it relative to "
+                "this skill's directory."
+            ),
+        )
+        overview_dir = skills_dir / plugin_meta.name
+        overview_dir.mkdir(exist_ok=True)
+        out = overview_dir / "SKILL.md"
+        out.write_text(overview_text)
+        written.append(out)
+
+    return written
+
+
+def _build_codex_plugin_skill_text(manifest: NerfManifest, prefix: str = "") -> str:
+    """Generate a SKILL.md for the codex-plugin format.
+
+    Uses relative script paths — Codex resolves them from the skill's
+    listed file path in the system prompt.
+    """
+    parts: list[str] = []
+    skill_group = prefix + manifest.package.skill_group
+
+    parts.append("---")
+    parts.append(f"name: {skill_group}")
+    parts.append(f'description: "{manifest.package.description}"')
+    parts.append('targets: ["*"]')
+    parts.append("---")
+    parts.append("")
+    parts.append(f"# {skill_group}")
+    parts.append("")
+    parts.append(
+        "These tools are available as scripts within this skill. "
+        "Call them using the paths shown in each usage line."
+    )
+    parts.append("")
+
+    if manifest.package.skill_intro:
+        parts.append(manifest.package.skill_intro.strip())
+        parts.append("")
+
+    for tool_name, tool_spec in manifest.tools.items():
+        full_name = prefix + tool_name
+        script_path = f"scripts/{full_name}"
+        parts.append(_tool_section(full_name, tool_spec, script_path=script_path))
 
     return "\n".join(parts).rstrip() + "\n"

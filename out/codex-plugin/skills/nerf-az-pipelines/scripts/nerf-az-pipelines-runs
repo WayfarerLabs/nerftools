@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# nerf-az-pipelines-runs -- List the 20 most recent pipeline runs across all pipelines.
+# Generated from az-pipelines manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-pipelines-runs [--project|-p <project>]
+
+Options:
+  --project, -p <project>
+      Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+
+Maps to: az pipelines runs list --top 20 <project> --output json
+
+List the 20 most recent pipeline runs across all pipelines.
+EOF
+  exit 1
+}
+
+PROJECT=""
+_PROJECT_SET=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --project|-p) if [[ -n "${_PROJECT_SET}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; _PROJECT_SET=true; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(az pipelines runs list --top 20 ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec az pipelines runs list --top 20 ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json

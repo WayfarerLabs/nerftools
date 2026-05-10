@@ -63,6 +63,10 @@ def _run(
         env["HOME"] = str(home)
     if env_extra:
         env.update(env_extra)
+    # When isolating to a fake HOME, also default cwd to it so any
+    # local-scope writes/reads can't leak into the developer's repo.
+    if cwd is None and home is not None:
+        cwd = home
     return subprocess.run(
         ["bash", "--norc", "--noprofile", str(script), *args],
         capture_output=True,

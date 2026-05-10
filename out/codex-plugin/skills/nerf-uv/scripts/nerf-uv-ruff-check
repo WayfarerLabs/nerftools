@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# nerf-uv-ruff-check -- Run ruff check (lint without modifying files).
+# Generated from uv manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-uv-ruff-check [<args...>]
+
+Arguments:
+  <args...>
+      Arguments to pass to ruff check (e.g. src/)
+
+Maps to: uv run ruff check <args>
+
+Run ruff check (lint without modifying files).
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+ARGS=("$@")
+
+for _v in "${ARGS[@]}"; do
+  if [[ "$_v" == "--nerf-dry-run" ]]; then
+    echo "error: nerf-uv-ruff-check: --nerf-dry-run inside the command tokens would be a no-op (it is a wrapper flag)" >&2
+    echo "  hint: place --nerf-dry-run before the command tokens" >&2
+    exit 1
+  fi
+done
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(uv run ruff check ${ARGS[@]+"${ARGS[@]}"})
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec uv run ruff check ${ARGS[@]+"${ARGS[@]}"}

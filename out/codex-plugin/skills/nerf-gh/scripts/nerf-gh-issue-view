@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# nerf-gh-issue-view -- View full details of an issue as JSON, including metadata, comments, and labels.
+# Generated from gh manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-gh-issue-view <issue>
+
+Arguments:
+  <issue> (required)
+      Issue number or URL
+
+Maps to: gh issue view <issue> --json title,body,state,author,comments,labels,assignees,milestone,createdAt,updatedAt,closedAt
+
+View full details of an issue as JSON, including metadata, comments, and labels.
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+_ISSUE_SET=""
+if [[ $# -gt 0 ]]; then
+  ISSUE="$1"
+  _ISSUE_SET=true
+  shift
+else
+  ISSUE=""
+fi
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-gh-issue-view: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+if [[ -n "${_ISSUE_SET}" ]] && [[ "${ISSUE}" == -* ]]; then
+  echo "error: nerf-gh-issue-view: <issue> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${ISSUE}" ]]; then
+  echo "error: nerf-gh-issue-view: missing required argument <issue>" >&2
+  echo "  hint: provide a value for <issue>" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(gh issue view "${ISSUE}" --json title,body,state,author,comments,labels,assignees,milestone,createdAt,updatedAt,closedAt)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec gh issue view "${ISSUE}" --json title,body,state,author,comments,labels,assignees,milestone,createdAt,updatedAt,closedAt

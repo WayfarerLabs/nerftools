@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# nerf-az-boards-mywi-list -- List work items assigned to you that are not Closed or Removed, ordered by most recently changed. Returns matching work items as JSON.
+# Generated from az-boards manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-az-boards-mywi-list [--project|-p <project>]
+
+Options:
+  --project, -p <project>
+      Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+
+List work items assigned to you that are not Closed or Removed, ordered by most recently changed. Returns matching work items as JSON.
+EOF
+  exit 1
+}
+
+PROJECT=""
+_PROJECT_SET=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --project|-p) if [[ -n "${_PROJECT_SET}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; _PROJECT_SET=true; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: nerf-az-boards-mywi-list would run inline script"
+  exit 0
+fi
+
+WIQL="SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType], [System.ChangedDate] FROM WorkItems WHERE [System.AssignedTo] = @Me AND [System.State] <> 'Closed' AND [System.State] <> 'Removed' ORDER BY [System.ChangedDate] DESC"
+ARGS=(az boards query --wiql "${WIQL}" --output json)
+[[ -n "${PROJECT}" ]] && ARGS+=(--project "${PROJECT}")
+"${ARGS[@]}"

@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# nerf-tf-fmt -- Run terraform fmt to canonically format Terraform files in the current directory.
+# Generated from tf manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=workspace
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-tf-fmt [-check] [-recursive] [-diff]
+
+Switches:
+  -check
+      Check formatting without modifying files (exits non-zero if files are unformatted)
+  -recursive
+      Process files in subdirectories
+  -diff
+      Display diffs of formatting changes
+
+Maps to: terraform fmt <check> <recursive> <diff>
+
+Run terraform fmt to canonically format Terraform files in the current directory.
+EOF
+  exit 1
+}
+
+CHECK=""
+RECURSIVE=""
+DIFF=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -check) if [[ -n "${CHECK}" ]]; then echo "error: -check can only be specified once" >&2; exit 1; fi; CHECK="true"; shift 1 ;;
+    -recursive) if [[ -n "${RECURSIVE}" ]]; then echo "error: -recursive can only be specified once" >&2; exit 1; fi; RECURSIVE="true"; shift 1 ;;
+    -diff) if [[ -n "${DIFF}" ]]; then echo "error: -diff can only be specified once" >&2; exit 1; fi; DIFF="true"; shift 1 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(terraform fmt ${CHECK:+"-check"} ${RECURSIVE:+"-recursive"} ${DIFF:+"-diff"})
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec terraform fmt ${CHECK:+"-check"} ${RECURSIVE:+"-recursive"} ${DIFF:+"-diff"}

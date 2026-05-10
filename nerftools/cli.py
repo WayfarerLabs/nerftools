@@ -18,7 +18,7 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-_VALID_TARGETS = ("bin", "skills", "claude-plugin")
+_VALID_TARGETS = ("bin", "skills", "claude-plugin", "codex-plugin")
 
 
 def _resolve_config_manifests(config_manifests: list[str], config_path: Path | None) -> list[Path]:
@@ -173,6 +173,21 @@ def generate(
                 plugin_meta,
                 prefix=prefix,
                 marketplace_meta=marketplace_meta,
+            )
+            for path in written:
+                typer.echo(f"  {path}")
+
+        elif t == "codex-plugin":
+            from nerftools.config import resolve_plugin_meta
+            from nerftools.formats import build_codex_plugin
+
+            plugin_meta = resolve_plugin_meta(config)
+
+            written = build_codex_plugin(
+                loaded,
+                output,
+                plugin_meta,
+                prefix=prefix,
             )
             for path in written:
                 typer.echo(f"  {path}")
