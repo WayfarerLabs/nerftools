@@ -138,7 +138,6 @@ Set the parent of a work item. Takes the child ID and parent ID as positional ar
 List work items assigned to you that are not Closed or Removed, ordered by most recently changed. Returns matching work items as JSON.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-boards/scripts/nerf-az-boards-mywi-list [--project|-p <project>]`
-**Maps to:** `az boards query --wiql SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType], [System.ChangedDate] FROM WorkItems WHERE [System.AssignedTo] = @Me AND [System.State] <> 'Closed' AND [System.State] <> 'Removed' ORDER BY [System.ChangedDate] DESC <project> --output json`
 
 **Options:**
 

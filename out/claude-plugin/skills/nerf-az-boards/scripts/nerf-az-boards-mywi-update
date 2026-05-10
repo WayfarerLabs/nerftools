@@ -112,7 +112,9 @@ if [[ -z "${ASSIGNED}" ]]; then
   echo "error: az-boards-mywi-update: work item ${WI_ID} is not assigned to anyone" >&2
   exit 1
 fi
-if [[ "${ASSIGNED,,}" != "${CURRENT_USER,,}" ]]; then
+ASSIGNED_LC=$(printf '%s' "${ASSIGNED}" | tr '[:upper:]' '[:lower:]')
+CURRENT_USER_LC=$(printf '%s' "${CURRENT_USER}" | tr '[:upper:]' '[:lower:]')
+if [[ "${ASSIGNED_LC}" != "${CURRENT_USER_LC}" ]]; then
   echo "error: az-boards-mywi-update: work item ${WI_ID} is assigned to ${ASSIGNED}, not you (${CURRENT_USER}). Use az-boards-wi-update for items assigned to others." >&2
   exit 1
 fi

@@ -278,23 +278,11 @@ tools:
     threat:
       read: remote
       write: none
-    template:
-      command:
-        - az
-        - boards
-        - query
-        - --wiql
-        - >-
-          SELECT [System.Id], [System.Title], [System.State],
-          [System.WorkItemType], [System.ChangedDate]
-          FROM WorkItems
-          WHERE [System.AssignedTo] = @Me
-          AND [System.State] <> 'Closed'
-          AND [System.State] <> 'Removed'
-          ORDER BY [System.ChangedDate] DESC
-        - "{{options.project}}"
-        - --output
-        - json
+    script: |
+      WIQL="SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType], [System.ChangedDate] FROM WorkItems WHERE [System.AssignedTo] = @Me AND [System.State] <> 'Closed' AND [System.State] <> 'Removed' ORDER BY [System.ChangedDate] DESC"
+      ARGS=(az boards query --wiql "${WIQL}" --output json)
+      [[ -n "${PROJECT}" ]] && ARGS+=(--project "${PROJECT}")
+      "${ARGS[@]}"
     options:
       project:
         description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
@@ -331,7 +319,9 @@ tools:
         echo "error: az-boards-mywi-show: work item ${WI_ID} is not assigned to anyone" >&2
         exit 1
       fi
-      if [[ "${ASSIGNED,,}" != "${CURRENT_USER,,}" ]]; then
+      ASSIGNED_LC=$(printf '%s' "${ASSIGNED}" | tr '[:upper:]' '[:lower:]')
+      CURRENT_USER_LC=$(printf '%s' "${CURRENT_USER}" | tr '[:upper:]' '[:lower:]')
+      if [[ "${ASSIGNED_LC}" != "${CURRENT_USER_LC}" ]]; then
         echo "error: az-boards-mywi-show: work item ${WI_ID} is assigned to ${ASSIGNED}, not you (${CURRENT_USER}). Use az-boards-wi-show for items assigned to others." >&2
         exit 1
       fi
@@ -376,7 +366,9 @@ tools:
         echo "error: az-boards-mywi-comment: work item ${WI_ID} is not assigned to anyone" >&2
         exit 1
       fi
-      if [[ "${ASSIGNED,,}" != "${CURRENT_USER,,}" ]]; then
+      ASSIGNED_LC=$(printf '%s' "${ASSIGNED}" | tr '[:upper:]' '[:lower:]')
+      CURRENT_USER_LC=$(printf '%s' "${CURRENT_USER}" | tr '[:upper:]' '[:lower:]')
+      if [[ "${ASSIGNED_LC}" != "${CURRENT_USER_LC}" ]]; then
         echo "error: az-boards-mywi-comment: work item ${WI_ID} is assigned to ${ASSIGNED}, not you (${CURRENT_USER}). Use az-boards-wi-comment for items assigned to others." >&2
         exit 1
       fi
@@ -434,7 +426,9 @@ tools:
         echo "error: az-boards-mywi-update: work item ${WI_ID} is not assigned to anyone" >&2
         exit 1
       fi
-      if [[ "${ASSIGNED,,}" != "${CURRENT_USER,,}" ]]; then
+      ASSIGNED_LC=$(printf '%s' "${ASSIGNED}" | tr '[:upper:]' '[:lower:]')
+      CURRENT_USER_LC=$(printf '%s' "${CURRENT_USER}" | tr '[:upper:]' '[:lower:]')
+      if [[ "${ASSIGNED_LC}" != "${CURRENT_USER_LC}" ]]; then
         echo "error: az-boards-mywi-update: work item ${WI_ID} is assigned to ${ASSIGNED}, not you (${CURRENT_USER}). Use az-boards-wi-update for items assigned to others." >&2
         exit 1
       fi

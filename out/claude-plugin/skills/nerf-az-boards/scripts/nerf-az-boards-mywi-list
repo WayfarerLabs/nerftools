@@ -16,8 +16,6 @@ Options:
   --project, -p <project>
       Azure DevOps project name or ID (auto-detected from the git remote if omitted)
 
-Maps to: az boards query --wiql SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType], [System.ChangedDate] FROM WorkItems WHERE [System.AssignedTo] = @Me AND [System.State] <> 'Closed' AND [System.State] <> 'Removed' ORDER BY [System.ChangedDate] DESC <project> --output json
-
 List work items assigned to you that are not Closed or Removed, ordered by most recently changed. Returns matching work items as JSON.
 EOF
   exit 1
@@ -37,11 +35,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az boards query --wiql SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType], [System.ChangedDate] FROM WorkItems WHERE [System.AssignedTo] = @Me AND [System.State] <> 'Closed' AND [System.State] <> 'Removed' ORDER BY [System.ChangedDate] DESC ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json)
-  printf 'dry-run:'
-  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
-  echo
+  echo "dry-run: nerf-az-boards-mywi-list would run inline script"
   exit 0
 fi
 
-exec az boards query --wiql SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType], [System.ChangedDate] FROM WorkItems WHERE [System.AssignedTo] = @Me AND [System.State] <> 'Closed' AND [System.State] <> 'Removed' ORDER BY [System.ChangedDate] DESC ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json
+WIQL="SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType], [System.ChangedDate] FROM WorkItems WHERE [System.AssignedTo] = @Me AND [System.State] <> 'Closed' AND [System.State] <> 'Removed' ORDER BY [System.ChangedDate] DESC"
+ARGS=(az boards query --wiql "${WIQL}" --output json)
+[[ -n "${PROJECT}" ]] && ARGS+=(--project "${PROJECT}")
+"${ARGS[@]}"
