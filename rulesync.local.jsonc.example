@@ -1,0 +1,12 @@
+{
+  // Personal rulesync target configuration (gitignored).
+  // Copy this to rulesync.local.jsonc and adjust targets to your AI tool(s).
+  //
+  // The shared rulesync.jsonc targets only claudecode and copilot — those are
+  // the "standard" outputs that get committed. Add your own personal targets
+  // here. Their generated paths are .gitignored so you won't accidentally
+  // commit them.
+  //
+  // Full target list: npx rulesync generate --help
+  "targets": ["claudecode", "copilot"]
+}

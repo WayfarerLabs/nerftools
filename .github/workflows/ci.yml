@@ -61,3 +61,31 @@ jobs:
         uses: streetsidesoftware/cspell-action@v8
         with:
           files: "**/*.md"
+
+  rulesync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Regenerate rulesync outputs
+        run: ./ops/scripts/rulesync-upgen.bash
+
+      - name: Verify generated outputs match committed
+        run: |
+          if ! git diff --quiet; then
+            echo "::error::Rulesync output is out of sync with sources."
+            echo "Run ./ops/scripts/rulesync-upgen.bash locally and commit the result."
+            git diff --stat
+            exit 1
+          fi
+          if [ -n "$(git ls-files --others --exclude-standard)" ]; then
+            echo "::error::Rulesync produced files outside the committed standard set."
+            echo "Either add the path to .gitignore (personal-target output) or commit it (new standard target)."
+            git ls-files --others --exclude-standard
+            exit 1
+          fi
