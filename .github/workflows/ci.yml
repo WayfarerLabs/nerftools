@@ -79,7 +79,7 @@ jobs:
         run: |
           if ! git diff --quiet; then
             echo "::error::Rulesync output is out of sync with sources."
-            echo "Run ./ops/scripts/rulesync-upgen.bash locally and commit the result."
+            echo "Run ./scripts/rulesync-upgen.bash locally and commit the result."
             git diff --stat
             exit 1
           fi
