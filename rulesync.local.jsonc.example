@@ -8,6 +8,7 @@
   // Their generated paths are .gitignored so you won't accidentally commit
   // them.
   //
-  // Full target list: npx rulesync generate --help
+  // Consult rulesync docs for supported configurations.
+  // Note that this varies by version. Be sure to consider the pinned version.
   "targets": ["cursor"]
 }
