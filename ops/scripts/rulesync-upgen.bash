@@ -18,7 +18,9 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 source "$SCRIPT_DIR/_common.bash"
 require_npm_package_runner
 
-RULESYNC_VERSION=$(read_version_file .rulesync-version "$REPO_ROOT")
+# Note: `set -e` does not reliably propagate failures from command substitution
+# on the right side of an assignment, so check the exit status explicitly.
+RULESYNC_VERSION=$(read_version_file .rulesync-version "$REPO_ROOT") || exit 1
 if [[ -z "$RULESYNC_VERSION" ]]; then
     echo "Error: .rulesync-version is empty or contains only whitespace." >&2
     exit 1
