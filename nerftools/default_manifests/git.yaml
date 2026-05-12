@@ -6,10 +6,12 @@ package:
   skill_group: git
   skill_intro: |
     These tools wrap git operations with safety guardrails. Always stage changes
-    with git-add before committing. Commit messages (git-commit) and new local
-    branch names (git-create-branch) must follow the Conventional Commits type
-    vocabulary (feat/, fix/, docs/, style/, refactor/, perf/, test/, build/,
-    ci/, chore/, revert/). Tools that switch to or check out branches that
+    with git-add before committing. Commit subjects (git-commit, git-commit-amend)
+    and new local branch names (git-create-branch) must follow the Conventional
+    Commits type vocabulary (feat/, fix/, docs/, style/, refactor/, perf/, test/,
+    build/, ci/, chore/, revert/). Commit subject is a required positional capped
+    at 72 characters; longer explanations go in the optional second positional
+    "body" argument, which git renders as a separate paragraph. Tools that switch to or check out branches that
     already exist (git-switch, git-branch-checkout-remote) do not enforce this
     prefix. All remote operations take the remote name as the first positional
     argument (typically origin). Every tool accepts an optional -C <directory>
@@ -38,51 +40,78 @@ tools:
 
   git-commit:
     description: >-
-      Create a git commit with a Conventional Commits message (changes must already be staged).
-      Format: type[(scope)][!]: description.
+      Create a git commit with a Conventional Commits subject and an optional body
+      (changes must already be staged). Subject format: type[(scope)][!]: description.
       Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert.
+      Subject must be at most 72 characters; put longer explanations in the body
+      positional, which git renders as a separate paragraph.
       Must not contain Co-Authored-By trailers.
     threat:
       read: workspace
       write: workspace
-    template:
-      command: [git, "{{options.directory}}", commit, -m, "{{arguments.message}}"]
+    script: |
+      if [ -n "${BODY:-}" ]; then
+        exec git ${DIRECTORY:+-C "${DIRECTORY}"} commit -m "${SUBJECT}" -m "${BODY}"
+      else
+        exec git ${DIRECTORY:+-C "${DIRECTORY}"} commit -m "${SUBJECT}"
+      fi
     options:
       directory:
         description: Subdirectory of the workspace to run git in (must be under cwd)
         flag: -C
         path_tests: [under_cwd]
     arguments:
-      message:
-        description: "Commit message: type[(scope)][!]: description"
+      subject:
+        description: "Commit subject line: type[(scope)][!]: description (max 72 chars)"
         required: true
         pattern: "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\([a-zA-Z0-9._-]+\\))?!?: .+"
+      body:
+        description: Optional commit body (rendered as a separate paragraph). Use for longer explanations.
+        required: false
     guards:
       - script: '! git ${DIRECTORY:+-C "${DIRECTORY}"} diff --cached --quiet'
         fail_message: No staged changes. Use git-add to stage changes first.
+      - script: '[ ${#SUBJECT} -le 72 ]'
+        fail_message: Commit subject must be at most 72 characters.
       - script: |
-          ! echo "{{arguments.message}}" | grep -qi 'co-authored-by:'
+          ! printf '%s\n%s' "${SUBJECT}" "${BODY:-}" | grep -qi 'co-authored-by:'
         fail_message: Commit message must not contain Co-Authored-By trailers.
 
   git-commit-amend:
     description: >-
-      Amend the most recent commit with a new message. Fails if the commit has
-      already been pushed to any remote. Use only to fix the last local commit.
+      Amend the most recent commit with a new Conventional Commits subject and an
+      optional body. Fails if the commit has already been pushed to any remote.
+      Use only to fix the last local commit. Subject must be at most 72 characters;
+      put longer explanations in the body positional. Must not contain
+      Co-Authored-By trailers.
     threat:
       read: workspace
       write: workspace
-    template:
-      command: [git, "{{options.directory}}", commit, --amend, -m, "{{arguments.message}}"]
+    script: |
+      if [ -n "${BODY:-}" ]; then
+        exec git ${DIRECTORY:+-C "${DIRECTORY}"} commit --amend -m "${SUBJECT}" -m "${BODY}"
+      else
+        exec git ${DIRECTORY:+-C "${DIRECTORY}"} commit --amend -m "${SUBJECT}"
+      fi
     options:
       directory:
         description: Subdirectory of the workspace to run git in (must be under cwd)
         flag: -C
         path_tests: [under_cwd]
     arguments:
-      message:
-        description: "Commit message: type[(scope)][!]: description"
+      subject:
+        description: "Commit subject line: type[(scope)][!]: description (max 72 chars)"
         required: true
         pattern: "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\([a-zA-Z0-9._-]+\\))?!?: .+"
+      body:
+        description: Optional commit body (rendered as a separate paragraph). Use for longer explanations.
+        required: false
+    guards:
+      - script: '[ ${#SUBJECT} -le 72 ]'
+        fail_message: Commit subject must be at most 72 characters.
+      - script: |
+          ! printf '%s\n%s' "${SUBJECT}" "${BODY:-}" | grep -qi 'co-authored-by:'
+        fail_message: Commit message must not contain Co-Authored-By trailers.
     pre: |
       if ! git ${DIRECTORY:+-C "${DIRECTORY}"} rev-parse HEAD > /dev/null 2>&1; then
         echo "error: no commits to amend" >&2
