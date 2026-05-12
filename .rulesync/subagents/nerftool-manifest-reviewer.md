@@ -1,7 +1,7 @@
 ---
 name: nerftool-manifest-reviewer
 targets: ["*"]
-description:
+description: >-
   Use this agent for comprehensive review of nerftool manifest YAML files. Trigger when adding or
   modifying tools in nerftools/default_manifests/*.yaml, or when explicitly asked to review a
   manifest, a single tool definition, or a generated wrapper script. The agent does not modify code
