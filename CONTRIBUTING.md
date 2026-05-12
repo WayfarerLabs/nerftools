@@ -61,7 +61,7 @@ Personal-target outputs (`.cursor/`, `.aider*`, etc.) are gitignored.
 After editing anything under `.rulesync/`:
 
 ```bash
-./ops/scripts/rulesync-upgen.bash
+./scripts/rulesync-upgen.bash
 ```
 
 CI verifies that committed outputs match the sources and that no stray generated files leak in.

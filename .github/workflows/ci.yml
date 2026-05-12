@@ -73,7 +73,7 @@ jobs:
           node-version: "22"
 
       - name: Regenerate rulesync outputs
-        run: ./ops/scripts/rulesync-upgen.bash
+        run: ./scripts/rulesync-upgen.bash
 
       - name: Verify generated outputs match committed
         run: |
