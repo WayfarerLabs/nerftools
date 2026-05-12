@@ -19,6 +19,10 @@ source "$SCRIPT_DIR/_common.bash"
 require_npm_package_runner
 
 RULESYNC_VERSION=$(read_version_file .rulesync-version "$REPO_ROOT")
+if [[ -z "$RULESYNC_VERSION" ]]; then
+    echo "Error: .rulesync-version is empty or contains only whitespace." >&2
+    exit 1
+fi
 
 cd "$REPO_ROOT"
 

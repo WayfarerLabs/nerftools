@@ -44,16 +44,18 @@ run_npm_package() {
 # Usage: read_version_file <filename> [start_dir]
 read_version_file() {
     local filename="$1"
-    local dir="${2:-$PWD}"
+    local start_dir="${2:-$PWD}"
+    local dir="$start_dir"
 
-    while [[ "$dir" != "/" ]]; do
+    while :; do
         if [[ -f "$dir/$filename" ]]; then
             head -1 "$dir/$filename" | tr -d '[:space:]'
             return 0
         fi
+        [[ "$dir" == "/" ]] && break
         dir="$(dirname "$dir")"
     done
 
-    echo "Error: could not find $filename in $PWD or any parent directory." >&2
+    echo "Error: could not find $filename in $start_dir or any parent directory." >&2
     return 1
 }
