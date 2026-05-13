@@ -468,50 +468,47 @@ Rules:
 - Variadic arguments become bash arrays; all others become scalar variables.
 - By default, variadic arguments reject tokens starting with `-` to prevent flag injection. Set
   `allow_flags: true` when forwarding to a tool that expects its own flags (e.g. pytest, ruff).
-  **Read "Variadic flag injection" below before enabling this** -- `allow_flags: true` without a
-  `--` sentinel in `template.command` is functionally a free pass to every flag the wrapped tool
-  supports.
+  **Read "Variadic flag injection" below before enabling this** -- `allow_flags: true` is
+  functionally passthrough mode for the bytes in the variadic, and the only honest defense is a
+  structural property of the wrapped command that makes dangerous flags unreachable.
 - Arguments do not have a `default` field. Required positional arguments always receive a value;
   optional positionals are exposed to the wrapped tool only when the agent supplies one.
 
 ### Variadic flag injection
 
-`allow_flags: true` on a variadic argument collapses the safety surface to whatever the wrapped tool
-enforces about its own flags. The nerf parser stops consuming nerf-declared flags at the first
-unrecognized token and forwards everything from that point -- including arbitrary `-`-prefixed
-tokens -- raw to the wrapped tool. Template mode has no `deny` list to restrict specific tokens
-(unlike `passthrough`), so safety hinges on either the parser rejecting flags up front or some
-structural property of the wrapped command stopping a dangerous flag from taking effect.
+`allow_flags: true` on a variadic argument is functionally passthrough mode for the bytes that land
+in the variadic. The nerf parser stops consuming nerf-declared flags at the first unrecognized token
+and forwards everything from that point -- including arbitrary `-`-prefixed tokens -- raw to the
+wrapped tool, which fully parses them as flags. Template mode has no `deny` list to restrict
+specific tokens (unlike `passthrough`), so the only honest defense is a structural property of the
+wrapped command that makes dangerous flags unreachable from the variadic's position.
 
-**Treat `allow_flags: true` as "passthrough-equivalent" for the bytes that land in the variadic.**
-It is a free pass to every flag the wrapped tool accepts unless there is some structural protection
-you can leverage in the underlying tool. Two such patterns are described below but there may be
-more. This is worth careful consideration when designing tools.
+The canonical example is the **subcommand parse boundary in multi-level CLIs** (git, kubectl,
+docker, az, etc.). Dangerous flags often live at the top-level parser, not the subcommand's. A
+variadic placed after the subcommand cannot smuggle a top-level flag because the subcommand's parser
+does not recognize it. For example, `git`'s top-level flags (`-C`, `--git-dir`, `--work-tree`, `-c`)
+must precede the subcommand. A variadic placed after `git log` cannot reach them: `-C` after `log`
+is reinterpreted as `--find-copies`, and the rest error as unknown options. This makes
+`allow_flags: true` _on a subcommand-level variadic_ safe for that specific subcommand, but only
+after verifying the subcommand itself has no dangerous flags of its own. Document the analysis in
+the tool's `description`; do not transfer it to a different wrapped command without redoing it.
 
-#### Pattern 1: Sentinel token (`--`) in the wrapped tool
+Other structural protections exist (e.g. a tool that has no write-capable flags at all, or a tool
+whose dangerous flags are gated by an outer wrapper). Treat each one as a per-tool argument.
 
-Many tools support a sentinel (often '--') to say "don't process any more flags/options after this
-point". If the underlying tool supports this, you can place this before the variadic in the template
-command, trusting that the tool won't see any variadic tokens as flags/options.
+When you do **not** need to forward arbitrary flags, prefer the **sentinel pattern**: declare the
+flags you want to expose as nerf `switches` / `options`, place `--` after the static prefix in
+`template.command`, and leave the variadic with `allow_flags: false` (the default) for positional
+content only. The parser rejects `-`-prefixed tokens at the variadic, and the `--` sentinel forces
+the wrapped tool to interpret anything that slips through as a positional -- usually a loud failure
+rather than a silent dangerous-flag invocation. This is defense-in-depth on top of the default; it
+is not a justification for `allow_flags: true` (the two intents are opposite -- the sentinel tells
+the wrapped tool to ignore flags, which negates the point of forwarding them).
 
-#### Pattern 2: structural placement in multi-level CLIs
-
-A narrower pattern that applies to multi-level CLIs (git, kubectl, docker, az, etc.) where dangerous
-flags often live at the top-level parser, not the subcommand's parser. A variadic placed after the
-subcommand cannot smuggle top-level flags because the subcommand's parser does not recognize them.
-
-For example, `git`'s top-level flags (`-C`, `--git-dir`, `--work-tree`, `-c`) must precede the
-subcommand. A variadic placed after `git log` cannot reach them: `-C` after `log` is reinterpreted
-as `--find-copies`, and `--git-dir` / `--work-tree` / `-c` error as unknown options at the log-level
-parser. This makes `allow_flags: true` _on a subcommand-level variadic_ safe for that specific
-subcommand, but only after verifying that the subcommand itself has no dangerous flags of its own.
-
-#### When neither pattern applies
-
-If the wrapped tool has dangerous flags at the same level as the variadic and there is no structural
-protection, fall back to `passthrough` mode where token-level `deny` is available, or exhaustively
-declare the safe flags as `switches` / `options` and restrict the variadic to positional args only
-(allow_flags: false).
+If you need flag forwarding and there is no structural protection, either exhaustively declare all
+safe args or fall back to `passthrough` mode where token-level `deny` is available. Just make sure
+you understand the fundamental difference in templates parsing args vs passthrough just analyzing
+opaque tokens. It's not a simple conversion.
 
 ## Path tests
 
