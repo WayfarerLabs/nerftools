@@ -43,3 +43,30 @@ htmlcov/
 
 # tmuxinator config is personal
 .tmuxinator.yml
+
+# Rulesync personal target overrides (gitignored; see rulesync.local.jsonc.example).
+rulesync.local.jsonc
+
+# Rulesync personal-target outputs. The shared rulesync.jsonc targets only
+# claudecode and copilot; their outputs (.claude/agents/, .github/agents/) are
+# committed. Anything else listed here is generated only when a dev adds it to
+# their rulesync.local.jsonc, and must NOT be committed.
+.cursor/
+.aider*
+.codeium/
+.continue/
+.opencode/
+.kiro/
+.augment/
+.windsurf/
+.qoder/
+.roo/
+.amp/
+.cline/
+.serena/
+.augmentcode/
+AGENTS.md
+GEMINI.md
+QODER.md
+CLAUDE.md
+.junie/

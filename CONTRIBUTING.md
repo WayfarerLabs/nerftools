@@ -44,6 +44,29 @@ uv run nerf generate --target claude-plugin -c nerf.yaml --outdir ./out/claude-p
 You don't need to commit the regenerated `out/` -- CI regenerates it as part of the release PR.
 But committing it can be useful so reviewers can see the exact generated output in your PR diff.
 
+## AI Tooling (Rulesync)
+
+This repo uses [Rulesync](https://rulesync.dyoshikawa.com/) to maintain a single source of truth
+for AI coding assistant configuration (subagents, etc.).
+
+- `.rulesync/` -- source files (subagents in `.rulesync/subagents/`)
+- `rulesync.jsonc` -- shared config; standard targets are `claudecode` and `copilot`
+- `rulesync.local.jsonc` -- personal target overrides (gitignored; see `.example`)
+- `.rulesync-version` -- pinned rulesync version
+
+Standard-target outputs (`.claude/agents/`, `.github/agents/`) are committed so anyone cloning
+the repo -- including the GitHub Copilot PR review bot -- gets the AI context out of the box.
+Personal-target outputs (`.cursor/`, `.aider*`, etc.) are gitignored.
+
+After editing anything under `.rulesync/`:
+
+```bash
+./scripts/rulesync-upgen.bash
+```
+
+CI verifies that committed outputs match the sources and that no stray generated files leak in.
+If the CI rulesync job fails, run the script locally and commit the result.
+
 ## Releases
 
 Releases are fully automated via [`release-please`](https://github.com/googleapis/release-please)
