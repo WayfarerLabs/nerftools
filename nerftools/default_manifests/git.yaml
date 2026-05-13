@@ -683,11 +683,11 @@ tools:
 
   git-restore-worktree:
     description: >-
-      Discard unstaged changes in named files, reverting them to their staged
-      (or HEAD, if not staged) content. DESTRUCTIVE: changes are unrecoverable.
-      Does not affect staged content -- use git-restore-staged to unstage first.
-      Refuses bare `.` and bare `*` pathspecs to prevent accidental mass discards;
-      name files or directories explicitly.
+      Discard unstaged changes in the named files or pathspecs, reverting them
+      to their staged content, or to HEAD if there are no staged changes for
+      that path. DESTRUCTIVE on unstaged working-tree edits. Untracked files
+      are not affected. Does not modify the index -- use git-restore-staged to
+      unstage first.
     threat:
       read: workspace
       write: workspace
@@ -703,19 +703,13 @@ tools:
         flag: -C
         path_tests: [under_cwd]
     arguments:
+      # Do not set allow_flags: true here. Flags like --source=<rev>, --ours,
+      # --theirs, and --merge would broaden the threat profile by letting an
+      # agent pull arbitrary ref content into the worktree.
       files:
-        description: Files or directories to discard changes in (no bare `.` or `*`)
+        description: Files, directories, or pathspecs to discard changes in
         required: true
         variadic: true
-    pre: |
-      for f in "${FILES[@]}"; do
-        case "$f" in
-          .|"*")
-            echo "error: refuse pathspec '$f' -- name files or directories explicitly" >&2
-            return 1
-            ;;
-        esac
-      done
 
   git-rm:
     description: >-
