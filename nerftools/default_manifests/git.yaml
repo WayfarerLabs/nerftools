@@ -51,9 +51,9 @@ tools:
       write: workspace
     script: |
       if [ -n "${BODY:-}" ]; then
-        exec git ${DIRECTORY:+-C "${DIRECTORY}"} commit -m "${SUBJECT}" -m "${BODY}"
+        exec git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} commit -m "${SUBJECT}" -m "${BODY}"
       else
-        exec git ${DIRECTORY:+-C "${DIRECTORY}"} commit -m "${SUBJECT}"
+        exec git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} commit -m "${SUBJECT}"
       fi
     options:
       directory:
@@ -69,7 +69,7 @@ tools:
         description: Optional commit body (rendered as a separate paragraph). Use for longer explanations.
         required: false
     guards:
-      - script: '! git ${DIRECTORY:+-C "${DIRECTORY}"} diff --cached --quiet'
+      - script: '! git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} diff --cached --quiet'
         fail_message: No staged changes. Use git-add to stage changes first.
       - script: '[ ${#SUBJECT} -le 72 ]'
         fail_message: Commit subject must be at most 72 characters.
@@ -89,9 +89,9 @@ tools:
       write: workspace
     script: |
       if [ -n "${BODY:-}" ]; then
-        exec git ${DIRECTORY:+-C "${DIRECTORY}"} commit --amend -m "${SUBJECT}" -m "${BODY}"
+        exec git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} commit --amend -m "${SUBJECT}" -m "${BODY}"
       else
-        exec git ${DIRECTORY:+-C "${DIRECTORY}"} commit --amend -m "${SUBJECT}"
+        exec git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} commit --amend -m "${SUBJECT}"
       fi
     options:
       directory:
@@ -113,11 +113,11 @@ tools:
           ! printf '%s\n%s' "${SUBJECT}" "${BODY:-}" | grep -qi 'co-authored-by:'
         fail_message: Commit message must not contain Co-Authored-By trailers.
     pre: |
-      if ! git ${DIRECTORY:+-C "${DIRECTORY}"} rev-parse HEAD > /dev/null 2>&1; then
+      if ! git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} rev-parse HEAD > /dev/null 2>&1; then
         echo "error: no commits to amend" >&2
         return 1
       fi
-      REMOTE_BRANCHES=$(git ${DIRECTORY:+-C "${DIRECTORY}"} branch -r --contains HEAD 2>/dev/null)
+      REMOTE_BRANCHES=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} branch -r --contains HEAD 2>/dev/null)
       if [ -n "$REMOTE_BRANCHES" ]; then
         echo "error: HEAD exists on remote branches -- amending would require a force push" >&2
         echo "  remote branches: $(echo "$REMOTE_BRANCHES" | tr -s ' \n' ', ' | sed 's/,$//')" >&2
@@ -158,11 +158,11 @@ tools:
         flag: -C
         path_tests: [under_cwd]
     pre: |
-      if ! git ${DIRECTORY:+-C "${DIRECTORY}"} rev-parse HEAD > /dev/null 2>&1; then
+      if ! git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} rev-parse HEAD > /dev/null 2>&1; then
         echo "error: no commits to reset" >&2
         return 1
       fi
-      REMOTE_BRANCHES=$(git ${DIRECTORY:+-C "${DIRECTORY}"} branch -r --contains HEAD 2>/dev/null)
+      REMOTE_BRANCHES=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} branch -r --contains HEAD 2>/dev/null)
       if [ -n "$REMOTE_BRANCHES" ]; then
         echo "error: HEAD exists on remote branches -- resetting would require a force push" >&2
         echo "  remote branches: $(echo "$REMOTE_BRANCHES" | tr -s ' \n' ', ' | sed 's/,$//')" >&2
@@ -254,7 +254,7 @@ tools:
         required: true
         pattern: "^[a-zA-Z0-9_.-]+$"
     pre: |
-      BRANCH=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null)
+      BRANCH=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null)
       if [ -z "$BRANCH" ]; then
         echo "error: cannot push from detached HEAD state" >&2
         return 1
@@ -318,6 +318,11 @@ tools:
         description: Flags, refs, and paths forwarded to `git log` (e.g. --oneline, -n 20, main..HEAD, -- src/)
         variadic: true
         allow_flags: true
+        # Reject flags that re-enable the gitconfig-driven drivers we disabled
+        # in the prefix. git takes last-wins on these toggles, so without this
+        # an agent could pass `--ext-diff` after our `--no-ext-diff` and reach
+        # a configured external diff driver.
+        deny: [--ext-diff, --textconv]
 
   git-tag:
     description: >-
@@ -347,7 +352,7 @@ tools:
         pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$"
     guards:
       - script: |
-          ! git ${DIRECTORY:+-C "${DIRECTORY}"} rev-parse "refs/tags/{{arguments.tag}}" > /dev/null 2>&1
+          ! git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} rev-parse "refs/tags/{{arguments.tag}}" > /dev/null 2>&1
         fail_message: Tag already exists. Use a different version.
 
   git-status:
@@ -526,7 +531,7 @@ tools:
         echo "error: cannot delete main" >&2
         return 1
       fi
-      CURRENT=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
+      CURRENT=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
       if [ "${NAME}" = "${CURRENT}" ]; then
         echo "error: cannot delete the current branch (${CURRENT})" >&2
         echo "  hint: switch to another branch first (e.g., git-switch main)" >&2
@@ -557,7 +562,7 @@ tools:
         flag: -C
         path_tests: [under_cwd]
     pre: |
-      BRANCH=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
+      BRANCH=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
       if [ -z "${BRANCH}" ]; then
         echo "error: cannot rebase from a detached HEAD state" >&2
         return 1
@@ -567,8 +572,8 @@ tools:
         echo "error: cannot rebase main" >&2
         return 1
       fi
-      RANGE_TOTAL=$(git ${DIRECTORY:+-C "${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" 2>/dev/null || echo 0)
-      RANGE_LOCAL=$(git ${DIRECTORY:+-C "${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" --not --remotes 2>/dev/null || echo 0)
+      RANGE_TOTAL=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" 2>/dev/null || echo 0)
+      RANGE_LOCAL=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" --not --remotes 2>/dev/null || echo 0)
       if [ "${RANGE_TOTAL}" != "${RANGE_LOCAL}" ]; then
         echo "error: ${TARGET}..HEAD contains commits already on a remote -- rebase would require a force push" >&2
         return 1
@@ -639,7 +644,7 @@ tools:
         flag: -C
         path_tests: [under_cwd]
     pre: |
-      BRANCH=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
+      BRANCH=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
       if [ -z "${BRANCH}" ]; then
         echo "error: cannot reset from a detached HEAD state" >&2
         return 1
@@ -649,8 +654,8 @@ tools:
         echo "error: cannot reset main" >&2
         return 1
       fi
-      RANGE_TOTAL=$(git ${DIRECTORY:+-C "${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" 2>/dev/null || echo 0)
-      RANGE_LOCAL=$(git ${DIRECTORY:+-C "${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" --not --remotes 2>/dev/null || echo 0)
+      RANGE_TOTAL=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" 2>/dev/null || echo 0)
+      RANGE_LOCAL=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" --not --remotes 2>/dev/null || echo 0)
       if [ "${RANGE_TOTAL}" != "${RANGE_LOCAL}" ]; then
         echo "error: ${TARGET}..HEAD contains commits already on a remote -- reset would orphan pushed commits" >&2
         return 1
@@ -895,7 +900,7 @@ tools:
         required: true
         pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$"
     pre: |
-      CUR_BRANCH=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
+      CUR_BRANCH=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
       if [ -z "${CUR_BRANCH}" ]; then
         echo "error: cannot cherry-pick onto detached HEAD" >&2
         return 1
@@ -933,7 +938,7 @@ tools:
         required: true
         pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$"
     pre: |
-      CUR_BRANCH=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
+      CUR_BRANCH=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
       if [ -z "${CUR_BRANCH}" ]; then
         echo "error: cannot merge from detached HEAD" >&2
         return 1

@@ -479,9 +479,13 @@ Rules:
 `allow_flags: true` on a variadic argument is functionally passthrough mode for the bytes that land
 in the variadic. The nerf parser stops consuming nerf-declared flags at the first unrecognized token
 and forwards everything from that point -- including arbitrary `-`-prefixed tokens -- raw to the
-wrapped tool, which fully parses them as flags. Template mode has no `deny` list to restrict
-specific tokens (unlike `passthrough`), so the only honest defense is a structural property of the
-wrapped command that makes dangerous flags unreachable from the variadic's position.
+wrapped tool, which fully parses them as flags. The variadic's own `deny` / `allow` / `pattern`
+validations *do* run per element, but they are exact-token matches: they do not handle stacked
+short flags (`-Aw`), inline value forms (`--flag=value`), or any other syntactic variant the wrapped
+tool may accept. Use them to forbid a small enumerable set of dangerous flags (e.g. the
+gitconfig-driver re-enablers `--ext-diff` / `--textconv`), not as a general flag firewall. For
+broader coverage the only honest defense is a structural property of the wrapped command that
+makes dangerous flags unreachable from the variadic's position.
 
 The canonical example is the **subcommand parse boundary in multi-level CLIs** (git, kubectl,
 docker, az, etc.). Dangerous flags often live at the top-level parser, not the subcommand's. A
