@@ -480,7 +480,7 @@ Rules:
 in the variadic. The nerf parser stops consuming nerf-declared flags at the first unrecognized token
 and forwards everything from that point -- including arbitrary `-`-prefixed tokens -- raw to the
 wrapped tool, which fully parses them as flags. The variadic's own `deny` / `allow` / `pattern`
-validations *do* run per element, but they are exact-token matches: they do not handle stacked
+validations _do_ run per element, but they are exact-token matches: they do not handle stacked
 short flags (`-Aw`), inline value forms (`--flag=value`), or any other syntactic variant the wrapped
 tool may accept. Use them to forbid a small enumerable set of dangerous flags (e.g. the
 gitconfig-driver re-enablers `--ext-diff` / `--textconv`), not as a general flag firewall. For
