@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-git-push-branch -- Push the current branch to a remote including annotated tags (no force push). Fails if in detached HEAD state or on main. Do not use on main -- use git-push-main instead.
+# nerf-git-push-branch -- Push the current branch to a remote including annotated tags (no force push) and set upstream tracking, so subsequent git-pull works without an extra ref. Fails if in detached HEAD state or on main. Do not use on main -- use git-push-main instead.
 # Generated from git manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=remote
@@ -21,9 +21,9 @@ Arguments:
       Remote name (e.g. origin)
       Must match: ^[a-zA-Z0-9_.-]+$
 
-Maps to: git <directory> push --follow-tags <remote> HEAD
+Maps to: git <directory> push --follow-tags --set-upstream <remote> HEAD
 
-Push the current branch to a remote including annotated tags (no force push). Fails if in detached HEAD state or on main. Do not use on main -- use git-push-main instead.
+Push the current branch to a remote including annotated tags (no force push) and set upstream tracking, so subsequent git-pull works without an extra ref. Fails if in detached HEAD state or on main. Do not use on main -- use git-push-main instead.
 EOF
   exit 1
 }
@@ -158,7 +158,7 @@ if [[ -n "${_REMOTE_SET}" ]] && ! [[ "${REMOTE}" =~ $_NERF_PATTERN ]]; then
 fi
 
 _nerf_pre() {
-  BRANCH=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null)
+  BRANCH=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null)
   if [ -z "$BRANCH" ]; then
     echo "error: cannot push from detached HEAD state" >&2
     return 1
@@ -178,11 +178,11 @@ if [ $_nerf_pre_rc -ne 0 ]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} push --follow-tags "${REMOTE}" HEAD)
+  _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} push --follow-tags --set-upstream "${REMOTE}" HEAD)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} push --follow-tags "${REMOTE}" HEAD
+exec git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} push --follow-tags --set-upstream "${REMOTE}" HEAD

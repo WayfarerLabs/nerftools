@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-git-log -- Show a short one-line log of recent commits.
+# nerf-git-log -- Show commit history. Accepts any combination of git-log flags, refs, and pathspecs (e.g. --oneline, -n 20, main..HEAD, --stat, -- src/). External diff and textconv drivers are disabled so the tool cannot be hijacked via gitconfig. With no extra args, prints the full history -- pass `-n <count>` (or `--oneline -20`) to bound output.
 # Generated from git manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=none
@@ -10,15 +10,20 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-git-log [-C <directory>]
+Usage: nerf-git-log [-C <directory>] [<args...>]
 
 Options:
   -C <directory>
       Subdirectory of the workspace to run git in (must be under cwd)
 
-Maps to: git <directory> log --oneline --no-decorate -20
+Arguments:
+  <args...>
+      Flags, refs, and paths forwarded to `git log` (e.g. --oneline, -n 20, main..HEAD, -- src/)
+      Not allowed: --ext-diff, --textconv
 
-Show a short one-line log of recent commits.
+Maps to: git <directory> log --no-ext-diff --no-textconv <args>
+
+Show commit history. Accepts any combination of git-log flags, refs, and pathspecs (e.g. --oneline, -n 20, main..HEAD, --stat, -- src/). External diff and textconv drivers are disabled so the tool cannot be hijacked via gitconfig. With no extra args, prints the full history -- pass `-n <count>` (or `--oneline -20`) to bound output.
 EOF
   exit 1
 }
@@ -32,9 +37,11 @@ while [[ $# -gt 0 ]]; do
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
-    *) echo "error: unknown argument: $1" >&2; usage ;;
+    *) break ;;
   esac
 done
+
+ARGS=("$@")
 
 _nerf_check_path() {
   local _label=$1 _input=$2 _tests=$3
@@ -117,12 +124,37 @@ if [[ -n "${_DIRECTORY_SET}" ]]; then
   _nerf_check_path 'option -C' "${DIRECTORY}" 'under_cwd' || exit 1
 fi
 
+for _v in "${ARGS[@]}"; do
+  if [[ "$_v" == "--nerf-dry-run" ]]; then
+    echo "error: nerf-git-log: --nerf-dry-run inside the command tokens would be a no-op (it is a wrapper flag)" >&2
+    echo "  hint: place --nerf-dry-run before the command tokens" >&2
+    exit 1
+  fi
+done
+
+for _v in "${ARGS[@]}"; do
+  if [[ "$_v" == "--ext-diff" ]]; then
+    echo "error: nerf-git-log: argument <args> is not allowed" >&2
+    echo "  value:  \"--ext-diff\"" >&2
+    echo "  denied: --ext-diff, --textconv" >&2
+    echo "  hint: use a different value" >&2
+    exit 1
+  fi
+  if [[ "$_v" == "--textconv" ]]; then
+    echo "error: nerf-git-log: argument <args> is not allowed" >&2
+    echo "  value:  \"--textconv\"" >&2
+    echo "  denied: --ext-diff, --textconv" >&2
+    echo "  hint: use a different value" >&2
+    exit 1
+  fi
+done
+
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} log --oneline --no-decorate -20)
+  _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} log --no-ext-diff --no-textconv ${ARGS[@]+"${ARGS[@]}"})
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} log --oneline --no-decorate -20
+exec git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} log --no-ext-diff --no-textconv ${ARGS[@]+"${ARGS[@]}"}
