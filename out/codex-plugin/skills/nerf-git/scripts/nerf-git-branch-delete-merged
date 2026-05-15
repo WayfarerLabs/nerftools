@@ -163,7 +163,7 @@ _nerf_pre() {
     echo "error: cannot delete main" >&2
     return 1
   fi
-  CURRENT=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
+  CURRENT=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
   if [ "${NAME}" = "${CURRENT}" ]; then
     echo "error: cannot delete the current branch (${CURRENT})" >&2
     echo "  hint: switch to another branch first (e.g., git-switch main)" >&2

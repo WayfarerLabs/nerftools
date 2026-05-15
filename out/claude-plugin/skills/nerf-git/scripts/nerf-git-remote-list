@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# nerf-git-reset-hard-last -- Drop the most recent commit entirely, discarding its changes. Fails if the commit has already been pushed to any remote.
+# nerf-git-remote-list -- List configured remotes with their fetch and push URLs.
 # Generated from git manifest. Do not edit directly.
 # nerf:threat:read=workspace
-# nerf:threat:write=workspace
+# nerf:threat:write=none
 
 set -euo pipefail
 
@@ -10,15 +10,15 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-git-reset-hard-last [-C <directory>]
+Usage: nerf-git-remote-list [-C <directory>]
 
 Options:
   -C <directory>
       Subdirectory of the workspace to run git in (must be under cwd)
 
-Maps to: git <directory> reset --hard HEAD~1
+Maps to: git <directory> remote -v
 
-Drop the most recent commit entirely, discarding its changes. Fails if the commit has already been pushed to any remote.
+List configured remotes with their fetch and push URLs.
 EOF
   exit 1
 }
@@ -41,17 +41,17 @@ _nerf_check_path() {
   local _cwd _canonical
   case "$_input" in
     *$'\n'*|*$'\r'*|*$'\t'*)
-      echo "error: nerf-git-reset-hard-last: ${_label}: contains illegal control character" >&2
+      echo "error: nerf-git-remote-list: ${_label}: contains illegal control character" >&2
       echo "  hint: paths must not contain newlines, carriage returns, or tabs" >&2
       return 1 ;;
   esac
   _cwd=$(realpath -- "$PWD") || {
-    echo "error: nerf-git-reset-hard-last: failed to canonicalize cwd '$PWD'" >&2
+    echo "error: nerf-git-remote-list: failed to canonicalize cwd '$PWD'" >&2
     echo "  hint: invoke from a valid directory" >&2
     return 1
   }
   _canonical=$(realpath -m -- "$_input") || {
-    echo "error: nerf-git-reset-hard-last: ${_label}: failed to canonicalize '${_input}'" >&2
+    echo "error: nerf-git-remote-list: ${_label}: failed to canonicalize '${_input}'" >&2
     echo "  hint: pass a syntactically valid path" >&2
     return 1
   }
@@ -59,7 +59,7 @@ _nerf_check_path() {
     # Skip the prefix check when cwd is root: every absolute path qualifies, and the
     # naive prefix comparison would build "//" and reject otherwise-valid paths.
     if [[ "$_cwd" != "/" && "$_canonical" != "$_cwd" && "$_canonical" != "$_cwd"/* ]]; then
-      echo "error: nerf-git-reset-hard-last: ${_label}: 'under_cwd' failed: '${_input}'" >&2
+      echo "error: nerf-git-remote-list: ${_label}: 'under_cwd' failed: '${_input}'" >&2
       echo "  resolves to '${_canonical}', not under '${_cwd}'" >&2
       echo "  hint: pass a path inside the current workspace" >&2
       echo "  hint: symlinks are followed -- if the link's target is outside the workspace it is rejected" >&2
@@ -67,47 +67,47 @@ _nerf_check_path() {
     fi
   fi
   if [[ ",$_tests," == *",exists,"* ]] && [[ ! -e "$_input" ]]; then
-    echo "error: nerf-git-reset-hard-last: ${_label}: 'exists' failed: '${_input}' does not exist" >&2
+    echo "error: nerf-git-remote-list: ${_label}: 'exists' failed: '${_input}' does not exist" >&2
     echo "  hint: create the path or pass an existing one" >&2
     return 1
   fi
   if [[ ",$_tests," == *",not_exists,"* ]] && [[ -e "$_input" ]]; then
-    echo "error: nerf-git-reset-hard-last: ${_label}: 'not_exists' failed: '${_input}' already exists" >&2
+    echo "error: nerf-git-remote-list: ${_label}: 'not_exists' failed: '${_input}' already exists" >&2
     echo "  hint: choose a different path or remove the existing one first" >&2
     return 1
   fi
   if [[ ",$_tests," == *",file,"* ]] && [[ ! -f "$_input" ]]; then
-    echo "error: nerf-git-reset-hard-last: ${_label}: 'file' failed: '${_input}' is not a regular file" >&2
+    echo "error: nerf-git-remote-list: ${_label}: 'file' failed: '${_input}' is not a regular file" >&2
     echo "  hint: pass a regular file path (not a directory, symlink-to-dir, device, or missing path)" >&2
     return 1
   fi
   if [[ ",$_tests," == *",dir,"* ]] && [[ ! -d "$_input" ]]; then
-    echo "error: nerf-git-reset-hard-last: ${_label}: 'dir' failed: '${_input}' is not a directory" >&2
+    echo "error: nerf-git-remote-list: ${_label}: 'dir' failed: '${_input}' is not a directory" >&2
     echo "  hint: pass a directory path (not a regular file or missing path)" >&2
     return 1
   fi
   if [[ ",$_tests," == *",symlink,"* ]] && [[ ! -L "$_input" ]]; then
-    echo "error: nerf-git-reset-hard-last: ${_label}: 'symlink' failed: '${_input}' is not a symlink" >&2
+    echo "error: nerf-git-remote-list: ${_label}: 'symlink' failed: '${_input}' is not a symlink" >&2
     echo "  hint: pass a symbolic link (the test does not follow the link)" >&2
     return 1
   fi
   if [[ ",$_tests," == *",not_symlink,"* ]] && [[ -L "$_input" ]]; then
-    echo "error: nerf-git-reset-hard-last: ${_label}: 'not_symlink' failed: '${_input}' is a symlink" >&2
+    echo "error: nerf-git-remote-list: ${_label}: 'not_symlink' failed: '${_input}' is a symlink" >&2
     echo "  hint: pass a real path, not a symlink (the test does not follow the link)" >&2
     return 1
   fi
   if [[ ",$_tests," == *",readable,"* ]] && [[ ! -r "$_input" ]]; then
-    echo "error: nerf-git-reset-hard-last: ${_label}: 'readable' failed: '${_input}' is not readable" >&2
+    echo "error: nerf-git-remote-list: ${_label}: 'readable' failed: '${_input}' is not readable" >&2
     echo "  hint: check filesystem permissions for the current user" >&2
     return 1
   fi
   if [[ ",$_tests," == *",writable,"* ]] && [[ ! -w "$_input" ]]; then
-    echo "error: nerf-git-reset-hard-last: ${_label}: 'writable' failed: '${_input}' is not writable" >&2
+    echo "error: nerf-git-remote-list: ${_label}: 'writable' failed: '${_input}' is not writable" >&2
     echo "  hint: check filesystem permissions for the current user" >&2
     return 1
   fi
   if [[ ",$_tests," == *",executable,"* ]] && [[ ! -x "$_input" ]]; then
-    echo "error: nerf-git-reset-hard-last: ${_label}: 'executable' failed: '${_input}' is not executable" >&2
+    echo "error: nerf-git-remote-list: ${_label}: 'executable' failed: '${_input}' is not executable" >&2
     echo "  hint: check filesystem permissions for the current user" >&2
     return 1
   fi
@@ -117,32 +117,12 @@ if [[ -n "${_DIRECTORY_SET}" ]]; then
   _nerf_check_path 'option -C' "${DIRECTORY}" 'under_cwd' || exit 1
 fi
 
-_nerf_pre() {
-  if ! git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} rev-parse HEAD > /dev/null 2>&1; then
-    echo "error: no commits to reset" >&2
-    return 1
-  fi
-  REMOTE_BRANCHES=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} branch -r --contains HEAD 2>/dev/null)
-  if [ -n "$REMOTE_BRANCHES" ]; then
-    echo "error: HEAD exists on remote branches -- resetting would require a force push" >&2
-    echo "  remote branches: $(echo "$REMOTE_BRANCHES" | tr -s ' \n' ', ' | sed 's/,$//')" >&2
-    return 1
-  fi
-}
-
-_nerf_pre_rc=0
-_nerf_pre || _nerf_pre_rc=$?
-if [ $_nerf_pre_rc -ne 0 ]; then
-  echo "error: nerf-git-reset-hard-last: pre-hook failed (exit code $_nerf_pre_rc)" >&2
-  exit $_nerf_pre_rc
-fi
-
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} reset --hard HEAD~1)
+  _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} remote -v)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} reset --hard HEAD~1
+exec git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} remote -v

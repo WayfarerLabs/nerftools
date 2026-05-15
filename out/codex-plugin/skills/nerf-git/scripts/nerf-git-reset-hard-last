@@ -118,11 +118,11 @@ if [[ -n "${_DIRECTORY_SET}" ]]; then
 fi
 
 _nerf_pre() {
-  if ! git ${DIRECTORY:+-C "${DIRECTORY}"} rev-parse HEAD > /dev/null 2>&1; then
+  if ! git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} rev-parse HEAD > /dev/null 2>&1; then
     echo "error: no commits to reset" >&2
     return 1
   fi
-  REMOTE_BRANCHES=$(git ${DIRECTORY:+-C "${DIRECTORY}"} branch -r --contains HEAD 2>/dev/null)
+  REMOTE_BRANCHES=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} branch -r --contains HEAD 2>/dev/null)
   if [ -n "$REMOTE_BRANCHES" ]; then
     echo "error: HEAD exists on remote branches -- resetting would require a force push" >&2
     echo "  remote branches: $(echo "$REMOTE_BRANCHES" | tr -s ' \n' ', ' | sed 's/,$//')" >&2

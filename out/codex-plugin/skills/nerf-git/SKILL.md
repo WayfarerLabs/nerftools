@@ -9,10 +9,12 @@ targets: ["*"]
 These tools are available as scripts within this skill. Call them using the paths shown in each usage line.
 
 These tools wrap git operations with safety guardrails. Always stage changes
-with git-add before committing. Commit messages (git-commit) and new local
-branch names (git-create-branch) must follow the Conventional Commits type
-vocabulary (feat/, fix/, docs/, style/, refactor/, perf/, test/, build/,
-ci/, chore/, revert/). Tools that switch to or check out branches that
+with git-add before committing. Commit subjects (git-commit, git-commit-amend)
+and new local branch names (git-create-branch) must follow the Conventional
+Commits type vocabulary (feat/, fix/, docs/, style/, refactor/, perf/, test/,
+build/, ci/, chore/, revert/). Commit subject is a required positional capped
+at 72 characters; longer explanations go in the optional second positional
+"body" argument, which git renders as a separate paragraph. Tools that switch to or check out branches that
 already exist (git-switch, git-branch-checkout-remote) do not enforce this
 prefix. All remote operations take the remote name as the first positional
 argument (typically origin). Every tool accepts an optional -C <directory>
@@ -39,10 +41,9 @@ Stage files or directories for commit.
 
 ## nerf-git-commit
 
-Create a git commit with a Conventional Commits message (changes must already be staged). Format: type[(scope)][!]: description. Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert. Must not contain Co-Authored-By trailers.
+Create a git commit with a Conventional Commits subject and an optional body (changes must already be staged). Subject format: type[(scope)][!]: description. Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert. Subject must be at most 72 characters; put longer explanations in the body positional, which git renders as a separate paragraph. Must not contain Co-Authored-By trailers.
 
-**Usage:** `scripts/nerf-git-commit [-C <directory>] <message>`
-**Maps to:** `git <directory> commit -m <message>`
+**Usage:** `scripts/nerf-git-commit [-C <directory>] <subject> [<body>]`
 
 **Options:**
 
@@ -50,16 +51,16 @@ Create a git commit with a Conventional Commits message (changes must already be
 
 **Arguments:**
 
-- `<message>` (required): Commit message: type[(scope)][!]: description. must match `^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+`
+- `<subject>` (required): Commit subject line: type[(scope)][!]: description (max 72 chars). must match `^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+`
+- `<body>` (optional): Optional commit body (rendered as a separate paragraph). Use for longer explanations.
 
 ---
 
 ## nerf-git-commit-amend
 
-Amend the most recent commit with a new message. Fails if the commit has already been pushed to any remote. Use only to fix the last local commit.
+Amend the most recent commit with a new Conventional Commits subject and an optional body. Fails if the commit has already been pushed to any remote. Use only to fix the last local commit. Subject must be at most 72 characters; put longer explanations in the body positional. Must not contain Co-Authored-By trailers.
 
-**Usage:** `scripts/nerf-git-commit-amend [-C <directory>] <message>`
-**Maps to:** `git <directory> commit --amend -m <message>`
+**Usage:** `scripts/nerf-git-commit-amend [-C <directory>] <subject> [<body>]`
 
 **Options:**
 
@@ -67,7 +68,8 @@ Amend the most recent commit with a new message. Fails if the commit has already
 
 **Arguments:**
 
-- `<message>` (required): Commit message: type[(scope)][!]: description. must match `^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+`
+- `<subject>` (required): Commit subject line: type[(scope)][!]: description (max 72 chars). must match `^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+`
+- `<body>` (optional): Optional commit body (rendered as a separate paragraph). Use for longer explanations.
 
 ---
 
@@ -154,10 +156,10 @@ Push the local main branch to a remote including annotated tags (no force push).
 
 ## nerf-git-push-branch
 
-Push the current branch to a remote including annotated tags (no force push). Fails if in detached HEAD state or on main. Do not use on main -- use git-push-main instead.
+Push the current branch to a remote including annotated tags (no force push) and set upstream tracking, so subsequent git-pull works without an extra ref. Fails if in detached HEAD state or on main. Do not use on main -- use git-push-main instead.
 
 **Usage:** `scripts/nerf-git-push-branch [-C <directory>] <remote>`
-**Maps to:** `git <directory> push --follow-tags <remote> HEAD`
+**Maps to:** `git <directory> push --follow-tags --set-upstream <remote> HEAD`
 
 **Options:**
 
@@ -189,14 +191,18 @@ Push a single tag to a remote. Does not allow force-pushing; tag is rejected by 
 
 ## nerf-git-log
 
-Show a short one-line log of recent commits.
+Show commit history. Accepts any combination of git-log flags, refs, and pathspecs (e.g. --oneline, -n 20, main..HEAD, --stat, -- src/). External diff and textconv drivers are disabled so the tool cannot be hijacked via gitconfig. With no extra args, prints the full history -- pass `-n <count>` (or `--oneline -20`) to bound output.
 
-**Usage:** `scripts/nerf-git-log [-C <directory>]`
-**Maps to:** `git <directory> log --oneline --no-decorate -20`
+**Usage:** `scripts/nerf-git-log [-C <directory>] [<args...>]`
+**Maps to:** `git <directory> log --no-ext-diff --no-textconv <args>`
 
 **Options:**
 
 - `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+**Arguments:**
+
+- `<args...>` (optional): Flags, refs, and paths forwarded to `git log` (e.g. --oneline, -n 20, main..HEAD, -- src/). not `--ext-diff`, `--textconv`
 
 ---
 
@@ -413,5 +419,255 @@ Reset HEAD to a target ref. Default mode is mixed (changes left unstaged); pass 
 **Arguments:**
 
 - `<target>` (required): Ref to reset to (e.g. HEAD~1, origin/main). must match `^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$`
+
+---
+
+## nerf-git-restore-staged
+
+Unstage one or more files (move them from the index back to the working tree). Inverse of git-add. Does not modify working-tree contents.
+
+**Usage:** `scripts/nerf-git-restore-staged [-C <directory>] <files...>`
+**Maps to:** `git <directory> restore --staged <files>`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+**Arguments:**
+
+- `<files...>` (required): Files or directories to unstage
+
+---
+
+## nerf-git-restore-worktree
+
+Discard unstaged changes in the named files or pathspecs, reverting them to their staged content, or to HEAD if there are no staged changes for that path. DESTRUCTIVE on unstaged working-tree edits. Untracked files are not affected. Does not modify the index -- use git-restore-staged to unstage first.
+
+**Usage:** `scripts/nerf-git-restore-worktree [-C <directory>] <files...>`
+**Maps to:** `git <directory> restore <files>`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+**Arguments:**
+
+- `<files...>` (required): Files, directories, or pathspecs to discard changes in
+
+---
+
+## nerf-git-rm
+
+Remove tracked files from the working tree and the index. DESTRUCTIVE on the working tree (file is deleted). Does not commit.
+
+**Usage:** `scripts/nerf-git-rm [-C <directory>] <files...>`
+**Maps to:** `git <directory> rm <files>`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+**Arguments:**
+
+- `<files...>` (required): Files to remove (must be tracked)
+
+---
+
+## nerf-git-mv
+
+Rename or move a tracked file. Source must exist; destination must be inside the workspace.
+
+**Usage:** `scripts/nerf-git-mv [-C <directory>] <source> <destination>`
+**Maps to:** `git <directory> mv <source> <destination>`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+**Arguments:**
+
+- `<source>` (required): File to move (must exist and be tracked)
+- `<destination>` (required): New path (must be inside the workspace)
+
+---
+
+## nerf-git-show
+
+Show a commit's message and unified diff. Accepts any commit-ish (SHA, HEAD, HEAD~1, ref name). External diff and textconv drivers are disabled. Defaults to HEAD if no ref is given.
+
+**Usage:** `scripts/nerf-git-show [-C <directory>] [<ref>]`
+**Maps to:** `git <directory> show --no-ext-diff --no-textconv <ref>`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+**Arguments:**
+
+- `<ref>` (optional): Commit-ish to show (default HEAD). must match `^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$`
+
+---
+
+## nerf-git-blame
+
+Show line-by-line authorship for a file. Read-only.
+
+**Usage:** `scripts/nerf-git-blame [-C <directory>] <file>`
+**Maps to:** `git <directory> blame <file>`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+**Arguments:**
+
+- `<file>` (required): File to blame
+
+---
+
+## nerf-git-reflog
+
+Show the last 50 reflog entries -- a record of where HEAD and branch tips have pointed locally. Useful for recovering lost commits or undoing unintended branch movements.
+
+**Usage:** `scripts/nerf-git-reflog [-C <directory>]`
+**Maps to:** `git <directory> reflog -n 50`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+---
+
+## nerf-git-remote-list
+
+List configured remotes with their fetch and push URLs.
+
+**Usage:** `scripts/nerf-git-remote-list [-C <directory>]`
+**Maps to:** `git <directory> remote -v`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+---
+
+## nerf-git-branch-current
+
+Show the name of the currently checked-out branch.
+
+**Usage:** `scripts/nerf-git-branch-current [-C <directory>]`
+**Maps to:** `git <directory> branch --show-current`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+---
+
+## nerf-git-cherry-pick
+
+Apply a single commit's changes onto the current branch as a new commit. Refuses on main and on detached HEAD. On conflicts, resolve manually and use the underlying `git cherry-pick --continue` / `--abort` (not yet exposed via nerf).
+
+**Usage:** `scripts/nerf-git-cherry-pick [-C <directory>] <ref>`
+**Maps to:** `git <directory> cherry-pick <ref>`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+**Arguments:**
+
+- `<ref>` (required): Commit-ish to cherry-pick. must match `^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$`
+
+---
+
+## nerf-git-merge-no-ff
+
+Merge a branch into the current branch with a merge commit (--no-ff, --no-edit). Refuses if the current branch is main; merges into main should go through a PR. Conflicts must be resolved manually.
+
+**Usage:** `scripts/nerf-git-merge-no-ff [-C <directory>] <branch>`
+**Maps to:** `git <directory> merge --no-ff --no-edit <branch>`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+**Arguments:**
+
+- `<branch>` (required): Branch (or commit-ish) to merge into the current branch. must match `^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$`
+
+---
+
+## nerf-git-stash-push
+
+Save staged and unstaged changes to the stash and revert the working tree to HEAD. Untracked files are not stashed. Use git-stash-pop to restore.
+
+**Usage:** `scripts/nerf-git-stash-push [-C <directory>] [-m <message>]`
+**Maps to:** `git <directory> stash push <message>`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+- `-m` (optional): Description of the stash
+
+---
+
+## nerf-git-stash-pop
+
+Pop a saved stash (default the most recent) and reapply its changes to the working tree. DESTRUCTIVE on conflicts -- the stash entry is removed from the stash list even if conflicts arise during reapply.
+
+**Usage:** `scripts/nerf-git-stash-pop [-C <directory>] [<ref>]`
+**Maps to:** `git <directory> stash pop <ref>`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+**Arguments:**
+
+- `<ref>` (optional): Stash ref to pop (e.g. stash@{1}, default stash@{0}). must match `^stash@\{[0-9]+\}$`
+
+---
+
+## nerf-git-stash-list
+
+List saved stashes with their descriptions.
+
+**Usage:** `scripts/nerf-git-stash-list [-C <directory>]`
+**Maps to:** `git <directory> stash list`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+---
+
+## nerf-git-stash-drop
+
+Drop a saved stash without applying it.
+
+**Usage:** `scripts/nerf-git-stash-drop [-C <directory>] <ref>`
+**Maps to:** `git <directory> stash drop <ref>`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+**Arguments:**
+
+- `<ref>` (required): Stash ref to drop (e.g. stash@{0}). must match `^stash@\{[0-9]+\}$`
+
+---
+
+## nerf-git-submodule-status
+
+Show the status of each submodule (current SHA, configured path, and describe output). Read-only.
+
+**Usage:** `scripts/nerf-git-submodule-status [-C <directory>]`
+**Maps to:** `git <directory> submodule status`
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
 
 ---

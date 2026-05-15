@@ -6,10 +6,12 @@ package:
   skill_group: git
   skill_intro: |
     These tools wrap git operations with safety guardrails. Always stage changes
-    with git-add before committing. Commit messages (git-commit) and new local
-    branch names (git-create-branch) must follow the Conventional Commits type
-    vocabulary (feat/, fix/, docs/, style/, refactor/, perf/, test/, build/,
-    ci/, chore/, revert/). Tools that switch to or check out branches that
+    with git-add before committing. Commit subjects (git-commit, git-commit-amend)
+    and new local branch names (git-create-branch) must follow the Conventional
+    Commits type vocabulary (feat/, fix/, docs/, style/, refactor/, perf/, test/,
+    build/, ci/, chore/, revert/). Commit subject is a required positional capped
+    at 72 characters; longer explanations go in the optional second positional
+    "body" argument, which git renders as a separate paragraph. Tools that switch to or check out branches that
     already exist (git-switch, git-branch-checkout-remote) do not enforce this
     prefix. All remote operations take the remote name as the first positional
     argument (typically origin). Every tool accepts an optional -C <directory>
@@ -38,57 +40,84 @@ tools:
 
   git-commit:
     description: >-
-      Create a git commit with a Conventional Commits message (changes must already be staged).
-      Format: type[(scope)][!]: description.
+      Create a git commit with a Conventional Commits subject and an optional body
+      (changes must already be staged). Subject format: type[(scope)][!]: description.
       Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert.
+      Subject must be at most 72 characters; put longer explanations in the body
+      positional, which git renders as a separate paragraph.
       Must not contain Co-Authored-By trailers.
     threat:
       read: workspace
       write: workspace
-    template:
-      command: [git, "{{options.directory}}", commit, -m, "{{arguments.message}}"]
+    script: |
+      if [ -n "${BODY:-}" ]; then
+        exec git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} commit -m "${SUBJECT}" -m "${BODY}"
+      else
+        exec git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} commit -m "${SUBJECT}"
+      fi
     options:
       directory:
         description: Subdirectory of the workspace to run git in (must be under cwd)
         flag: -C
         path_tests: [under_cwd]
     arguments:
-      message:
-        description: "Commit message: type[(scope)][!]: description"
+      subject:
+        description: "Commit subject line: type[(scope)][!]: description (max 72 chars)"
         required: true
         pattern: "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\([a-zA-Z0-9._-]+\\))?!?: .+"
+      body:
+        description: Optional commit body (rendered as a separate paragraph). Use for longer explanations.
+        required: false
     guards:
-      - script: '! git ${DIRECTORY:+-C "${DIRECTORY}"} diff --cached --quiet'
+      - script: '! git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} diff --cached --quiet'
         fail_message: No staged changes. Use git-add to stage changes first.
+      - script: '[ ${#SUBJECT} -le 72 ]'
+        fail_message: Commit subject must be at most 72 characters.
       - script: |
-          ! echo "{{arguments.message}}" | grep -qi 'co-authored-by:'
+          ! printf '%s\n%s' "${SUBJECT}" "${BODY:-}" | grep -qi 'co-authored-by:'
         fail_message: Commit message must not contain Co-Authored-By trailers.
 
   git-commit-amend:
     description: >-
-      Amend the most recent commit with a new message. Fails if the commit has
-      already been pushed to any remote. Use only to fix the last local commit.
+      Amend the most recent commit with a new Conventional Commits subject and an
+      optional body. Fails if the commit has already been pushed to any remote.
+      Use only to fix the last local commit. Subject must be at most 72 characters;
+      put longer explanations in the body positional. Must not contain
+      Co-Authored-By trailers.
     threat:
       read: workspace
       write: workspace
-    template:
-      command: [git, "{{options.directory}}", commit, --amend, -m, "{{arguments.message}}"]
+    script: |
+      if [ -n "${BODY:-}" ]; then
+        exec git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} commit --amend -m "${SUBJECT}" -m "${BODY}"
+      else
+        exec git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} commit --amend -m "${SUBJECT}"
+      fi
     options:
       directory:
         description: Subdirectory of the workspace to run git in (must be under cwd)
         flag: -C
         path_tests: [under_cwd]
     arguments:
-      message:
-        description: "Commit message: type[(scope)][!]: description"
+      subject:
+        description: "Commit subject line: type[(scope)][!]: description (max 72 chars)"
         required: true
         pattern: "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\([a-zA-Z0-9._-]+\\))?!?: .+"
+      body:
+        description: Optional commit body (rendered as a separate paragraph). Use for longer explanations.
+        required: false
+    guards:
+      - script: '[ ${#SUBJECT} -le 72 ]'
+        fail_message: Commit subject must be at most 72 characters.
+      - script: |
+          ! printf '%s\n%s' "${SUBJECT}" "${BODY:-}" | grep -qi 'co-authored-by:'
+        fail_message: Commit message must not contain Co-Authored-By trailers.
     pre: |
-      if ! git ${DIRECTORY:+-C "${DIRECTORY}"} rev-parse HEAD > /dev/null 2>&1; then
+      if ! git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} rev-parse HEAD > /dev/null 2>&1; then
         echo "error: no commits to amend" >&2
         return 1
       fi
-      REMOTE_BRANCHES=$(git ${DIRECTORY:+-C "${DIRECTORY}"} branch -r --contains HEAD 2>/dev/null)
+      REMOTE_BRANCHES=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} branch -r --contains HEAD 2>/dev/null)
       if [ -n "$REMOTE_BRANCHES" ]; then
         echo "error: HEAD exists on remote branches -- amending would require a force push" >&2
         echo "  remote branches: $(echo "$REMOTE_BRANCHES" | tr -s ' \n' ', ' | sed 's/,$//')" >&2
@@ -129,11 +158,11 @@ tools:
         flag: -C
         path_tests: [under_cwd]
     pre: |
-      if ! git ${DIRECTORY:+-C "${DIRECTORY}"} rev-parse HEAD > /dev/null 2>&1; then
+      if ! git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} rev-parse HEAD > /dev/null 2>&1; then
         echo "error: no commits to reset" >&2
         return 1
       fi
-      REMOTE_BRANCHES=$(git ${DIRECTORY:+-C "${DIRECTORY}"} branch -r --contains HEAD 2>/dev/null)
+      REMOTE_BRANCHES=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} branch -r --contains HEAD 2>/dev/null)
       if [ -n "$REMOTE_BRANCHES" ]; then
         echo "error: HEAD exists on remote branches -- resetting would require a force push" >&2
         echo "  remote branches: $(echo "$REMOTE_BRANCHES" | tr -s ' \n' ', ' | sed 's/,$//')" >&2
@@ -198,13 +227,22 @@ tools:
 
   git-push-branch:
     description: >-
-      Push the current branch to a remote including annotated tags (no force push).
-      Fails if in detached HEAD state or on main. Do not use on main -- use git-push-main instead.
+      Push the current branch to a remote including annotated tags (no force push)
+      and set upstream tracking, so subsequent git-pull works without an extra ref.
+      Fails if in detached HEAD state or on main. Do not use on main -- use
+      git-push-main instead.
     threat:
       read: workspace
       write: remote
     template:
-      command: [git, "{{options.directory}}", push, --follow-tags, "{{arguments.remote}}", HEAD]
+      command:
+        - git
+        - "{{options.directory}}"
+        - push
+        - --follow-tags
+        - --set-upstream
+        - "{{arguments.remote}}"
+        - HEAD
     options:
       directory:
         description: Subdirectory of the workspace to run git in (must be under cwd)
@@ -216,7 +254,7 @@ tools:
         required: true
         pattern: "^[a-zA-Z0-9_.-]+$"
     pre: |
-      BRANCH=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null)
+      BRANCH=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null)
       if [ -z "$BRANCH" ]; then
         echo "error: cannot push from detached HEAD state" >&2
         return 1
@@ -253,17 +291,38 @@ tools:
         pattern: "^[a-zA-Z0-9_./-]+$"
 
   git-log:
-    description: Show a short one-line log of recent commits.
+    description: >-
+      Show commit history. Accepts any combination of git-log flags, refs,
+      and pathspecs (e.g. --oneline, -n 20, main..HEAD, --stat, -- src/).
+      External diff and textconv drivers are disabled so the tool cannot be
+      hijacked via gitconfig. With no extra args, prints the full history --
+      pass `-n <count>` (or `--oneline -20`) to bound output.
     threat:
       read: workspace
       write: none
     template:
-      command: [git, "{{options.directory}}", log, --oneline, --no-decorate, -20]
+      command:
+        - git
+        - "{{options.directory}}"
+        - log
+        - --no-ext-diff
+        - --no-textconv
+        - "{{arguments.args}}"
     options:
       directory:
         description: Subdirectory of the workspace to run git in (must be under cwd)
         flag: -C
         path_tests: [under_cwd]
+    arguments:
+      args:
+        description: Flags, refs, and paths forwarded to `git log` (e.g. --oneline, -n 20, main..HEAD, -- src/)
+        variadic: true
+        allow_flags: true
+        # Reject flags that re-enable the gitconfig-driven drivers we disabled
+        # in the prefix. git takes last-wins on these toggles, so without this
+        # an agent could pass `--ext-diff` after our `--no-ext-diff` and reach
+        # a configured external diff driver.
+        deny: [--ext-diff, --textconv]
 
   git-tag:
     description: >-
@@ -293,7 +352,7 @@ tools:
         pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$"
     guards:
       - script: |
-          ! git ${DIRECTORY:+-C "${DIRECTORY}"} rev-parse "refs/tags/{{arguments.tag}}" > /dev/null 2>&1
+          ! git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} rev-parse "refs/tags/{{arguments.tag}}" > /dev/null 2>&1
         fail_message: Tag already exists. Use a different version.
 
   git-status:
@@ -472,7 +531,7 @@ tools:
         echo "error: cannot delete main" >&2
         return 1
       fi
-      CURRENT=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
+      CURRENT=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
       if [ "${NAME}" = "${CURRENT}" ]; then
         echo "error: cannot delete the current branch (${CURRENT})" >&2
         echo "  hint: switch to another branch first (e.g., git-switch main)" >&2
@@ -503,7 +562,7 @@ tools:
         flag: -C
         path_tests: [under_cwd]
     pre: |
-      BRANCH=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
+      BRANCH=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
       if [ -z "${BRANCH}" ]; then
         echo "error: cannot rebase from a detached HEAD state" >&2
         return 1
@@ -513,8 +572,8 @@ tools:
         echo "error: cannot rebase main" >&2
         return 1
       fi
-      RANGE_TOTAL=$(git ${DIRECTORY:+-C "${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" 2>/dev/null || echo 0)
-      RANGE_LOCAL=$(git ${DIRECTORY:+-C "${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" --not --remotes 2>/dev/null || echo 0)
+      RANGE_TOTAL=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" 2>/dev/null || echo 0)
+      RANGE_LOCAL=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" --not --remotes 2>/dev/null || echo 0)
       if [ "${RANGE_TOTAL}" != "${RANGE_LOCAL}" ]; then
         echo "error: ${TARGET}..HEAD contains commits already on a remote -- rebase would require a force push" >&2
         return 1
@@ -585,7 +644,7 @@ tools:
         flag: -C
         path_tests: [under_cwd]
     pre: |
-      BRANCH=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
+      BRANCH=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
       if [ -z "${BRANCH}" ]; then
         echo "error: cannot reset from a detached HEAD state" >&2
         return 1
@@ -595,9 +654,406 @@ tools:
         echo "error: cannot reset main" >&2
         return 1
       fi
-      RANGE_TOTAL=$(git ${DIRECTORY:+-C "${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" 2>/dev/null || echo 0)
-      RANGE_LOCAL=$(git ${DIRECTORY:+-C "${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" --not --remotes 2>/dev/null || echo 0)
+      RANGE_TOTAL=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" 2>/dev/null || echo 0)
+      RANGE_LOCAL=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" --not --remotes 2>/dev/null || echo 0)
       if [ "${RANGE_TOTAL}" != "${RANGE_LOCAL}" ]; then
         echo "error: ${TARGET}..HEAD contains commits already on a remote -- reset would orphan pushed commits" >&2
         return 1
       fi
+
+  git-restore-staged:
+    description: >-
+      Unstage one or more files (move them from the index back to the working
+      tree). Inverse of git-add. Does not modify working-tree contents.
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - restore
+        - --staged
+        - "{{arguments.files}}"
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    arguments:
+      files:
+        description: Files or directories to unstage
+        required: true
+        variadic: true
+
+  git-restore-worktree:
+    description: >-
+      Discard unstaged changes in the named files or pathspecs, reverting them
+      to their staged content, or to HEAD if there are no staged changes for
+      that path. DESTRUCTIVE on unstaged working-tree edits. Untracked files
+      are not affected. Does not modify the index -- use git-restore-staged to
+      unstage first.
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - restore
+        - "{{arguments.files}}"
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    arguments:
+      # Do not set allow_flags: true here. Flags like --source=<rev>, --ours,
+      # --theirs, and --merge would broaden the threat profile by letting an
+      # agent pull arbitrary ref content into the worktree.
+      files:
+        description: Files, directories, or pathspecs to discard changes in
+        required: true
+        variadic: true
+
+  git-rm:
+    description: >-
+      Remove tracked files from the working tree and the index. DESTRUCTIVE
+      on the working tree (file is deleted). Does not commit.
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - rm
+        - "{{arguments.files}}"
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    arguments:
+      files:
+        description: Files to remove (must be tracked)
+        required: true
+        variadic: true
+
+  git-mv:
+    description: >-
+      Rename or move a tracked file. Source must exist; destination must be
+      inside the workspace.
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - mv
+        - "{{arguments.source}}"
+        - "{{arguments.destination}}"
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    arguments:
+      source:
+        description: File to move (must exist and be tracked)
+        required: true
+        path_tests: [under_cwd, exists]
+      destination:
+        description: New path (must be inside the workspace)
+        required: true
+        path_tests: [under_cwd]
+
+  git-show:
+    description: >-
+      Show a commit's message and unified diff. Accepts any commit-ish
+      (SHA, HEAD, HEAD~1, ref name). External diff and textconv drivers
+      are disabled. Defaults to HEAD if no ref is given.
+    threat:
+      read: workspace
+      write: none
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - show
+        - --no-ext-diff
+        - --no-textconv
+        - "{{arguments.ref}}"
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    arguments:
+      ref:
+        description: Commit-ish to show (default HEAD)
+        required: false
+        pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$"
+
+  git-blame:
+    description: >-
+      Show line-by-line authorship for a file. Read-only.
+    threat:
+      read: workspace
+      write: none
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - blame
+        - "{{arguments.file}}"
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    arguments:
+      file:
+        description: File to blame
+        required: true
+        path_tests: [under_cwd, file]
+
+  git-reflog:
+    description: >-
+      Show the last 50 reflog entries -- a record of where HEAD and branch tips
+      have pointed locally. Useful for recovering lost commits or undoing
+      unintended branch movements.
+    threat:
+      read: workspace
+      write: none
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - reflog
+        - -n
+        - "50"
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+
+  git-remote-list:
+    description: List configured remotes with their fetch and push URLs.
+    threat:
+      read: workspace
+      write: none
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - remote
+        - -v
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+
+  git-branch-current:
+    description: Show the name of the currently checked-out branch.
+    threat:
+      read: workspace
+      write: none
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - branch
+        - --show-current
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+
+  git-cherry-pick:
+    description: >-
+      Apply a single commit's changes onto the current branch as a new commit.
+      Refuses on main and on detached HEAD. On conflicts, resolve manually and
+      use the underlying `git cherry-pick --continue` / `--abort` (not yet
+      exposed via nerf).
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - cherry-pick
+        - "{{arguments.ref}}"
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    arguments:
+      ref:
+        description: Commit-ish to cherry-pick
+        required: true
+        pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$"
+    pre: |
+      CUR_BRANCH=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
+      if [ -z "${CUR_BRANCH}" ]; then
+        echo "error: cannot cherry-pick onto detached HEAD" >&2
+        return 1
+      fi
+      CUR_LOWER=$(printf '%s' "${CUR_BRANCH}" | tr '[:upper:]' '[:lower:]')
+      if [ "${CUR_LOWER}" = "main" ]; then
+        echo "error: cannot cherry-pick onto main" >&2
+        return 1
+      fi
+
+  git-merge-no-ff:
+    description: >-
+      Merge a branch into the current branch with a merge commit (--no-ff,
+      --no-edit). Refuses if the current branch is main; merges into main
+      should go through a PR. Conflicts must be resolved manually.
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - merge
+        - --no-ff
+        - --no-edit
+        - "{{arguments.branch}}"
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    arguments:
+      branch:
+        description: Branch (or commit-ish) to merge into the current branch
+        required: true
+        pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./~^-]*$"
+    pre: |
+      CUR_BRANCH=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
+      if [ -z "${CUR_BRANCH}" ]; then
+        echo "error: cannot merge from detached HEAD" >&2
+        return 1
+      fi
+      CUR_LOWER=$(printf '%s' "${CUR_BRANCH}" | tr '[:upper:]' '[:lower:]')
+      if [ "${CUR_LOWER}" = "main" ]; then
+        echo "error: cannot merge into main locally -- merges to main should go through a PR" >&2
+        return 1
+      fi
+
+  git-stash-push:
+    description: >-
+      Save staged and unstaged changes to the stash and revert the working
+      tree to HEAD. Untracked files are not stashed. Use git-stash-pop to
+      restore.
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - stash
+        - push
+        - "{{options.message}}"
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+      message:
+        description: Description of the stash
+        flag: -m
+
+  git-stash-pop:
+    description: >-
+      Pop a saved stash (default the most recent) and reapply its changes to
+      the working tree. DESTRUCTIVE on conflicts -- the stash entry is removed
+      from the stash list even if conflicts arise during reapply.
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - stash
+        - pop
+        - "{{arguments.ref}}"
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    arguments:
+      ref:
+        description: Stash ref to pop (e.g. stash@{1}, default stash@{0})
+        required: false
+        pattern: "^stash@\\{[0-9]+\\}$"
+
+  git-stash-list:
+    description: List saved stashes with their descriptions.
+    threat:
+      read: workspace
+      write: none
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - stash
+        - list
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+
+  git-stash-drop:
+    description: Drop a saved stash without applying it.
+    threat:
+      read: workspace
+      write: workspace
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - stash
+        - drop
+        - "{{arguments.ref}}"
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    arguments:
+      ref:
+        description: Stash ref to drop (e.g. stash@{0})
+        required: true
+        pattern: "^stash@\\{[0-9]+\\}$"
+
+  git-submodule-status:
+    description: >-
+      Show the status of each submodule (current SHA, configured path, and
+      describe output). Read-only.
+    threat:
+      read: workspace
+      write: none
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - submodule
+        - status
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]

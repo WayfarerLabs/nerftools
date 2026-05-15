@@ -235,17 +235,17 @@ Rules:
 - A variadic argument's `{{kind.name}}` must be the last element of `command`.
 - The generated script ends with `exec`, replacing the process.
 
-**Literal command tokens are passed unquoted to bash.** Placeholder substitutions
-(`{{switches.x}}`, `{{options.x}}`, `{{arguments.x}}`) emit shell-quoted variable references and
-are always safe -- a value like `*.md` passed via `{{arguments.target}}` reaches the wrapped tool
-verbatim, with no glob expansion. The unquoted-token concern applies *only* to the static literal
-strings you put in `template.command`. The codegen lays each literal token down unquoted in the
-generated `exec` line, so bash sees them raw. This works for simple words, flags, and
-comma-separated lists (e.g. `--json title,body,state`), which covers the vast majority of cases.
-It does *not* work for literal tokens containing shell-special characters -- braces, parens,
-brackets, glob characters (`*`, `?`), tilde, redirects, pipes, dollar signs, backticks, quotes,
-whitespace, etc. If you need a literal token like that (a `jq` expression, etc.), or if you need
-any pipe / redirection / transformation logic, use `script` mode instead.
+**Literal command tokens are passed unquoted to bash.** Placeholder substitutions (`{{switches.x}}`,
+`{{options.x}}`, `{{arguments.x}}`) emit shell-quoted variable references and are always safe -- a
+value like `*.md` passed via `{{arguments.target}}` reaches the wrapped tool verbatim, with no glob
+expansion. The unquoted-token concern applies _only_ to the static literal strings you put in
+`template.command`. The codegen lays each literal token down unquoted in the generated `exec` line,
+so bash sees them raw. This works for simple words, flags, and comma-separated lists (e.g.
+`--json title,body,state`), which covers the vast majority of cases. It does _not_ work for literal
+tokens containing shell-special characters -- braces, parens, brackets, glob characters (`*`, `?`),
+tilde, redirects, pipes, dollar signs, backticks, quotes, whitespace, etc. If you need a literal
+token like that (a `jq` expression, etc.), or if you need any pipe / redirection / transformation
+logic, use `script` mode instead.
 
 Example:
 
@@ -313,30 +313,29 @@ safe-find:
 
 #### Known security limitations
 
-Passthrough deny operates on whole tokens, so it cannot enforce restrictions when the wrapped
-tool accepts alternative flag syntax:
+Passthrough deny operates on whole tokens, so it cannot enforce restrictions when the wrapped tool
+accepts alternative flag syntax:
 
 - **Short-flag stacking.** Tools that use POSIX-style or `pflag` short flags (notably `kubectl`,
-  many `getopt`-based utilities) allow combining boolean short flags into one token: `-Aw` is
-  parsed as `-A -w`. A deny entry of `-w` matches only the exact token `-w`, not `-Aw`, `-wA`,
-  `-Aow`, or any other stack containing `w`.
-- **Inline value forms.** For a flag that takes a value, the deny patterns `--watch` and `-w`
-  do not catch `--watch=true`, `-w=true`, or `-wtrue` (BSD-style short flag with concatenated
-  value). The first two can be partially mitigated with glob denies like `--watch=*` and
-  `-w=*`. The concatenated form `-wtrue` is syntactically indistinguishable from a short-flag
-  stack and cannot be reliably denied at the token level.
+  many `getopt`-based utilities) allow combining boolean short flags into one token: `-Aw` is parsed
+  as `-A -w`. A deny entry of `-w` matches only the exact token `-w`, not `-Aw`, `-wA`, `-Aow`, or
+  any other stack containing `w`.
+- **Inline value forms.** For a flag that takes a value, the deny patterns `--watch` and `-w` do not
+  catch `--watch=true`, `-w=true`, or `-wtrue` (BSD-style short flag with concatenated value). The
+  first two can be partially mitigated with glob denies like `--watch=*` and `-w=*`. The
+  concatenated form `-wtrue` is syntactically indistinguishable from a short-flag stack and cannot
+  be reliably denied at the token level.
 
 **When this matters.** Use `template` mode when the wrapped tool is an agent-escape vector and
-supports either of the above syntaxes. Templates declare the entire surface up front, so any
-flag not declared in the manifest cannot reach the underlying command. Use passthrough only
-when the wrapped tool's flag surface is well-understood, or when an undeclared flag slipping
-through is purely an ergonomic issue rather than a safety one.
+supports either of the above syntaxes. Templates declare the entire surface up front, so any flag
+not declared in the manifest cannot reach the underlying command. Use passthrough only when the
+wrapped tool's flag surface is well-understood, or when an undeclared flag slipping through is
+purely an ergonomic issue rather than a safety one.
 
-**Future direction.** A future opt-in deny extension may recognize tokens matching
-`^-[a-zA-Z]{2,}$` and decompose them for deny matching, closing the short-flag-stacking gap.
-The concatenated-value form is likely to remain a passthrough limitation because it cannot be
-distinguished from a stack without per-tool flag knowledge. When in doubt, prefer template
-mode.
+**Future direction.** A future opt-in deny extension may recognize tokens matching `^-[a-zA-Z]{2,}$`
+and decompose them for deny matching, closing the short-flag-stacking gap. The concatenated-value
+form is likely to remain a passthrough limitation because it cannot be distinguished from a stack
+without per-tool flag knowledge. When in doubt, prefer template mode.
 
 ### script
 
@@ -437,12 +436,12 @@ Rules:
 - `pattern` is automatically anchored to a full match in the generated bash script.
 - When `repeatable: true`, the option can be passed multiple times. The generated script accumulates
   flag-value pairs in an array so `"${VAR[@]}"` expands to `--flag val1 --flag val2`.
-- `default` seeds the bash variable so inline placeholder substitutions like
-  `"{{options.x}}/foo"` see the value even when the agent omits the flag. `default` is
-  validated at manifest-load time: it must satisfy `pattern` / `allow` / `deny`, and is
-  mutually exclusive with `required: true`, `repeatable: true`, and `path_tests`
-  (path tests only evaluate against runtime cwd, so they cannot validate a load-time
-  default). `default` must be a string; YAML `null`, `true`, `0`, etc. are rejected.
+- `default` seeds the bash variable so inline placeholder substitutions like `"{{options.x}}/foo"`
+  see the value even when the agent omits the flag. `default` is validated at manifest-load time: it
+  must satisfy `pattern` / `allow` / `deny`, and is mutually exclusive with `required: true`,
+  `repeatable: true`, and `path_tests` (path tests only evaluate against runtime cwd, so they cannot
+  validate a load-time default). `default` must be a string; YAML `null`, `true`, `0`, etc. are
+  rejected.
 
 ### arguments
 
@@ -469,14 +468,57 @@ Rules:
 - Variadic arguments become bash arrays; all others become scalar variables.
 - By default, variadic arguments reject tokens starting with `-` to prevent flag injection. Set
   `allow_flags: true` when forwarding to a tool that expects its own flags (e.g. pytest, ruff).
+  **Read "Variadic flag injection" below before enabling this** -- `allow_flags: true` is
+  functionally passthrough mode for the bytes in the variadic, and the only honest defense is a
+  structural property of the wrapped command that makes dangerous flags unreachable.
 - Arguments do not have a `default` field. Required positional arguments always receive a value;
   optional positionals are exposed to the wrapped tool only when the agent supplies one.
 
+### Variadic flag injection
+
+`allow_flags: true` on a variadic argument is functionally passthrough mode for the bytes that land
+in the variadic. The nerf parser stops consuming nerf-declared flags at the first unrecognized token
+and forwards everything from that point -- including arbitrary `-`-prefixed tokens -- raw to the
+wrapped tool, which fully parses them as flags. The variadic's own `deny` / `allow` / `pattern`
+validations _do_ run per element, but they are exact-token matches: they do not handle stacked
+short flags (`-Aw`), inline value forms (`--flag=value`), or any other syntactic variant the wrapped
+tool may accept. Use them to forbid a small enumerable set of dangerous flags (e.g. the
+gitconfig-driver re-enablers `--ext-diff` / `--textconv`), not as a general flag firewall. For
+broader coverage the only honest defense is a structural property of the wrapped command that
+makes dangerous flags unreachable from the variadic's position.
+
+The canonical example is the **subcommand parse boundary in multi-level CLIs** (git, kubectl,
+docker, az, etc.). Dangerous flags often live at the top-level parser, not the subcommand's. A
+variadic placed after the subcommand cannot smuggle a top-level flag because the subcommand's parser
+does not recognize it. For example, `git`'s top-level flags (`-C`, `--git-dir`, `--work-tree`, `-c`)
+must precede the subcommand. A variadic placed after `git log` cannot reach them: `-C` after `log`
+is reinterpreted as `--find-copies`, and the rest error as unknown options. This makes
+`allow_flags: true` _on a subcommand-level variadic_ safe for that specific subcommand, but only
+after verifying the subcommand itself has no dangerous flags of its own. Document the analysis in
+the tool's `description`; do not transfer it to a different wrapped command without redoing it.
+
+Other structural protections exist (e.g. a tool that has no write-capable flags at all, or a tool
+whose dangerous flags are gated by an outer wrapper). Treat each one as a per-tool argument.
+
+When you do **not** need to forward arbitrary flags, prefer the **sentinel pattern**: declare the
+flags you want to expose as nerf `switches` / `options`, place `--` after the static prefix in
+`template.command`, and leave the variadic with `allow_flags: false` (the default) for positional
+content only. The parser rejects `-`-prefixed tokens at the variadic, and the `--` sentinel forces
+the wrapped tool to interpret anything that slips through as a positional -- usually a loud failure
+rather than a silent dangerous-flag invocation. This is defense-in-depth on top of the default; it
+is not a justification for `allow_flags: true` (the two intents are opposite -- the sentinel tells
+the wrapped tool to ignore flags, which negates the point of forwarding them).
+
+If you need flag forwarding and there is no structural protection, either exhaustively declare all
+safe args or fall back to `passthrough` mode where token-level `deny` is available. Just make sure
+you understand the fundamental difference in templates parsing args vs passthrough just analyzing
+opaque tokens. It's not a simple conversion.
+
 ## Path tests
 
-Mark an option or argument as a filesystem path by setting `path_tests` to a non-empty list of
-test names. The generated script applies a baseline check (control characters rejected,
-canonicalization succeeds) plus the listed tests in a deterministic order.
+Mark an option or argument as a filesystem path by setting `path_tests` to a non-empty list of test
+names. The generated script applies a baseline check (control characters rejected, canonicalization
+succeeds) plus the listed tests in a deterministic order.
 
 ```yaml
 options:
@@ -493,7 +535,7 @@ arguments:
 
 ### Test catalog
 
-| Test | Meaning | Bash primitive |
+| Test          | Meaning                                                         | Bash primitive |
 | ------------- | --------------------------------------------------------------- | -------------- |
 | `under_cwd`   | Canonicalized path is `$PWD` itself or under it (symlink-aware) | `realpath -m`  |
 | `exists`      | Path exists                                                     | `[[ -e ]]`     |
@@ -506,14 +548,14 @@ arguments:
 | `symlink`     | Path is a symlink                                               | `[[ -L ]]`     |
 | `not_symlink` | Path is not a symlink                                           | `! [[ -L ]]`   |
 
-**Symlinks behave differently across tests.** `under_cwd` follows symlinks via `realpath -m`,
-so a symlink whose target is outside the workspace fails the boundary check even if the link
-itself is inside. The `exists`/`file`/`dir`/`readable`/`writable`/`executable` tests also follow
-symlinks (they check the target, not the link). Only `symlink` and `not_symlink` test the path
-itself without following the link. Combine them deliberately if you mean both, e.g.
-`[under_cwd, file]` requires the resolved target to be a regular file inside the workspace,
-while `[under_cwd, not_symlink, file]` additionally rejects symlinks even when their targets
-would qualify.
+**Symlinks behave differently across tests.** `under_cwd` follows symlinks via `realpath -m`, so a
+symlink whose target is outside the workspace fails the boundary check even if the link itself is
+inside. The `exists`/`file`/`dir`/`readable`/`writable`/`executable` tests also follow symlinks
+(they check the target, not the link). Only `symlink` and `not_symlink` test the path itself without
+following the link. Combine them deliberately if you mean both, e.g. `[under_cwd, file]` requires
+the resolved target to be a regular file inside the workspace, while
+`[under_cwd, not_symlink, file]` additionally rejects symlinks even when their targets would
+qualify.
 
 ### Evaluation order
 
@@ -548,16 +590,16 @@ credibly claim `read: workspace` or `write: workspace` rather than `read: machin
 
 ### Don't duplicate the wrapped tool's own checks
 
-`path_tests` exists to enforce *boundaries* (workspace containment, control characters, basic
-canonicalization). It is not a place to recreate validation that the wrapped tool already does.
-For most cases, `[under_cwd]` alone is the right answer: it locks the path to the workspace and
+`path_tests` exists to enforce _boundaries_ (workspace containment, control characters, basic
+canonicalization). It is not a place to recreate validation that the wrapped tool already does. For
+most cases, `[under_cwd]` alone is the right answer: it locks the path to the workspace and
 delegates type, existence, and content checks to the tool you're calling.
 
-For example, `git -C <dir>` already produces a clear `fatal: cannot change to '...': Not a
-directory` if the path is wrong. Adding `dir` to `path_tests` would only duplicate that check
-and produce a less informative error than git's. Reach for the longer test lists only when the
-wrapped tool's behavior on the failure mode is genuinely worse than failing at the boundary
-(e.g. silently no-oping, hanging, or modifying state).
+For example, `git -C <dir>` already produces a clear
+`fatal: cannot change to '...': Not a directory` if the path is wrong. Adding `dir` to `path_tests`
+would only duplicate that check and produce a less informative error than git's. Reach for the
+longer test lists only when the wrapped tool's behavior on the failure mode is genuinely worse than
+failing at the boundary (e.g. silently no-oping, hanging, or modifying state).
 
 ### Caveats
 
@@ -565,8 +607,8 @@ wrapped tool's behavior on the failure mode is genuinely worse than failing at t
   target is outside `$PWD` fails `under_cwd`. This is intentional.
 - The check is not a security boundary against an adversarial filesystem actor (TOCTOU between
   validation and use is possible).
-- `realpath` is required and is part of GNU coreutils on Linux and modern macOS coreutils. Pure
-  BSD environments are not supported.
+- `realpath` is required and is part of GNU coreutils on Linux and modern macOS coreutils. Pure BSD
+  environments are not supported.
 
 ## Lifecycle
 
@@ -607,15 +649,14 @@ The pre script is wrapped in a shell function (`_nerf_pre`). Key points:
   kills the entire script immediately, bypassing error reporting.
 - **Print your own error messages.** The fallback message is generic. Write `echo "error: ..." >&2`
   before `return 1`.
-- **Shell variables set in pre are visible to main.** Functions execute in the caller's scope.
-  Do **not** use `local` -- a `local` declaration limits scope to the function body and the
-  variable will be empty when main runs.
+- **Shell variables set in pre are visible to main.** Functions execute in the caller's scope. Do
+  **not** use `local` -- a `local` declaration limits scope to the function body and the variable
+  will be empty when main runs.
 - **`{{kind.name}}` placeholders work.** Parameters are parsed before pre runs.
 - **`set -e` does NOT abort pre on bare command failure.** Bash suppresses errexit inside any
   function whose return code is being tested by the caller, and the wrapper invokes pre via
-  `_nerf_pre || _nerf_pre_rc=$?`. Even adding `set -e` inside the function body has no effect
-  per POSIX/bash semantics. **Always check command results explicitly with `if`/`||` and
-  `return 1`.**
+  `_nerf_pre || _nerf_pre_rc=$?`. Even adding `set -e` inside the function body has no effect per
+  POSIX/bash semantics. **Always check command results explicitly with `if`/`||` and `return 1`.**
 
 Example:
 
@@ -697,9 +738,8 @@ error: nerf-safe-find: token '-exec' is not allowed (matched deny pattern '-exec
 ## Dry-run mode
 
 Every generated tool supports `--nerf-dry-run`. When passed in the flag region (before any
-positional argument), the tool runs all
-validation, guards, pre-hooks, and deny scans as normal, but instead of executing the final command
-it prints what would be run and exits.
+positional argument), the tool runs all validation, guards, pre-hooks, and deny scans as normal, but
+instead of executing the final command it prints what would be run and exits.
 
 ```bash
 $ nerf-git-fetch --nerf-dry-run origin
@@ -719,12 +759,12 @@ $ nerf-find-cwd --nerf-dry-run -exec echo {} \;
 error: nerf-find-cwd: token '-exec' is not allowed (matched deny pattern '-exec')
 ```
 
-`--nerf-dry-run` may appear anywhere in the flag region (before the first positional argument);
-like other declared flags it is recognized in any order. The parser stops consuming flags at the
-first non-flag token, so `--nerf-dry-run` placed after a positional argument is captured into
-that argument (or rejected as an extra) and does not enable dry-run. For tools with
-variadic+allow_flags arguments, the codegen rejects `--nerf-dry-run` tokens inside the variadic
-explicitly to prevent silent dry-run bypass.
+`--nerf-dry-run` may appear anywhere in the flag region (before the first positional argument); like
+other declared flags it is recognized in any order. The parser stops consuming flags at the first
+non-flag token, so `--nerf-dry-run` placed after a positional argument is captured into that
+argument (or rejected as an extra) and does not enable dry-run. For tools with variadic+allow_flags
+arguments, the codegen rejects `--nerf-dry-run` tokens inside the variadic explicitly to prevent
+silent dry-run bypass.
 
 ## Generated documentation
 
@@ -747,26 +787,26 @@ Generated skill files follow the same structure formatted as markdown for AI ass
 
 ## Validation summary
 
-| Rule                                                                 | Scope                 |
-| -------------------------------------------------------------------- | --------------------- |
-| `version` is required and must be an integer                         | manifest              |
-| `threat.read` and `threat.write` required                            | tool                  |
-| Exactly one of `template`, `passthrough`, `script`                   | tool                  |
-| `switches`/`options`/`arguments` not allowed with `passthrough`      | tool                  |
-| `{{kind.name}}` refs must exist in switches/options/arguments        | template, guards, pre |
-| All switches/options/arguments must be referenced in `{{kind.name}}` | template only         |
-| Variadic argument must be last in `arguments`                        | arguments             |
-| Variadic `{{kind.name}}` must be last element in `template.command`  | template              |
-| `allow` and `deny` are mutually exclusive                            | options, arguments    |
-| Switch/option/argument names must not overlap                        | tool                  |
-| `flag` matches `-<name>` or `--<name>` pattern                       | switches, options     |
-| `short` matches `-[a-zA-Z]`                                          | switches, options     |
-| `pattern` is a valid regex                                           | options, arguments    |
-| `env` keys match `[A-Z_][A-Z0-9_]*`                                  | env                   |
-| Guard has exactly one of `command` or `script`                       | guards                |
-| `path_tests` is non-empty if present                                 | options, arguments    |
-| `path_tests` entries are known names                                 | options, arguments    |
-| `path_tests` mutual exclusions enforced                              | options, arguments    |
-| `default` must be a string                                           | options               |
-| `default` mutually exclusive with `required`, `repeatable`, `path_tests` | options           |
-| `default` must satisfy `pattern` / `allow` / `deny` if present       | options               |
+| Rule                                                                     | Scope                 |
+| ------------------------------------------------------------------------ | --------------------- |
+| `version` is required and must be an integer                             | manifest              |
+| `threat.read` and `threat.write` required                                | tool                  |
+| Exactly one of `template`, `passthrough`, `script`                       | tool                  |
+| `switches`/`options`/`arguments` not allowed with `passthrough`          | tool                  |
+| `{{kind.name}}` refs must exist in switches/options/arguments            | template, guards, pre |
+| All switches/options/arguments must be referenced in `{{kind.name}}`     | template only         |
+| Variadic argument must be last in `arguments`                            | arguments             |
+| Variadic `{{kind.name}}` must be last element in `template.command`      | template              |
+| `allow` and `deny` are mutually exclusive                                | options, arguments    |
+| Switch/option/argument names must not overlap                            | tool                  |
+| `flag` matches `-<name>` or `--<name>` pattern                           | switches, options     |
+| `short` matches `-[a-zA-Z]`                                              | switches, options     |
+| `pattern` is a valid regex                                               | options, arguments    |
+| `env` keys match `[A-Z_][A-Z0-9_]*`                                      | env                   |
+| Guard has exactly one of `command` or `script`                           | guards                |
+| `path_tests` is non-empty if present                                     | options, arguments    |
+| `path_tests` entries are known names                                     | options, arguments    |
+| `path_tests` mutual exclusions enforced                                  | options, arguments    |
+| `default` must be a string                                               | options               |
+| `default` mutually exclusive with `required`, `repeatable`, `path_tests` | options               |
+| `default` must satisfy `pattern` / `allow` / `deny` if present           | options               |

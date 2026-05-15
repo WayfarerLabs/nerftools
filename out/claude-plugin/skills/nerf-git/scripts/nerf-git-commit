@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-git-commit -- Create a git commit with a Conventional Commits message (changes must already be staged). Format: type[(scope)][!]: description. Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert. Must not contain Co-Authored-By trailers.
+# nerf-git-commit -- Create a git commit with a Conventional Commits subject and an optional body (changes must already be staged). Subject format: type[(scope)][!]: description. Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert. Subject must be at most 72 characters; put longer explanations in the body positional, which git renders as a separate paragraph. Must not contain Co-Authored-By trailers.
 # Generated from git manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=workspace
@@ -10,20 +10,20 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-git-commit [-C <directory>] <message>
+Usage: nerf-git-commit [-C <directory>] <subject> [<body>]
 
 Options:
   -C <directory>
       Subdirectory of the workspace to run git in (must be under cwd)
 
 Arguments:
-  <message> (required)
-      Commit message: type[(scope)][!]: description
+  <subject> (required)
+      Commit subject line: type[(scope)][!]: description (max 72 chars)
       Must match: ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+
+  <body>
+      Optional commit body (rendered as a separate paragraph). Use for longer explanations.
 
-Maps to: git <directory> commit -m <message>
-
-Create a git commit with a Conventional Commits message (changes must already be staged). Format: type[(scope)][!]: description. Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert. Must not contain Co-Authored-By trailers.
+Create a git commit with a Conventional Commits subject and an optional body (changes must already be staged). Subject format: type[(scope)][!]: description. Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert. Subject must be at most 72 characters; put longer explanations in the body positional, which git renders as a separate paragraph. Must not contain Co-Authored-By trailers.
 EOF
   exit 1
 }
@@ -41,13 +41,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-_MESSAGE_SET=""
+_SUBJECT_SET=""
 if [[ $# -gt 0 ]]; then
-  MESSAGE="$1"
-  _MESSAGE_SET=true
+  SUBJECT="$1"
+  _SUBJECT_SET=true
   shift
 else
-  MESSAGE=""
+  SUBJECT=""
+fi
+_BODY_SET=""
+if [[ $# -gt 0 ]]; then
+  BODY="$1"
+  _BODY_SET=true
+  shift
+else
+  BODY=""
 fi
 if [[ $# -gt 0 ]]; then
   echo "error: nerf-git-commit: unexpected extra arguments: $*" >&2
@@ -136,36 +144,44 @@ if [[ -n "${_DIRECTORY_SET}" ]]; then
   _nerf_check_path 'option -C' "${DIRECTORY}" 'under_cwd' || exit 1
 fi
 
-if [[ -n "${_MESSAGE_SET}" ]] && [[ "${MESSAGE}" == -* ]]; then
-  echo "error: nerf-git-commit: <message> cannot start with '-'" >&2
+if [[ -n "${_SUBJECT_SET}" ]] && [[ "${SUBJECT}" == -* ]]; then
+  echo "error: nerf-git-commit: <subject> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2
   exit 1
 fi
 
-if [[ -z "${MESSAGE}" ]]; then
-  echo "error: nerf-git-commit: missing required argument <message>" >&2
-  echo "  hint: provide a value for <message>" >&2
+if [[ -z "${SUBJECT}" ]]; then
+  echo "error: nerf-git-commit: missing required argument <subject>" >&2
+  echo "  hint: provide a value for <subject>" >&2
   usage
 fi
 
 _NERF_PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+$'
-if [[ -n "${_MESSAGE_SET}" ]] && ! [[ "${MESSAGE}" =~ $_NERF_PATTERN ]]; then
-  echo "error: nerf-git-commit: argument <message> does not match required pattern" >&2
-  echo "  value:   \"${MESSAGE}\"" >&2
+if [[ -n "${_SUBJECT_SET}" ]] && ! [[ "${SUBJECT}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-git-commit: argument <subject> does not match required pattern" >&2
+  echo "  value:   \"${SUBJECT}\"" >&2
   echo "  pattern: ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+" >&2
   echo "  hint: value must match ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+" >&2
   exit 1
 fi
 
-( ! git ${DIRECTORY:+-C "${DIRECTORY}"} diff --cached --quiet ) || { echo 'error: nerf-git-commit: No staged changes. Use git-add to stage changes first.' >&2; exit 1; }
-( ! echo "${MESSAGE}" | grep -qi 'co-authored-by:' ) || { echo 'error: nerf-git-commit: Commit message must not contain Co-Authored-By trailers.' >&2; exit 1; }
+if [[ -n "${_BODY_SET}" ]] && [[ "${BODY}" == -* ]]; then
+  echo "error: nerf-git-commit: <body> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+( ! git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} diff --cached --quiet ) || { echo 'error: nerf-git-commit: No staged changes. Use git-add to stage changes first.' >&2; exit 1; }
+( [ ${#SUBJECT} -le 72 ] ) || { echo 'error: nerf-git-commit: Commit subject must be at most 72 characters.' >&2; exit 1; }
+( ! printf '%s\n%s' "${SUBJECT}" "${BODY:-}" | grep -qi 'co-authored-by:' ) || { echo 'error: nerf-git-commit: Commit message must not contain Co-Authored-By trailers.' >&2; exit 1; }
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} commit -m "${MESSAGE}")
-  printf 'dry-run:'
-  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
-  echo
+  echo "dry-run: nerf-git-commit would run inline script"
   exit 0
 fi
 
-exec git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} commit -m "${MESSAGE}"
+if [ -n "${BODY:-}" ]; then
+  exec git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} commit -m "${SUBJECT}" -m "${BODY}"
+else
+  exec git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} commit -m "${SUBJECT}"
+fi

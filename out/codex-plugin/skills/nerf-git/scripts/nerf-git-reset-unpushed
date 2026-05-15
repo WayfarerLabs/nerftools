@@ -164,7 +164,7 @@ if [[ -n "${_TARGET_SET}" ]] && ! [[ "${TARGET}" =~ $_NERF_PATTERN ]]; then
 fi
 
 _nerf_pre() {
-  BRANCH=$(git ${DIRECTORY:+-C "${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
+  BRANCH=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} symbolic-ref --short HEAD 2>/dev/null || true)
   if [ -z "${BRANCH}" ]; then
     echo "error: cannot reset from a detached HEAD state" >&2
     return 1
@@ -174,8 +174,8 @@ _nerf_pre() {
     echo "error: cannot reset main" >&2
     return 1
   fi
-  RANGE_TOTAL=$(git ${DIRECTORY:+-C "${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" 2>/dev/null || echo 0)
-  RANGE_LOCAL=$(git ${DIRECTORY:+-C "${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" --not --remotes 2>/dev/null || echo 0)
+  RANGE_TOTAL=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" 2>/dev/null || echo 0)
+  RANGE_LOCAL=$(git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} rev-list --count "${TARGET}..HEAD" --not --remotes 2>/dev/null || echo 0)
   if [ "${RANGE_TOTAL}" != "${RANGE_LOCAL}" ]; then
     echo "error: ${TARGET}..HEAD contains commits already on a remote -- reset would orphan pushed commits" >&2
     return 1
