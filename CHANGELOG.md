@@ -1,5 +1,35 @@
 # Changelog
 
+## [2.0.0](https://github.com/WayfarerLabs/nerftools/compare/v1.4.0...v2.0.0) (2026-05-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* **git:** split commit message into required subject + optional body
+
+### Features
+
+* **git:** add restore/show/blame/stash/cherry-pick tools and relax log ([ce00f28](https://github.com/WayfarerLabs/nerftools/commit/ce00f283ccb49f862601552ca00075aec57e8799))
+* **git:** split commit message into required subject + optional body ([49c9543](https://github.com/WayfarerLabs/nerftools/commit/49c954336afeb0ae2e046c0fca35bf836bdeedf6))
+
+
+### Bug Fixes
+
+* clarify targets use in local rulesync config ([181a46b](https://github.com/WayfarerLabs/nerftools/commit/181a46b5dd3eb42e26c181a04c93b2b9f5f687b2))
+* **git:** correct -C quoting and add git-log driver re-enable denies ([888be4f](https://github.com/WayfarerLabs/nerftools/commit/888be4fba28e8d43e35d7a99b28d78c7b78cb417))
+* **git:** drop pathspec guard from git-restore-worktree ([239fb3a](https://github.com/WayfarerLabs/nerftools/commit/239fb3a06c85c8b98ff6626d3ad640e204eb3241))
+* propagate read_version_file failures and note schema drift risk ([42fa3a2](https://github.com/WayfarerLabs/nerftools/commit/42fa3a2c26c0f1f684cd1daf442a05c8f48081c5))
+* regenerate agent and address copilot bash review feedback ([72275a0](https://github.com/WayfarerLabs/nerftools/commit/72275a05f8c9d5d8e0bd941ea9bdf7f52e102adc))
+* script path in remediation output ([7283fa6](https://github.com/WayfarerLabs/nerftools/commit/7283fa6682591a8fbbc285ef43fa925e3338496d))
+
+
+### Documentation
+
+* clarify how to get more info on config ([64e73ab](https://github.com/WayfarerLabs/nerftools/commit/64e73abb46dc89bc80b67438097284c27d6a8785))
+* **manifest:** document variadic flag injection and safe patterns ([68e04e9](https://github.com/WayfarerLabs/nerftools/commit/68e04e96dad37bf3d2b3ee1151e261f307cb8a49))
+* **manifest:** fix sentinel pattern vs allow_flags framing ([8aeae18](https://github.com/WayfarerLabs/nerftools/commit/8aeae18c70d8b05075f2bfa83b18dc3c06e129a6))
+* **manifest:** use underscore emphasis to satisfy markdownlint MD049 ([14776de](https://github.com/WayfarerLabs/nerftools/commit/14776de53b9bccba2fd47c4a61983e4342caaea5))
+
 ## [1.4.0](https://github.com/WayfarerLabs/nerftools/compare/v1.3.0...v1.4.0) (2026-05-10)
 
 
