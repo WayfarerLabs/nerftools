@@ -45,6 +45,9 @@ select = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["TCH"]
+# formats.py embeds bash hook templates as Python triple-quoted strings;
+# long bash lines inside those templates can't be inline-noqa'd.
+"nerftools/formats.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"

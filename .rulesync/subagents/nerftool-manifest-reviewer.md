@@ -148,7 +148,40 @@ Beyond outright security: rough edges that bite users.
   what happens if the detection fails? Empty string? `null`? Tool needs to either fail clearly or
   accept an explicit override.
 
-### 9. Description, intro, and metadata hygiene
+### 9. Bash hint coverage (package-level `bash_hints`)
+
+`bash_hints` is a list of regex patterns at the package level that drive a
+pre-bash redirect hook on plugin targets that support one: when an agent
+calls raw bash with a command matching any pattern, the hook denies the
+call and points the agent at the nerf skill instead. Patterns are matched
+with substring search, and the hook is skipped automatically when the
+first token of the command contains the wrapper prefix (so calls to nerf
+wrappers themselves are never flagged).
+
+- **Coverage**: every CLI binary that this package's tools wrap must be
+  covered by at least one pattern. E.g., a package that wraps both `git`
+  and `gh` must declare patterns for both. A tool whose underlying command
+  isn't matched by any hint will silently let the agent reach for raw
+  bash without redirection -- file it as a gap.
+- **Anchoring**: prefer word-boundary anchors (`\bgit\b`) over start-of-line
+  (`^git`). Compound commands like `foo && git status` only match
+  word-boundary patterns. Start-anchored patterns miss those cases.
+- **Specificity vs. breadth**: package-level patterns are coarse on purpose
+  -- they redirect to a skill, not a specific tool. `\baz boards\b` is fine
+  even if the package doesn't yet wrap every `az boards` subcommand; the
+  hint says "the skill may wrap this," and the agent learns which tools
+  exist by loading the skill.
+- **No false positives on the wrapper**: do NOT add a pattern that would
+  match the wrapper's own name when called by its absolute path. The first-
+  token / wrapper-prefix exclusion is already in the hook; an over-eager
+  pattern (e.g. `git` without word boundaries) would still misfire on
+  unrelated substrings in env exports or paths.
+- **Extensions**: if this manifest is an extension of an existing package
+  (same `package.name` in a different file), `bash_hints` is unioned across
+  manifests. An extension may declare additional patterns covering its new
+  surface (e.g. `\bgit lfs\b`) without restating the base patterns.
+
+### 10. Description, intro, and metadata hygiene
 
 - Descriptions should describe _what the wrapper does_, not the underlying tool's general docs. Be
   specific about constraints (e.g. "refuses on main").
@@ -158,7 +191,7 @@ Beyond outright security: rough edges that bite users.
 - Argument and option `description:` fields should mention any non-obvious behavior (e.g. defaults,
   valid values, format expectations).
 
-### 10. Output formatting (script-mode tools)
+### 11. Output formatting (script-mode tools)
 
 - Errors go to stderr (`>&2`).
 - Each error message includes the tool name as a prefix so it's identifiable in agent output.

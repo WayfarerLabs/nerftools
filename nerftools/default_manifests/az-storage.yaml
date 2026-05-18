@@ -10,6 +10,8 @@ package:
     connections. Useful for auditing tfstate accounts and verifying public
     access is appropriately restricted.
     All tools accept --subscription to target a specific subscription.
+  bash_hints:
+    - '\baz storage\b'
 
 tools:
   az-storage-account-list:

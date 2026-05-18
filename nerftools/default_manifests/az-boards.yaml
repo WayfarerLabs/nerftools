@@ -11,6 +11,8 @@ package:
     on any work item. The az-boards-mywi-* tools are scoped to work items
     assigned to you. az-boards-area-list lists area paths in a project,
     useful for setting --area on create/update.
+  bash_hints:
+    - '\baz boards\b'
 
 tools:
   az-boards-wi-list:

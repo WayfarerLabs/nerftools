@@ -11,6 +11,8 @@ package:
     Use during private-networking validation to confirm VNet filtering
     is active and the public surface is restricted.
     All tools accept --subscription to target a specific subscription.
+  bash_hints:
+    - '\baz cosmosdb\b'
 
 tools:
   az-cosmosdb-list:

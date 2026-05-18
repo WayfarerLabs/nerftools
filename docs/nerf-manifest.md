@@ -7,7 +7,8 @@ guardrails, threat metadata, and AI skill documentation.
 
 Each tool defines exactly **one execution mode** (`template`, `passthrough`, or `script`) plus
 optional lifecycle hooks and shared configuration. The `nerf` CLI reads manifests and generates
-self-contained bash scripts, rulesync skills, and Claude Code plugins.
+self-contained bash scripts, rulesync skills, and agent plugins (e.g. for Claude Code). Run
+`nerf generate --help` for the current list of output targets.
 
 Generated scripts target **bash** (not POSIX sh).
 
@@ -123,9 +124,35 @@ package:
   description: <string> # Human-readable description of the package
   skill_group: <string> # Skill directory name (usually matches name)
   skill_intro: <string> # Optional multi-line intro for AI skill docs
+  bash_hints: # Optional list of regex patterns; see "Bash hint hook" below
+    - <regex>
 ```
 
-All fields except `skill_intro` are required.
+All fields except `skill_intro` and `bash_hints` are required.
+
+### Bash hint hook
+
+Plugin targets that support a pre-bash hook (Claude Code today; others as
+their APIs land) use `bash_hints` to generate a redirect: when the agent
+calls raw bash with a command that matches any pattern, the hook denies
+the call (silently, without prompting the user) and points the agent at
+the corresponding nerf skill. Multiple matching skills are listed
+together. Targets without a pre-bash hook simply ignore the field.
+
+Patterns are evaluated with substring search, so prefer word-boundary
+anchors (`\bgit\b`) over start-anchored ones (`^git`) — compound commands
+like `foo && git status` only match the former. The hook automatically
+skips when the first token of the command contains the wrapper prefix
+(default `nerf-`), so calls to the wrappers themselves are never flagged.
+
+When the same `package.name` is split across multiple manifests (extension
+pattern), `bash_hints` are unioned across them (order-preserved, deduped).
+An extension can add new patterns without restating the base set.
+
+An agent that genuinely needs to run the underlying command directly can
+include `# nerf:bypass <reason>` anywhere in the command (reason required).
+The hook lets the call through; the user's normal permission flow still
+applies.
 
 ## Tool definition
 

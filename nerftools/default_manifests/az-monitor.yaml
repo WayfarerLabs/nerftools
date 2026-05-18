@@ -12,6 +12,8 @@ package:
     series. az-monitor-diagnostic-settings-list audits what is wired to
     Log Analytics for a given resource.
     All tools accept --subscription to target a specific subscription.
+  bash_hints:
+    - '\baz monitor\b'
 
 tools:
   az-monitor-activity-log:

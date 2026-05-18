@@ -18,6 +18,8 @@ package:
     to operate on a different repo subdirectory; the directory must be under
     the workspace root. Several tools refuse operations on main or operations
     that would require force-pushing already-pushed commits.
+  bash_hints:
+    - '\bgit\b'
 
 tools:
   git-add:

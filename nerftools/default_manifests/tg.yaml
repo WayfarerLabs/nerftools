@@ -10,6 +10,8 @@ package:
     under the current directory using "terragrunt run --all". Use the non-all
     variant when working in a specific module directory, and the -all variant
     when working at the root of a stack.
+  bash_hints:
+    - '\bterragrunt\b'
 
 tools:
   tg-validate:

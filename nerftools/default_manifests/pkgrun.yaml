@@ -10,6 +10,10 @@ package:
     forwarded to the underlying tool unchanged. Use pkgrun-cspell for spell
     checking, pkgrun-markdownlint for Markdown linting, and pkgrun-prettier
     for code formatting.
+  bash_hints:
+    - '\bcspell\b'
+    - '\bmarkdownlint(-cli2)?\b'
+    - '\bprettier\b'
 
 tools:
   pkgrun-cspell:

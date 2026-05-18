@@ -10,6 +10,8 @@ package:
     tables. Use these during validation phases to confirm resources are
     configured for private access and that public surface is minimized.
     All tools accept --subscription to target a specific subscription.
+  bash_hints:
+    - '\baz network\b'
 
 tools:
   az-network-vnet-list:

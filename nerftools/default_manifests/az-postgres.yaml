@@ -11,6 +11,8 @@ package:
     setting. Use during private-networking validation to confirm the
     server is correctly attached to its private endpoint topology.
     All tools accept --subscription to target a specific subscription.
+  bash_hints:
+    - '\baz postgres\b'
 
 tools:
   az-postgres-flexible-server-list:
