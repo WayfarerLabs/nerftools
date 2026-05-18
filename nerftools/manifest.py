@@ -112,6 +112,7 @@ class PackageMeta:
     description: str
     skill_group: str
     skill_intro: str = ""
+    bash_hints: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -295,13 +296,36 @@ def _load_package(raw: dict[str, Any], path: Path) -> PackageMeta:
     description = _require_str(pkg, "description", ctx)
     skill_group = _require_str(pkg, "skill_group", ctx)
     skill_intro = str(pkg.get("skill_intro", "")).strip()
+    bash_hints = _load_bash_hints(pkg, ctx)
 
     return PackageMeta(
         name=name,
         description=description,
         skill_group=skill_group,
         skill_intro=skill_intro,
+        bash_hints=bash_hints,
     )
+
+
+def _load_bash_hints(pkg: dict[str, Any], ctx: str) -> tuple[str, ...]:
+    raw = pkg.get("bash_hints")
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        raise ManifestError(f"{ctx}: 'bash_hints' must be a list, got {type(raw).__name__}")
+    hints: list[str] = []
+    for i, item in enumerate(raw):
+        if not isinstance(item, str):
+            raise ManifestError(
+                f"{ctx}.bash_hints[{i}]: must be a string, got {type(item).__name__}"
+            )
+        _reject_control_chars(item, f"bash_hints[{i}]", ctx)
+        try:
+            re.compile(item)
+        except re.error as e:
+            raise ManifestError(f"{ctx}.bash_hints[{i}]: invalid regex {item!r}: {e}") from e
+        hints.append(item)
+    return tuple(hints)
 
 
 def _load_tools(raw: dict[str, Any], path: Path) -> dict[str, ToolSpec]:
@@ -775,12 +799,16 @@ def merge_manifests(manifests: list[NerfManifest]) -> list[NerfManifest]:
     """Merge manifests, with later entries winning on tool name collision.
 
     Tools within the same package are merged; a tool from a later manifest
-    replaces the same-named tool from an earlier manifest.
+    replaces the same-named tool from an earlier manifest. bash_hints are
+    unioned across manifests sharing a package name (order-preserved, deduped)
+    so an extension can declare additional hint patterns without redefining
+    the base set.
     """
     packages: dict[str, PackageMeta] = {}
     versions: dict[str, int] = {}
     tools_by_package: dict[str, dict[str, ToolSpec]] = {}
     source_by_package: dict[str, Path | None] = {}
+    hints_by_package: dict[str, list[str]] = {}
 
     for manifest in manifests:
         pkg_name = manifest.package.name
@@ -789,12 +817,22 @@ def merge_manifests(manifests: list[NerfManifest]) -> list[NerfManifest]:
             versions[pkg_name] = manifest.version
             tools_by_package[pkg_name] = {}
             source_by_package[pkg_name] = manifest.source_path
+            hints_by_package[pkg_name] = []
         tools_by_package[pkg_name].update(manifest.tools)
+        for hint in manifest.package.bash_hints:
+            if hint not in hints_by_package[pkg_name]:
+                hints_by_package[pkg_name].append(hint)
 
     return [
         NerfManifest(
             version=versions[pkg_name],
-            package=packages[pkg_name],
+            package=PackageMeta(
+                name=packages[pkg_name].name,
+                description=packages[pkg_name].description,
+                skill_group=packages[pkg_name].skill_group,
+                skill_intro=packages[pkg_name].skill_intro,
+                bash_hints=tuple(hints_by_package[pkg_name]),
+            ),
             tools=tools_by_package[pkg_name],
             source_path=source_by_package[pkg_name],
         )
