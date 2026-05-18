@@ -125,10 +125,24 @@ class MarketplaceConfig:
 
 
 @dataclass(frozen=True)
+class HooksConfig:
+    """Toggles for hooks emitted into a generated plugin.
+
+    Both default to True, preserving the historical "always emit" behavior.
+    Set a flag to False to skip emitting that hook script and its entry in
+    the plugin's ``hooks.json``.
+    """
+
+    session_start: bool = True
+    pretool_bash_hint: bool = True
+
+
+@dataclass(frozen=True)
 class ClaudePluginConfig:
     """Target-specific settings for ``claude-plugin``."""
 
     marketplace: MarketplaceConfig = field(default_factory=MarketplaceConfig)
+    hooks: HooksConfig = field(default_factory=HooksConfig)
 
 
 @dataclass(frozen=True)
@@ -296,7 +310,7 @@ def _parse_claude_plugin(raw: Any) -> ClaudePluginConfig:
     if not isinstance(raw, dict):
         raise ConfigError("'targets.claude-plugin' must be a mapping")
 
-    allowed = {"marketplace"}
+    allowed = {"marketplace", "hooks"}
     unknown = set(raw) - allowed
     if unknown:
         raise ConfigError(f"targets.claude-plugin has unknown keys: {sorted(unknown)}")
@@ -306,7 +320,31 @@ def _parse_claude_plugin(raw: Any) -> ClaudePluginConfig:
         if "marketplace" in raw
         else MarketplaceConfig()
     )
-    return ClaudePluginConfig(marketplace=marketplace)
+    hooks = (
+        _parse_hooks_config(raw["hooks"])
+        if "hooks" in raw
+        else HooksConfig()
+    )
+    return ClaudePluginConfig(marketplace=marketplace, hooks=hooks)
+
+
+def _parse_hooks_config(raw: Any) -> HooksConfig:
+    if not isinstance(raw, dict):
+        raise ConfigError("'targets.claude-plugin.hooks' must be a mapping")
+
+    allowed = {"session_start", "pretool_bash_hint"}
+    unknown = set(raw) - allowed
+    if unknown:
+        raise ConfigError(f"targets.claude-plugin.hooks has unknown keys: {sorted(unknown)}")
+
+    for bool_field in ("session_start", "pretool_bash_hint"):
+        if bool_field in raw and not isinstance(raw[bool_field], bool):
+            raise ConfigError(f"targets.claude-plugin.hooks.{bool_field} must be a boolean")
+
+    return HooksConfig(
+        session_start=raw.get("session_start", True),
+        pretool_bash_hint=raw.get("pretool_bash_hint", True),
+    )
 
 
 def _parse_marketplace_config(raw: Any) -> MarketplaceConfig:

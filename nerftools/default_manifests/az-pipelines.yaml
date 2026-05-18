@@ -13,6 +13,8 @@ package:
     history. Use az-pipelines-run-show to drill into a single run.
     Use az-pipelines-run-timeline to see step-by-step status for a failed run
     and az-pipelines-run-log to fetch a specific step's log content.
+  bash_hints:
+    - '\baz pipelines\b'
 
 tools:
   az-pipelines-list:

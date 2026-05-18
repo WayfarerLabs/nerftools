@@ -9,6 +9,8 @@ package:
     az-boards, az-pipelines, and az-repos packages. Use
     az-devops-set-default-project when the git-remote-detected project
     is not the one you want to operate on by default.
+  bash_hints:
+    - '\baz devops\b'
 
 tools:
   az-devops-set-default-project:

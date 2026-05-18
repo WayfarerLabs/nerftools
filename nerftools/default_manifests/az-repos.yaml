@@ -14,6 +14,8 @@ package:
     az-repos-pr-set-status changes a PR's lifecycle state
     (active / abandoned / completed). az-repos-pr-vote casts or resets
     a review vote on a PR.
+  bash_hints:
+    - '\baz repos\b'
 
 tools:
   az-repos-pr-list:
