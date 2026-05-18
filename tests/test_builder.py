@@ -94,6 +94,15 @@ def test_simple_tool_has_set_pipefail() -> None:
     assert "set -euo pipefail" in script
 
 
+def test_simple_tool_has_bash_version_check() -> None:
+    script = build_script_text("my-tool", "my-pkg", _template_tool(["echo", "hello"]))
+    assert 'BASH_VERSINFO[0]:-0' in script
+    assert "my-tool requires bash 4+" in script
+    # Must come before set -euo so old-bash users get the clean message
+    # rather than a syntax error from later constructs.
+    assert script.index("BASH_VERSINFO") < script.index("set -euo pipefail")
+
+
 def test_simple_tool_exec_line() -> None:
     script = build_script_text("my-tool", "my-pkg", _template_tool(["echo", "hello"]))
     assert "exec echo hello" in script
