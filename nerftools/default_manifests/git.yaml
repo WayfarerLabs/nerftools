@@ -187,6 +187,45 @@ tools:
         required: true
         pattern: "^[a-zA-Z0-9_.-]+$"
 
+  git-ls-remote:
+    description: >-
+      List references (branches and tags) on a remote without fetching them
+      locally. With no pattern, all refs are returned (can be large on busy
+      repos). Optional <pattern> filters refs (e.g. `refs/tags/v1.*` or
+      `feat/*`). Use --tags or --heads to restrict the listing to one ref type.
+    threat:
+      read: remote
+      write: none
+    template:
+      command:
+        - git
+        - "{{options.directory}}"
+        - ls-remote
+        - "{{switches.tags}}"
+        - "{{switches.heads}}"
+        - "{{arguments.remote}}"
+        - "{{arguments.pattern}}"
+    switches:
+      tags:
+        description: List only tag refs
+        flag: --tags
+      heads:
+        description: List only branch refs
+        flag: --heads
+    options:
+      directory:
+        description: Subdirectory of the workspace to run git in (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    arguments:
+      remote:
+        description: Remote name (e.g. origin)
+        required: true
+        pattern: "^[a-zA-Z0-9_.-]+$"
+      pattern:
+        description: Optional ref pattern to filter results (e.g. refs/tags/v1.*, feat/*)
+        required: false
+
   git-pull:
     description: Pull the current branch from a remote.
     threat:
@@ -323,6 +362,18 @@ tools:
         # an agent could pass `--ext-diff` after our `--no-ext-diff` and reach
         # a configured external diff driver.
         deny: [--ext-diff, --textconv]
+    guards:
+      # `--output[=]<path>` would write the log to an arbitrary file, breaking
+      # the declared `write: none` threat profile. Variadic deny is exact-match
+      # only, so it cannot catch the inline `--output=foo` form -- this guard
+      # rejects both bare and inline forms.
+      - script: |
+          for a in "${ARGS[@]}"; do
+            case "$a" in
+              --output|--output=*) exit 1 ;;
+            esac
+          done
+        fail_message: --output is not allowed (would write outside the read-only threat profile)
 
   git-tag:
     description: >-
@@ -369,30 +420,49 @@ tools:
         path_tests: [under_cwd]
 
   git-diff:
-    description: Show unstaged changes as a unified diff.
+    description: >-
+      Show diffs. Accepts any combination of git-diff flags, refs, and pathspecs
+      (e.g. --staged, --stat, main..HEAD, main...HEAD, src/). With no extra
+      args, shows unstaged working-tree changes. External diff and textconv
+      drivers are disabled so the tool cannot be hijacked via gitconfig.
     threat:
       read: workspace
       write: none
     template:
-      command: [git, "{{options.directory}}", diff, --no-ext-diff, --no-textconv]
+      command:
+        - git
+        - "{{options.directory}}"
+        - diff
+        - --no-ext-diff
+        - --no-textconv
+        - "{{arguments.args}}"
     options:
       directory:
         description: Subdirectory of the workspace to run git in (must be under cwd)
         flag: -C
         path_tests: [under_cwd]
-
-  git-diff-staged:
-    description: Show staged changes as a unified diff.
-    threat:
-      read: workspace
-      write: none
-    template:
-      command: [git, "{{options.directory}}", diff, --no-ext-diff, --no-textconv, --staged]
-    options:
-      directory:
-        description: Subdirectory of the workspace to run git in (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
+    arguments:
+      args:
+        description: Flags, refs, and paths forwarded to `git diff` (e.g. --staged, --stat, main..HEAD, src/)
+        variadic: true
+        allow_flags: true
+        # Reject flags that re-enable the gitconfig-driven drivers we disabled
+        # in the prefix. git takes last-wins on these toggles, so without this
+        # an agent could pass `--ext-diff` after our `--no-ext-diff` and reach
+        # a configured external diff driver.
+        deny: [--ext-diff, --textconv]
+    guards:
+      # `--output[=]<path>` would write the diff to an arbitrary file, breaking
+      # the declared `write: none` threat profile. Variadic deny is exact-match
+      # only, so it cannot catch the inline `--output=foo` form -- this guard
+      # rejects both bare and inline forms.
+      - script: |
+          for a in "${ARGS[@]}"; do
+            case "$a" in
+              --output|--output=*) exit 1 ;;
+            esac
+          done
+        fail_message: --output is not allowed (would write outside the read-only threat profile)
 
   git-branch-list-local:
     description: >-
