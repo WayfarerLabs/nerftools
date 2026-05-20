@@ -6,6 +6,7 @@ Codex, including skills, scripts, plugin manifests, and marketplace metadata.
 
 from __future__ import annotations
 
+import re as re_module
 from typing import TYPE_CHECKING
 
 from nerftools.rendering import arg_line, maps_to_text, option_line, switch_line, usage_tokens
@@ -231,17 +232,18 @@ def build_claude_plugin(
     # Hooks: SessionStart intro (+ bash-version warning) plus, when any
     # package declares bash_hints, a PreToolUse redirect dispatcher. Either
     # may be opted out of via the plugin config.
+    emit_hint_hook = emit_pretool_bash_hint_hook and any(m.package.bash_hints for m in manifests)
     hook_events: dict[str, list[dict[str, object]]] = {}
 
-    if emit_session_start_hook or (
-        emit_pretool_bash_hint_hook and any(m.package.bash_hints for m in manifests)
-    ):
+    if emit_session_start_hook or emit_hint_hook:
         hooks_dir = output_dir / "hooks"
         hooks_dir.mkdir(exist_ok=True)
 
         if emit_session_start_hook:
             session_hook = hooks_dir / "nerf-session-start"
-            session_hook.write_text(_build_session_start_hook_script(plugin_meta, prefix=prefix))
+            session_hook.write_text(
+                _build_session_start_hook_script(plugin_meta, manifests, prefix=prefix)
+            )
             session_hook.chmod(0o755)
             written.append(session_hook)
             hook_events["SessionStart"] = [
@@ -256,7 +258,7 @@ def build_claude_plugin(
                 }
             ]
 
-        if emit_pretool_bash_hint_hook and any(m.package.bash_hints for m in manifests):
+        if emit_hint_hook:
             hint_hook = hooks_dir / "nerf-bash-hint"
             hint_hook.write_text(_build_bash_hint_hook_script(manifests, prefix=prefix))
             hint_hook.chmod(0o755)
@@ -626,8 +628,13 @@ set -uo pipefail
 
 _WRAPPER_PREFIX="__PREFIX__"
 _BRAND="__BRAND__"
+# Brand pre-escaped for regex use so a future prefix containing meta-chars
+# (e.g. ".", "+") doesn't break the bypass sentinel match.
+_BRAND_RE="__BRAND_RE__"
 
-# Tab-separated <regex>\\t<skill> rows, declaration order.
+# Tab-separated <regex>\\t<skill> rows, declaration order. \\b boundaries in
+# manifest patterns are translated to portable POSIX ERE at generation time
+# so the hook works on macOS BSD regex (where \\b is not supported).
 _PATTERNS=(
 __PATTERNS__
 )
@@ -642,14 +649,17 @@ _tool=$(printf '%s' "$_input" | jq -r '.tool_name // empty' 2>/dev/null) || exit
 _cmd=$(printf '%s' "$_input" | jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
 [[ -n "$_cmd" ]] || exit 0
 
-# Skip when the command's first token contains the wrapper prefix --
-# calls to the wrappers themselves are never flagged.
+# Skip when ANY whitespace-separated token in the command contains the
+# wrapper prefix -- handles compound commands like
+# "cd /repo && nerf-git status" and "env FOO=bar nerf-git pull" that
+# wouldn't be matched by a first-token-only check.
 if [[ -n "$_WRAPPER_PREFIX" ]]; then
-  _lead="${_cmd#"${_cmd%%[![:space:]]*}"}"
-  _first="${_lead%%[[:space:]]*}"
-  if [[ "$_first" == *"$_WRAPPER_PREFIX"* ]]; then
-    exit 0
-  fi
+  read -ra _tokens <<< "$_cmd"
+  for _t in "${_tokens[@]:-}"; do
+    if [[ "$_t" == *"$_WRAPPER_PREFIX"* ]]; then
+      exit 0
+    fi
+  done
 fi
 
 emit_deny() {
@@ -658,7 +668,7 @@ emit_deny() {
 }
 
 # Bypass sentinel: "# <brand>:bypass <reason>" anywhere in the command.
-_bypass_re="# ${_BRAND}:bypass([^"$'\\n'"]*)"
+_bypass_re="# ${_BRAND_RE}:bypass([^"$'\\n'"]*)"
 if [[ "$_cmd" =~ $_bypass_re ]]; then
   _reason="${BASH_REMATCH[1]}"
   # Trim surrounding whitespace.
@@ -667,7 +677,7 @@ if [[ "$_cmd" =~ $_bypass_re ]]; then
   if [[ -n "$_reason" ]]; then
     exit 0
   fi
-  emit_deny "The \\`# ${_BRAND}:bypass\\` marker requires a reason. Retry with \\`# ${_BRAND}:bypass <reason explaining why the wrapper isn't suitable>\\`."
+  emit_deny "The \\`# ${_BRAND}:bypass\\` marker requires a reason. Retry with \\`# ${_BRAND}:bypass <one-line explanation>\\`."
   exit 0
 fi
 
@@ -700,7 +710,7 @@ done
 
 _msg="The following ${_BRAND} skill(s) may wrap this command: ${_list}.
 
-Use one of them unless you specifically need a flag or behavior the wrapper doesn't expose. If you do need to run the command directly, retry with the marker \\`# ${_BRAND}:bypass <reason>\\` anywhere in the command."
+Use one if it covers what you need. To run the command directly anyway, retry with a brief reason appended as \\`# ${_BRAND}:bypass <one-line explanation>\\`."
 
 emit_deny "$_msg"
 '''
@@ -722,14 +732,39 @@ def _build_bash_hint_hook_script(manifests: list[NerfManifest], *, prefix: str) 
     for manifest in manifests:
         skill_name = prefix + manifest.package.skill_group
         for pattern in manifest.package.bash_hints:
-            row = f"{pattern}\t{skill_name}"
+            portable = _to_portable_ere(pattern)
+            row = f"{portable}\t{skill_name}"
             rows.append(f"  $'{_bash_dollar_escape(row)}'")
     return (
         _HINT_HOOK_TEMPLATE
         .replace("__PATTERNS__", "\n".join(rows))
         .replace("__PREFIX__", _bash_double_quote_escape(prefix))
         .replace("__BRAND__", _bash_double_quote_escape(brand))
+        .replace("__BRAND_RE__", _bash_double_quote_escape(_ere_escape(brand)))
     )
+
+
+# Word-boundary translation: bash's =~ uses the host POSIX ERE engine, which
+# does not portably recognize \b (GNU extension; absent on macOS BSD libc).
+# Translate \b in manifest-author patterns to a portable alternation that
+# matches start-of-string, end-of-string, or a non-word char at that
+# position. Equivalent for matching purposes; the surrounding non-word char,
+# when present, is consumed (the hook only cares about a match, not a span).
+_BACKSLASH_B_RE = re_module.compile(r"\\b")
+
+# POSIX ERE metacharacters that must be backslash-escaped when a literal
+# string is interpolated into a regex.
+_ERE_META = set(r".[]{}()\^$|?*+")
+
+
+def _to_portable_ere(pattern: str) -> str:
+    """Translate ``\\b`` word boundaries in *pattern* to portable POSIX ERE."""
+    return _BACKSLASH_B_RE.sub(r"(^|$|[^[:alnum:]_])", pattern)
+
+
+def _ere_escape(s: str) -> str:
+    """Backslash-escape POSIX ERE metacharacters in *s* for literal matching."""
+    return "".join("\\" + c if c in _ERE_META else c for c in s)
 
 
 def _bash_dollar_escape(s: str) -> str:
@@ -760,7 +795,7 @@ set -uo pipefail
 _PLUGIN_NAME="__PLUGIN_NAME__"
 _PREFIX="__PREFIX__"
 
-_intro="The \\`${_PLUGIN_NAME}\\` plugin is installed. It provides safety-constrained wrappers for common CLIs (git, gh, terraform/terragrunt, az, etc.). Prefer these wrappers over raw bash for commands they cover. Load the \\`${_PLUGIN_NAME}\\` skill for the full overview, or any \\`${_PREFIX}<group>\\` skill (e.g. \\`${_PREFIX}git\\`) for specific tools. A pre-bash redirect hook will prompt you to use a wrapper when one is available."
+_intro="The \\`${_PLUGIN_NAME}\\` plugin is installed. It provides safety-constrained wrappers for __EXAMPLE_CLI_LIST__. Prefer these wrappers over raw bash for commands they cover. Load the \\`${_PLUGIN_NAME}\\` skill for the full overview, or any \\`${_PREFIX}<group>\\` skill__EXAMPLE_SKILL_HINT__ for specific tools. A pre-bash redirect hook will prompt you to use a wrapper when one is available."
 
 _msg="$_intro"
 if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
@@ -778,10 +813,55 @@ fi
 '''
 
 
-def _build_session_start_hook_script(plugin_meta: PluginMetadata, *, prefix: str) -> str:
-    """Render the SessionStart hook script with plugin identity baked in."""
+def _build_session_start_hook_script(
+    plugin_meta: PluginMetadata,
+    manifests: list[NerfManifest],
+    *,
+    prefix: str,
+) -> str:
+    """Render the SessionStart hook script with plugin identity baked in.
+
+    The example CLI list and the example skill name are derived from the
+    actual manifests bundled in this build, so a plugin generated with a
+    different package set advertises an accurate scope.
+    """
     return (
         _SESSION_START_TEMPLATE
         .replace("__PLUGIN_NAME__", _bash_double_quote_escape(plugin_meta.name))
         .replace("__PREFIX__", _bash_double_quote_escape(prefix))
+        .replace(
+            "__EXAMPLE_CLI_LIST__",
+            _bash_double_quote_escape(_example_cli_list(manifests)),
+        )
+        .replace(
+            "__EXAMPLE_SKILL_HINT__",
+            _bash_double_quote_escape(_example_skill_hint(manifests, prefix=prefix)),
+        )
     )
+
+
+def _example_cli_list(manifests: list[NerfManifest]) -> str:
+    """Build a short, human-readable list of CLI families from manifest names.
+
+    Dedupe by first ``-``-separated component so packages like ``az-account``,
+    ``az-aks`` collapse to a single ``az``. Caps at the first 5 distinct
+    families with an "and more" tail for longer plugins; falls back to a
+    generic phrase for the empty case.
+    """
+    families: list[str] = []
+    for m in manifests:
+        first = m.package.skill_group.split("-", 1)[0]
+        if first and first not in families:
+            families.append(first)
+    if not families:
+        return "various CLIs"
+    if len(families) > 5:
+        return ", ".join(families[:5]) + ", and more"
+    return ", ".join(families)
+
+
+def _example_skill_hint(manifests: list[NerfManifest], *, prefix: str) -> str:
+    """Return ``" (e.g. <prefix><group>)"`` for the first real manifest, else ``""``."""
+    for m in manifests:
+        return f" (e.g. `{prefix}{m.package.skill_group}`)"
+    return ""

@@ -38,6 +38,7 @@
     "subshell",
     "TOCTOU",
     "typer",
+    "unioned",
     "upgen",
     "uppercased",
     "wiql",

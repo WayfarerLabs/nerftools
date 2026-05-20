@@ -796,13 +796,23 @@ def _validate_template_refs(tool: ToolSpec, all_params: set[str], ctx: str) -> N
 
 
 def merge_manifests(manifests: list[NerfManifest]) -> list[NerfManifest]:
-    """Merge manifests, with later entries winning on tool name collision.
+    """Merge manifests that share a ``package.name`` into one ``NerfManifest`` per package.
 
-    Tools within the same package are merged; a tool from a later manifest
-    replaces the same-named tool from an earlier manifest. bash_hints are
-    unioned across manifests sharing a package name (order-preserved, deduped)
-    so an extension can declare additional hint patterns without redefining
-    the base set.
+    Merge semantics are intentionally asymmetric across the package fields:
+
+    - ``description``, ``skill_group``, ``skill_intro``, ``version``, and
+      ``source_path`` are taken from the *first* manifest encountered for
+      that package name. Later manifests do not override these -- treat the
+      first manifest as the authoritative base.
+    - ``tools`` merge with *last-wins*: a tool from a later manifest
+      replaces the same-named tool from an earlier one.
+    - ``bash_hints`` are *unioned* across all manifests for the package
+      (order-preserved, deduped). An extension can add hint patterns
+      without restating the base set.
+
+    The split reflects what each field is for: identity anchors on the base
+    manifest, tools are the obvious extension point, and hints are additive
+    so multiple manifests can layer redirect coverage.
     """
     packages: dict[str, PackageMeta] = {}
     versions: dict[str, int] = {}

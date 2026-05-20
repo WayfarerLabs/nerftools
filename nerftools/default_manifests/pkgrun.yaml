@@ -12,7 +12,7 @@ package:
     for code formatting.
   bash_hints:
     - '\bcspell\b'
-    - '\bmarkdownlint(-cli2)?\b'
+    - '\bmarkdownlint\b'
     - '\bprettier\b'
 
 tools:
