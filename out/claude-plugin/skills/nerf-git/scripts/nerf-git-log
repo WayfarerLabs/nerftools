@@ -149,6 +149,14 @@ for _v in "${ARGS[@]}"; do
   fi
 done
 
+(
+  for a in "${ARGS[@]}"; do
+    case "$a" in
+      --output|--output=*) exit 1 ;;
+    esac
+  done
+) || { echo 'error: nerf-git-log: --output is not allowed (would write outside the read-only threat profile)' >&2; exit 1; }
+
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
   _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} log --no-ext-diff --no-textconv ${ARGS[@]+"${ARGS[@]}"})
   printf 'dry-run:'

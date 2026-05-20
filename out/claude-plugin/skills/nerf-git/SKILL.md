@@ -120,6 +120,29 @@ Fetch all branches and tags from a remote.
 
 ---
 
+## nerf-git-ls-remote
+
+List references (branches and tags) on a remote without fetching them locally. With no pattern, all refs are returned (can be large on busy repos). Optional <pattern> filters refs (e.g. `refs/tags/v1.*` or `feat/*`). Use --tags or --heads to restrict the listing to one ref type.
+
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-ls-remote [--tags] [--heads] [-C <directory>] <remote> [<pattern>]`
+**Maps to:** `git <directory> ls-remote <tags> <heads> <remote> <pattern>`
+
+**Switches:**
+
+- `--tags`: List only tag refs
+- `--heads`: List only branch refs
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+**Arguments:**
+
+- `<remote>` (required): Remote name (e.g. origin). must match `^[a-zA-Z0-9_.-]+$`
+- `<pattern>` (optional): Optional ref pattern to filter results (e.g. refs/tags/v1.*, feat/*)
+
+---
+
 ## nerf-git-pull
 
 Pull the current branch from a remote.
@@ -239,27 +262,18 @@ Show the working-tree status in short porcelain format.
 
 ## nerf-git-diff
 
-Show unstaged changes as a unified diff.
+Show diffs. Accepts any combination of git-diff flags, refs, and pathspecs (e.g. --staged, --stat, main..HEAD, main...HEAD, src/). With no extra args, shows unstaged working-tree changes. External diff and textconv drivers are disabled so the tool cannot be hijacked via gitconfig.
 
-**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-diff [-C <directory>]`
-**Maps to:** `git <directory> diff --no-ext-diff --no-textconv`
-
-**Options:**
-
-- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
-
----
-
-## nerf-git-diff-staged
-
-Show staged changes as a unified diff.
-
-**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-diff-staged [-C <directory>]`
-**Maps to:** `git <directory> diff --no-ext-diff --no-textconv --staged`
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-git/scripts/nerf-git-diff [-C <directory>] [<args...>]`
+**Maps to:** `git <directory> diff --no-ext-diff --no-textconv <args>`
 
 **Options:**
 
 - `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+**Arguments:**
+
+- `<args...>` (optional): Flags, refs, and paths forwarded to `git diff` (e.g. --staged, --stat, main..HEAD, src/). not `--ext-diff`, `--textconv`
 
 ---
 
