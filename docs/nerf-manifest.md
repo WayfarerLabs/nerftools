@@ -471,6 +471,12 @@ Rules:
   **Read "Variadic flag injection" below before enabling this** -- `allow_flags: true` is
   functionally passthrough mode for the bytes in the variadic, and the only honest defense is a
   structural property of the wrapped command that makes dangerous flags unreachable.
+- Inside a variadic with `allow_flags: true`, `deny:` does double duty: in addition to its usual
+  arg-value role (rejecting one of an exhaustive set of values for a named argument) it becomes a
+  per-token **flag firewall** -- strictly weaker than `passthrough` mode's glob-based deny, since
+  the match is exact-token only. Use it for an enumerable set of exact flag tokens; reach for a
+  `pre:` loop with `case`-pattern matching when a flag has both bare and `--flag=value` shapes
+  (see "Variadic flag injection" for guidance).
 - Arguments do not have a `default` field. Required positional arguments always receive a value;
   optional positionals are exposed to the wrapped tool only when the agent supplies one.
 
@@ -499,6 +505,24 @@ the tool's `description`; do not transfer it to a different wrapped command with
 
 Other structural protections exist (e.g. a tool that has no write-capable flags at all, or a tool
 whose dangerous flags are gated by an outer wrapper). Treat each one as a per-tool argument.
+
+#### Choosing between `deny:` and a `pre:` loop
+
+Both can reject dangerous tokens from a variadic, but they cover different shapes:
+
+- **`deny:` on the variadic argument** is an exact-token match against each forwarded element.
+  Use it for an enumerable set of dangerous flags whose value-attached form (`--flag=value`) is
+  either nonexistent or equally unsafe -- e.g. `--ext-diff` and `--textconv` on `git diff`, which
+  are toggles with no `=value` shape and unsafely re-enable disabled drivers. Cheap, declarative,
+  and produces the standard "denied:" error.
+- **A `pre:` loop with a `case` pattern** is the right tool when a dangerous flag has both bare
+  (`--flag <val>`) and inline (`--flag=val`) shapes, or any other syntactic variant exact-match
+  misses (short-flag stacking like `-Aw`, BSD-style `-oval`, etc.). The canonical example is
+  `--output[=]<path>` on `git diff` / `git log` (see `nerftools/default_manifests/git.yaml`),
+  which writes a patch to an arbitrary file path and so would violate `write: none`. The `pre:`
+  loop catches both forms with `--output|--output=*`.
+
+The two compose naturally: `deny:` for the easy cases, `pre:` for everything exact-match misses.
 
 When you do **not** need to forward arbitrary flags, prefer the **sentinel pattern**: declare the
 flags you want to expose as nerf `switches` / `options`, place `--` after the static prefix in

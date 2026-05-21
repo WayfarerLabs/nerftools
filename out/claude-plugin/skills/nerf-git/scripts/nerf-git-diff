@@ -149,13 +149,29 @@ for _v in "${ARGS[@]}"; do
   fi
 done
 
-(
+_nerf_pre() {
+  # `--output[=]<path>` would write the diff to an arbitrary file, breaking
+  # the declared `write: none` threat profile. Variadic deny is exact-match
+  # only, so it cannot catch the inline `--output=foo` form -- this loop
+  # rejects both bare and inline forms.
   for a in "${ARGS[@]}"; do
     case "$a" in
-      --output|--output=*) exit 1 ;;
+      --output|--output=*)
+        echo "error: nerf-git-diff: --output is not allowed (write: none)" >&2
+        echo "  value:  \"$a\"" >&2
+        echo "  hint:   pipe the output to a file instead of using --output" >&2
+        return 1
+        ;;
     esac
   done
-) || { echo 'error: nerf-git-diff: --output is not allowed (would write outside the read-only threat profile)' >&2; exit 1; }
+}
+
+_nerf_pre_rc=0
+_nerf_pre || _nerf_pre_rc=$?
+if [ $_nerf_pre_rc -ne 0 ]; then
+  echo "error: nerf-git-diff: pre-hook failed (exit code $_nerf_pre_rc)" >&2
+  exit $_nerf_pre_rc
+fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
   _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} diff --no-ext-diff --no-textconv ${ARGS[@]+"${ARGS[@]}"})

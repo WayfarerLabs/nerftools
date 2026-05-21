@@ -194,6 +194,9 @@ tools:
       repos). Optional <pattern> filters refs (e.g. `refs/tags/v1.*` or
       `feat/*`). Use --tags or --heads to restrict the listing to one ref type.
     threat:
+      # `read: remote` -- this is intentional. Unlike git-log / git-diff
+      # (workspace), ls-remote performs an outbound network request against
+      # the configured remote.
       read: remote
       write: none
     template:
@@ -362,18 +365,21 @@ tools:
         # an agent could pass `--ext-diff` after our `--no-ext-diff` and reach
         # a configured external diff driver.
         deny: [--ext-diff, --textconv]
-    guards:
+    pre: |
       # `--output[=]<path>` would write the log to an arbitrary file, breaking
       # the declared `write: none` threat profile. Variadic deny is exact-match
-      # only, so it cannot catch the inline `--output=foo` form -- this guard
+      # only, so it cannot catch the inline `--output=foo` form -- this loop
       # rejects both bare and inline forms.
-      - script: |
-          for a in "${ARGS[@]}"; do
-            case "$a" in
-              --output|--output=*) exit 1 ;;
-            esac
-          done
-        fail_message: --output is not allowed (would write outside the read-only threat profile)
+      for a in "${ARGS[@]}"; do
+        case "$a" in
+          --output|--output=*)
+            echo "error: nerf-git-log: --output is not allowed (write: none)" >&2
+            echo "  value:  \"$a\"" >&2
+            echo "  hint:   pipe the output to a file instead of using --output" >&2
+            return 1
+            ;;
+        esac
+      done
 
   git-tag:
     description: >-
@@ -451,18 +457,21 @@ tools:
         # an agent could pass `--ext-diff` after our `--no-ext-diff` and reach
         # a configured external diff driver.
         deny: [--ext-diff, --textconv]
-    guards:
+    pre: |
       # `--output[=]<path>` would write the diff to an arbitrary file, breaking
       # the declared `write: none` threat profile. Variadic deny is exact-match
-      # only, so it cannot catch the inline `--output=foo` form -- this guard
+      # only, so it cannot catch the inline `--output=foo` form -- this loop
       # rejects both bare and inline forms.
-      - script: |
-          for a in "${ARGS[@]}"; do
-            case "$a" in
-              --output|--output=*) exit 1 ;;
-            esac
-          done
-        fail_message: --output is not allowed (would write outside the read-only threat profile)
+      for a in "${ARGS[@]}"; do
+        case "$a" in
+          --output|--output=*)
+            echo "error: nerf-git-diff: --output is not allowed (write: none)" >&2
+            echo "  value:  \"$a\"" >&2
+            echo "  hint:   pipe the output to a file instead of using --output" >&2
+            return 1
+            ;;
+        esac
+      done
 
   git-branch-list-local:
     description: >-
