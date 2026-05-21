@@ -141,12 +141,14 @@ together. Targets without a pre-bash hook simply ignore the field.
 
 Patterns are evaluated as POSIX ERE matches that may appear anywhere in
 the command — prefer word-boundary anchors (`\bgit\b`) over start-anchored
-ones (`^git`) so compound commands like `foo && git status` match. Patterns
-must be POSIX ERE-compatible, since the generated hook evaluates them via
-bash's `[[ =~ ]]`; Python-only constructs (lookaheads, named groups, etc.)
-pass manifest validation but will not match at runtime. As a convenience,
-`\b` boundaries are translated to portable POSIX ERE at generation time so
-manifests can keep using them.
+ones (`^git`) so compound commands like `foo && git status` match. The
+generated hook evaluates patterns via bash's `[[ =~ ]]`, which on most
+platforms uses POSIX ERE. Manifest loading compiles each pattern as a
+Python regex (catching uncompilable patterns and control characters) but
+does not enforce ERE compatibility — Python-only constructs (lookaheads,
+named groups, etc.) will pass load-time validation but won't match at
+runtime. Stick to ERE. As a convenience, `\b` boundaries are translated to
+portable POSIX ERE at generation time so manifests can keep using them.
 
 The hook automatically skips when it detects an actual wrapper invocation:
 it splits the command on shell separators (`&&`, `||`, `;`, `|`, `&`),

@@ -12,7 +12,7 @@ arguments).
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
@@ -836,13 +836,11 @@ def merge_manifests(manifests: list[NerfManifest]) -> list[NerfManifest]:
     return [
         NerfManifest(
             version=versions[pkg_name],
-            package=PackageMeta(
-                name=packages[pkg_name].name,
-                description=packages[pkg_name].description,
-                skill_group=packages[pkg_name].skill_group,
-                skill_intro=packages[pkg_name].skill_intro,
-                bash_hints=tuple(hints_by_package[pkg_name]),
-            ),
+            # Copy the base PackageMeta forward unchanged except for the
+            # unioned bash_hints. Using dataclasses.replace keeps this
+            # merge correct as new fields are added to PackageMeta -- a
+            # hand-rolled constructor here would silently drop them.
+            package=replace(packages[pkg_name], bash_hints=tuple(hints_by_package[pkg_name])),
             tools=tools_by_package[pkg_name],
             source_path=source_by_package[pkg_name],
         )

@@ -653,10 +653,14 @@ _cmd=$(printf '%s' "$_input" | jq -r '.tool_input.command // empty' 2>/dev/null)
 # We split on common shell separators (&&, ||, ;, |, &) into segments,
 # skip any leading "VAR=val" env-var assignments in each segment, and
 # check whether the first remaining token's basename starts with the
-# wrapper prefix. This handles "cd /repo && nerf-git status",
-# "env FOO=bar nerf-git pull", and absolute-path invocations like
-# "/abs/path/nerf-git-add ." without skipping unrelated tokens that
-# merely happen to contain the prefix (e.g. "git log --grep nerf-X").
+# wrapper prefix. This handles "cd /repo && nerf-git status", bash
+# env-var prefixes ("FOO=bar nerf-git pull"), and absolute-path
+# invocations like "/abs/path/nerf-git-add ." without skipping
+# unrelated tokens that happen to contain the prefix at arg position
+# (e.g. "git log --grep nerf-X"). Commands fronted by the POSIX `env`
+# binary (or `nice`, `time`, `sudo`, etc.) are not specially recognized
+# -- the runner is the executable; agents can use the bypass sentinel
+# for that case.
 if [[ -n "$_WRAPPER_PREFIX" ]]; then
   _norm="${_cmd//&&/$'\\n'}"
   _norm="${_norm//||/$'\\n'}"
