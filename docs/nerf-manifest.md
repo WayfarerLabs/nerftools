@@ -139,20 +139,32 @@ the call (silently, without prompting the user) and points the agent at
 the corresponding nerf skill. Multiple matching skills are listed
 together. Targets without a pre-bash hook simply ignore the field.
 
-Patterns are evaluated with substring search, so prefer word-boundary
-anchors (`\bgit\b`) over start-anchored ones (`^git`) — compound commands
-like `foo && git status` only match the former. The hook automatically
-skips when the first token of the command contains the wrapper prefix
-(default `nerf-`), so calls to the wrappers themselves are never flagged.
+Patterns are evaluated as POSIX ERE matches that may appear anywhere in
+the command — prefer word-boundary anchors (`\bgit\b`) over start-anchored
+ones (`^git`) so compound commands like `foo && git status` match. Patterns
+must be POSIX ERE-compatible, since the generated hook evaluates them via
+bash's `[[ =~ ]]`; Python-only constructs (lookaheads, named groups, etc.)
+pass manifest validation but will not match at runtime. As a convenience,
+`\b` boundaries are translated to portable POSIX ERE at generation time so
+manifests can keep using them.
+
+The hook automatically skips when it detects an actual wrapper invocation:
+it splits the command on shell separators (`&&`, `||`, `;`, `|`, `&`),
+finds the first non-env-var token of each segment, and checks whether that
+token's basename starts with the wrapper prefix. Compound forms like
+`cd /repo && nerf-git status` and absolute-path invocations like
+`/abs/path/nerf-git-add .` skip cleanly; tokens that contain the prefix at
+arg position (e.g. `git log --grep nerf-X`) do not trigger the skip.
 
 When the same `package.name` is split across multiple manifests (extension
 pattern), `bash_hints` are unioned across them (order-preserved, deduped).
 An extension can add new patterns without restating the base set.
 
 An agent that genuinely needs to run the underlying command directly can
-include `# nerf:bypass <reason>` anywhere in the command (reason required).
-The hook lets the call through; the user's normal permission flow still
-applies.
+include `# <brand>:bypass <reason>` anywhere in the command (reason
+required). The `<brand>` follows the wrapper prefix (default `nerf-` →
+`nerf`, `mytool-` → `mytool`). The hook lets the call through; the user's
+normal permission flow still applies.
 
 ## Tool definition
 

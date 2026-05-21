@@ -21,5 +21,5 @@ targets:
     marketplace:
       embed: false # distributed via the repo-level marketplace.json
     # hooks: # both default to true; uncomment to opt out
-    #   session_start: true # one-time intro on session/clear/compact/resume
-    #   pretool_bash_hint: true # PreToolUse redirect for raw bash matching bash_hints
+    #   session_start: false # one-time intro on session/clear/compact/resume
+    #   pretool_bash_hint: false # PreToolUse redirect for raw bash matching bash_hints

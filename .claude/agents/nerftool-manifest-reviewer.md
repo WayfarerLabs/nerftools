@@ -153,9 +153,14 @@ Beyond outright security: rough edges that bite users.
 pre-bash redirect hook on plugin targets that support one: when an agent
 calls raw bash with a command matching any pattern, the hook denies the
 call and points the agent at the nerf skill instead. Patterns are matched
-with substring search, and the hook is skipped automatically when the
-first token of the command contains the wrapper prefix (so calls to nerf
-wrappers themselves are never flagged).
+anywhere in the command. The hook automatically skips when it detects an
+actual wrapper invocation -- it splits the command on shell separators
+(``&&``, ``||``, ``;``, ``|``, ``&``), finds the first non-env-var token
+in each segment, and checks whether that token's basename starts with the
+wrapper prefix. So ``cd /repo && nerf-git status`` and
+``/abs/path/nerf-git-add .`` skip cleanly; ``git log --grep nerf-X`` does
+not (the prefix appears only at arg position, not at an executable
+position).
 
 - **Coverage**: every CLI binary that this package's tools wrap must be
   covered by at least one pattern. E.g., a package that wraps both `git`
@@ -171,10 +176,10 @@ wrappers themselves are never flagged).
   hint says "the skill may wrap this," and the agent learns which tools
   exist by loading the skill.
 - **No false positives on the wrapper**: do NOT add a pattern that would
-  match the wrapper's own name when called by its absolute path. The first-
-  token / wrapper-prefix exclusion is already in the hook; an over-eager
-  pattern (e.g. `git` without word boundaries) would still misfire on
-  unrelated substrings in env exports or paths.
+  match the wrapper's own name when called by its absolute path. The
+  executable-position exclusion in the hook covers normal wrapper calls,
+  but an over-eager pattern (e.g. `git` without word boundaries) can still
+  misfire on unrelated substrings in env exports or paths.
 - **Extensions**: if this manifest is an extension of an existing package
   (same `package.name` in a different file), `bash_hints` is unioned across
   manifests. An extension may declare additional patterns covering its new

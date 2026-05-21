@@ -649,17 +649,36 @@ _tool=$(printf '%s' "$_input" | jq -r '.tool_name // empty' 2>/dev/null) || exit
 _cmd=$(printf '%s' "$_input" | jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
 [[ -n "$_cmd" ]] || exit 0
 
-# Skip when ANY whitespace-separated token in the command contains the
-# wrapper prefix -- handles compound commands like
-# "cd /repo && nerf-git status" and "env FOO=bar nerf-git pull" that
-# wouldn't be matched by a first-token-only check.
+# Skip the redirect when the command is invoking a wrapper itself.
+# We split on common shell separators (&&, ||, ;, |, &) into segments,
+# skip any leading "VAR=val" env-var assignments in each segment, and
+# check whether the first remaining token's basename starts with the
+# wrapper prefix. This handles "cd /repo && nerf-git status",
+# "env FOO=bar nerf-git pull", and absolute-path invocations like
+# "/abs/path/nerf-git-add ." without skipping unrelated tokens that
+# merely happen to contain the prefix (e.g. "git log --grep nerf-X").
 if [[ -n "$_WRAPPER_PREFIX" ]]; then
-  read -ra _tokens <<< "$_cmd"
-  for _t in "${_tokens[@]:-}"; do
-    if [[ "$_t" == *"$_WRAPPER_PREFIX"* ]]; then
+  _norm="${_cmd//&&/$'\\n'}"
+  _norm="${_norm//||/$'\\n'}"
+  _norm="${_norm//[|;&]/$'\\n'}"
+  while IFS= read -r _seg; do
+    _seg="${_seg#"${_seg%%[![:space:]]*}"}"
+    [[ -z "$_seg" ]] && continue
+    read -ra _toks <<< "$_seg"
+    _exec=""
+    for _t in "${_toks[@]:-}"; do
+      if [[ "$_t" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+        continue
+      fi
+      _exec="$_t"
+      break
+    done
+    [[ -z "$_exec" ]] && continue
+    _base="${_exec##*/}"
+    if [[ "$_base" == "$_WRAPPER_PREFIX"* ]]; then
       exit 0
     fi
-  done
+  done <<< "$_norm"
 fi
 
 emit_deny() {

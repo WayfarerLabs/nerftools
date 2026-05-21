@@ -496,7 +496,7 @@ def test_hook_skips_nerf_wrapper_calls(tmp_path: Path) -> None:
 
 
 def test_hook_skips_wrapper_calls_after_shell_prefix(tmp_path: Path) -> None:
-    """Wrapper invocations preceded by `cd` or env-var assignments are still skipped."""
+    """Wrapper invocations preceded by `cd` or bash env-var prefixes are still skipped."""
     m = _manifest_with_hints(skill_group="git", hints=(r"\bgit\b",))
     _build([m], tmp_path, prefix="nerf-")
     script = tmp_path / "hooks" / "nerf-bash-hint"
@@ -508,12 +508,37 @@ def test_hook_skips_wrapper_calls_after_shell_prefix(tmp_path: Path) -> None:
     )
     assert stdout == ""
 
-    # env-var assignment + wrapper
+    # bash env-var prefix + wrapper
     stdout, _ = _run_hook(
         script,
-        {"tool_name": "Bash", "tool_input": {"command": "env FOO=bar nerf-git pull"}},
+        {"tool_name": "Bash", "tool_input": {"command": "FOO=bar nerf-git pull"}},
     )
     assert stdout == ""
+
+    # absolute path to the wrapper
+    stdout, _ = _run_hook(
+        script,
+        {
+            "tool_name": "Bash",
+            "tool_input": {"command": "/abs/path/skills/nerf-git/scripts/nerf-git-add ."},
+        },
+    )
+    assert stdout == ""
+
+
+def test_hook_does_not_skip_on_arg_position_prefix(tmp_path: Path) -> None:
+    """A token containing the prefix at arg position does NOT trigger the skip."""
+    m = _manifest_with_hints(skill_group="git", hints=(r"\bgit\b",))
+    _build([m], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+
+    # `nerf-tracker` is just an arg to git, not a wrapper invocation -> redirect fires.
+    stdout, _ = _run_hook(
+        script,
+        {"tool_name": "Bash", "tool_input": {"command": "git log --grep nerf-tracker"}},
+    )
+    reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "`nerf-git`" in reason
 
 
 def test_hook_portable_word_boundary_translation(tmp_path: Path) -> None:
