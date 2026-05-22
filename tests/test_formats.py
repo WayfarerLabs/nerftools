@@ -238,6 +238,429 @@ def test_claude_plugin_passthrough_skill(tmp_path: Path) -> None:
     assert "[tokens...]" in content
 
 
+# -- claude-plugin hint hook ---------------------------------------------------
+
+
+def _manifest_with_hints(
+    *,
+    skill_group: str = "git",
+    hints: tuple[str, ...] = ("^git( |$)",),
+) -> NerfManifest:
+    return NerfManifest(
+        version=1,
+        package=PackageMeta(
+            name=skill_group,
+            description="Test package",
+            skill_group=skill_group,
+            bash_hints=hints,
+        ),
+        tools={"x": _template_tool(["echo", "x"])},
+    )
+
+
+def _run_hook(script: Path, payload: dict) -> tuple[str, int]:
+    import subprocess
+
+    result = subprocess.run(
+        [str(script)],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.stdout, result.returncode
+
+
+def test_claude_plugin_no_pretool_hook_when_no_bash_hints(tmp_path: Path) -> None:
+    _build([_manifest(skill_group="git")], tmp_path, prefix="nerf-")
+    cfg = json.loads((tmp_path / "hooks" / "hooks.json").read_text())
+    assert "PreToolUse" not in cfg["hooks"]
+    assert not (tmp_path / "hooks" / "nerf-bash-hint").exists()
+
+
+def test_claude_plugin_session_start_opt_out(tmp_path: Path) -> None:
+    _build(
+        [_manifest_with_hints()],
+        tmp_path,
+        prefix="nerf-",
+        emit_session_start_hook=False,
+    )
+    cfg = json.loads((tmp_path / "hooks" / "hooks.json").read_text())
+    assert "SessionStart" not in cfg["hooks"]
+    assert "PreToolUse" in cfg["hooks"]
+    assert not (tmp_path / "hooks" / "nerf-session-start").exists()
+    assert (tmp_path / "hooks" / "nerf-bash-hint").exists()
+
+
+def test_claude_plugin_pretool_opt_out(tmp_path: Path) -> None:
+    _build(
+        [_manifest_with_hints()],
+        tmp_path,
+        prefix="nerf-",
+        emit_pretool_bash_hint_hook=False,
+    )
+    cfg = json.loads((tmp_path / "hooks" / "hooks.json").read_text())
+    assert "SessionStart" in cfg["hooks"]
+    assert "PreToolUse" not in cfg["hooks"]
+    assert not (tmp_path / "hooks" / "nerf-bash-hint").exists()
+    assert (tmp_path / "hooks" / "nerf-session-start").exists()
+
+
+def test_claude_plugin_both_hooks_off_no_hooks_dir(tmp_path: Path) -> None:
+    _build(
+        [_manifest_with_hints()],
+        tmp_path,
+        prefix="nerf-",
+        emit_session_start_hook=False,
+        emit_pretool_bash_hint_hook=False,
+    )
+    assert not (tmp_path / "hooks").exists()
+
+
+def test_claude_plugin_session_start_always_emitted(tmp_path: Path) -> None:
+    _build([_manifest(skill_group="git")], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-session-start"
+    assert script.exists() and script.stat().st_mode & 0o111
+    cfg = json.loads((tmp_path / "hooks" / "hooks.json").read_text())
+    ss = cfg["hooks"]["SessionStart"][0]
+    assert ss["matcher"] == "startup|resume|clear|compact"
+    assert ss["hooks"][0]["command"].endswith("/hooks/nerf-session-start")
+
+
+def test_session_start_emits_intro(tmp_path: Path) -> None:
+    _build(
+        [
+            _manifest(skill_group="git"),
+            _manifest(name="gh-pkg", skill_group="gh"),
+            _manifest(name="tf-pkg", skill_group="tf"),
+        ],
+        tmp_path,
+        prefix="nerf-",
+    )
+    script = tmp_path / "hooks" / "nerf-session-start"
+    import subprocess
+
+    result = subprocess.run([str(script)], capture_output=True, text=True, check=True)
+    payload = json.loads(result.stdout)
+    out = payload["hookSpecificOutput"]
+    assert out["hookEventName"] == "SessionStart"
+    ctx = out["additionalContext"]
+    assert "`test-plugin`" in ctx
+    assert "`nerf-<group>`" in ctx
+    # CLI examples are derived from the actual bundled manifests.
+    assert "wrappers for git, gh, tf" in ctx
+
+
+def test_session_start_dedupes_cli_families(tmp_path: Path) -> None:
+    _build(
+        [
+            _manifest(name="az-aks", skill_group="az-aks"),
+            _manifest(name="az-account", skill_group="az-account"),
+            _manifest(name="az-boards", skill_group="az-boards"),
+        ],
+        tmp_path,
+        prefix="nerf-",
+    )
+    import subprocess
+
+    result = subprocess.run(
+        [str(tmp_path / "hooks" / "nerf-session-start")],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    ctx = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+    # Three az-* packages collapse to a single "az" family in the example list.
+    assert "wrappers for az." in ctx or "wrappers for az," in ctx
+
+
+def test_session_start_truncates_long_family_list(tmp_path: Path) -> None:
+    _build(
+        [_manifest(name=f"p{i}", skill_group=f"cli{i}") for i in range(8)],
+        tmp_path,
+        prefix="nerf-",
+    )
+    import subprocess
+
+    result = subprocess.run(
+        [str(tmp_path / "hooks" / "nerf-session-start")],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    ctx = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert "and more" in ctx
+
+
+def test_session_start_uses_plugin_name_and_prefix(tmp_path: Path) -> None:
+    _build(
+        [_manifest(skill_group="git")],
+        tmp_path,
+        plugin_meta=PluginMetadata(name="mytools", version="0.0.1", description="x"),
+        prefix="mytool-",
+    )
+    script = tmp_path / "hooks" / "nerf-session-start"
+    import subprocess
+
+    result = subprocess.run([str(script)], capture_output=True, text=True, check=True)
+    ctx = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert "`mytools`" in ctx
+    assert "`mytool-<group>`" in ctx
+    assert "`mytool-git`" in ctx
+
+
+def test_claude_plugin_hook_config_emitted(tmp_path: Path) -> None:
+    _build([_manifest_with_hints()], tmp_path, prefix="nerf-")
+    cfg = tmp_path / "hooks" / "hooks.json"
+    assert cfg.exists()
+    data = json.loads(cfg.read_text())
+    pre = data["hooks"]["PreToolUse"][0]
+    assert pre["matcher"] == "Bash"
+    cmd = pre["hooks"][0]["command"]
+    assert cmd.endswith("/hooks/nerf-bash-hint")
+    assert "${CLAUDE_PLUGIN_ROOT}" in cmd
+
+
+def test_claude_plugin_hook_script_executable(tmp_path: Path) -> None:
+    _build([_manifest_with_hints()], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    assert script.exists()
+    assert script.stat().st_mode & 0o111  # executable
+
+
+def test_hook_denies_matching_command(tmp_path: Path) -> None:
+    _build([_manifest_with_hints()], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    stdout, rc = _run_hook(
+        script, {"tool_name": "Bash", "tool_input": {"command": "git status"}}
+    )
+    assert rc == 0
+    payload = json.loads(stdout)
+    out = payload["hookSpecificOutput"]
+    assert out["hookEventName"] == "PreToolUse"
+    assert out["permissionDecision"] == "deny"
+    assert "`nerf-git`" in out["permissionDecisionReason"]
+    assert "# nerf:bypass <one-line explanation>" in out["permissionDecisionReason"]
+
+
+def test_hook_lists_all_matching_skills(tmp_path: Path) -> None:
+    m1 = _manifest_with_hints(skill_group="git", hints=("\\bgit\\b",))
+    m2 = _manifest_with_hints(skill_group="tf", hints=("\\bterraform\\b",))
+    _build([m1, m2], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    stdout, rc = _run_hook(
+        script,
+        {"tool_name": "Bash", "tool_input": {"command": "git status && terraform plan"}},
+    )
+    reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "`nerf-git`" in reason
+    assert "`nerf-tf`" in reason
+
+
+def test_hook_dedupes_skills_with_multiple_patterns(tmp_path: Path) -> None:
+    m = _manifest_with_hints(skill_group="git", hints=("^git( |$)", "^gh( |$)"))
+    _build([m], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    stdout, _ = _run_hook(
+        script, {"tool_name": "Bash", "tool_input": {"command": "git status"}}
+    )
+    reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert reason.count("`nerf-git`") == 1
+
+
+def test_hook_allows_unmatched_command(tmp_path: Path) -> None:
+    _build([_manifest_with_hints()], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    stdout, rc = _run_hook(
+        script, {"tool_name": "Bash", "tool_input": {"command": "ls -la"}}
+    )
+    assert rc == 0
+    assert stdout == ""
+
+
+def test_hook_skips_nerf_wrapper_calls(tmp_path: Path) -> None:
+    m = _manifest_with_hints(skill_group="git", hints=(r"\bgit\b",))
+    _build([m], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    stdout, rc = _run_hook(
+        script,
+        {
+            "tool_name": "Bash",
+            "tool_input": {
+                "command": "/plugin/skills/nerf-git/scripts/nerf-git-add ."
+            },
+        },
+    )
+    assert rc == 0
+    assert stdout == ""
+
+
+def test_hook_skips_wrapper_calls_after_shell_prefix(tmp_path: Path) -> None:
+    """Wrapper invocations preceded by `cd` or bash env-var prefixes are still skipped."""
+    m = _manifest_with_hints(skill_group="git", hints=(r"\bgit\b",))
+    _build([m], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+
+    # cd && wrapper
+    stdout, _ = _run_hook(
+        script,
+        {"tool_name": "Bash", "tool_input": {"command": "cd /repo && nerf-git status"}},
+    )
+    assert stdout == ""
+
+    # bash env-var prefix + wrapper
+    stdout, _ = _run_hook(
+        script,
+        {"tool_name": "Bash", "tool_input": {"command": "FOO=bar nerf-git pull"}},
+    )
+    assert stdout == ""
+
+    # absolute path to the wrapper
+    stdout, _ = _run_hook(
+        script,
+        {
+            "tool_name": "Bash",
+            "tool_input": {"command": "/abs/path/skills/nerf-git/scripts/nerf-git-add ."},
+        },
+    )
+    assert stdout == ""
+
+
+def test_hook_does_not_skip_on_arg_position_prefix(tmp_path: Path) -> None:
+    """A token containing the prefix at arg position does NOT trigger the skip."""
+    m = _manifest_with_hints(skill_group="git", hints=(r"\bgit\b",))
+    _build([m], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+
+    # `nerf-tracker` is just an arg to git, not a wrapper invocation -> redirect fires.
+    stdout, _ = _run_hook(
+        script,
+        {"tool_name": "Bash", "tool_input": {"command": "git log --grep nerf-tracker"}},
+    )
+    reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "`nerf-git`" in reason
+
+
+def test_hook_portable_word_boundary_translation(tmp_path: Path) -> None:
+    """Manifest patterns may use \\b; the generated hook ships portable ERE."""
+    m = _manifest_with_hints(skill_group="git", hints=(r"\bgit\b",))
+    _build([m], tmp_path, prefix="nerf-")
+    script_text = (tmp_path / "hooks" / "nerf-bash-hint").read_text()
+    # The GNU \b extension must not appear in the rendered script.
+    assert "\\bgit\\b" not in script_text
+    # The portable alternation must.
+    assert "(^|$|[^[:alnum:]_])git(^|$|[^[:alnum:]_])" in script_text
+
+
+def test_hook_brand_regex_meta_safe(tmp_path: Path) -> None:
+    """A prefix with regex metacharacters doesn't break the sentinel match."""
+    _build(
+        [_manifest_with_hints(skill_group="git", hints=(r"\bgit\b",))],
+        tmp_path,
+        prefix="my.tool-",
+    )
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    # Sentinel uses the literal brand 'my.tool', so 'myXtool:bypass' must NOT match.
+    stdout, _ = _run_hook(
+        script,
+        {"tool_name": "Bash", "tool_input": {"command": "git status  # myXtool:bypass reason"}},
+    )
+    reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "`my.tool-git`" in reason
+    # The literal brand sentinel DOES bypass.
+    stdout, _ = _run_hook(
+        script,
+        {"tool_name": "Bash", "tool_input": {"command": "git status  # my.tool:bypass reason"}},
+    )
+    assert stdout == ""
+
+
+def test_hook_allows_non_bash_tool(tmp_path: Path) -> None:
+    _build([_manifest_with_hints()], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    stdout, rc = _run_hook(
+        script, {"tool_name": "Edit", "tool_input": {"file_path": "/x"}}
+    )
+    assert rc == 0
+    assert stdout == ""
+
+
+def test_hook_bypass_with_reason_allows(tmp_path: Path) -> None:
+    _build([_manifest_with_hints()], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    stdout, rc = _run_hook(
+        script,
+        {
+            "tool_name": "Bash",
+            "tool_input": {"command": "git log -p  # nerf:bypass need raw diff output"},
+        },
+    )
+    assert rc == 0
+    assert stdout == ""
+
+
+def test_hook_malformed_bypass_falls_through_to_redirect(tmp_path: Path) -> None:
+    """A bypass marker missing its reason isn't recognized; redirect fires normally."""
+    _build([_manifest_with_hints()], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    # Marker with no following content: just falls through.
+    stdout, _ = _run_hook(
+        script,
+        {"tool_name": "Bash", "tool_input": {"command": "git status  # nerf:bypass"}},
+    )
+    reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "`nerf-git`" in reason
+    # The standard redirect message documents the proper bypass syntax.
+    assert "# nerf:bypass <one-line explanation>" in reason
+
+
+def test_hook_bypass_partial_word_does_not_trigger(tmp_path: Path) -> None:
+    """`bypassed-test` shouldn't accidentally trigger the marker."""
+    _build([_manifest_with_hints()], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    stdout, _ = _run_hook(
+        script,
+        {"tool_name": "Bash", "tool_input": {"command": "git status  # nerf:bypassed-test"}},
+    )
+    reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "`nerf-git`" in reason
+
+
+def test_hook_brand_follows_prefix(tmp_path: Path) -> None:
+    _build(
+        [_manifest_with_hints(skill_group="git", hints=(r"\bgit\b",))],
+        tmp_path,
+        prefix="mytool-",
+    )
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    # Bypass with the brand-derived sentinel allows
+    stdout, _ = _run_hook(
+        script,
+        {"tool_name": "Bash", "tool_input": {"command": "git status  # mytool:bypass yes"}},
+    )
+    assert stdout == ""
+    # Bypass with the old "nerf:" brand does NOT match -> still denies
+    stdout, _ = _run_hook(
+        script,
+        {"tool_name": "Bash", "tool_input": {"command": "git status  # nerf:bypass yes"}},
+    )
+    reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "`mytool-git`" in reason
+    assert "# mytool:bypass" in reason
+
+
+def test_hook_bypass_whitespace_only_reason_falls_through(tmp_path: Path) -> None:
+    """Whitespace-only reason isn't a reason; marker is malformed; redirect fires."""
+    _build([_manifest_with_hints()], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    stdout, _ = _run_hook(
+        script,
+        {"tool_name": "Bash", "tool_input": {"command": "git status  # nerf:bypass   "}},
+    )
+    reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "`nerf-git`" in reason
+
+
 # -- codex-plugin format -------------------------------------------------------
 
 

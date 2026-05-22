@@ -19,4 +19,7 @@ package:
 targets:
   claude-plugin:
     marketplace:
-      embed: false  # distributed via the repo-level marketplace.json
+      embed: false # distributed via the repo-level marketplace.json
+    # hooks: # both default to true; uncomment to opt out
+    #   session_start: false # one-time intro on session/clear/compact/resume
+    #   pretool_bash_hint: false # PreToolUse redirect for raw bash matching bash_hints

@@ -14,6 +14,8 @@ package:
     last-applied-configuration annotation. Use az-aks-get-credentials
     to populate ~/.kube/config first, then kubectl-config-use-context
     to switch between configured clusters.
+  bash_hints:
+    - '\bkubectl\b'
 
 tools:
   kubectl-version:

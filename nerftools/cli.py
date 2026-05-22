@@ -166,6 +166,7 @@ def generate(
             from nerftools.formats import build_claude_plugin
 
             plugin_meta, marketplace_meta = resolve_claude_plugin_meta(config)
+            hooks_cfg = config.targets.claude_plugin.hooks
 
             written = build_claude_plugin(
                 loaded,
@@ -173,6 +174,8 @@ def generate(
                 plugin_meta,
                 prefix=prefix,
                 marketplace_meta=marketplace_meta,
+                emit_session_start_hook=hooks_cfg.session_start,
+                emit_pretool_bash_hint_hook=hooks_cfg.pretool_bash_hint,
             )
             for path in written:
                 typer.echo(f"  {path}")

@@ -9,6 +9,8 @@ package:
     the current directory (Nx workspace root). Use nx-show-projects to
     list all projects, nx-run to execute a target, and nx-affected to
     find projects affected by current changes.
+  bash_hints:
+    - '\bnx\b'
 
 tools:
   nx-show-projects:

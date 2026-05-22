@@ -10,6 +10,9 @@ package:
     Use az-resource-show to fetch a resource by full ID.
     Use az-group-list and az-group-show for resource groups.
     All tools accept --subscription to target a specific subscription.
+  bash_hints:
+    - '\baz resource\b'
+    - '\baz group\b'
 
 tools:
   az-resource-list:

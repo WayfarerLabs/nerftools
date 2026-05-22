@@ -84,6 +84,44 @@ def test_load_manifest_with_skill_intro(tmp_path: Path) -> None:
     assert m.package.skill_intro == "Use these tools carefully."
 
 
+def test_bash_hints_default_empty(tmp_path: Path) -> None:
+    p = _write_manifest(tmp_path, _minimal_manifest())
+    m = load_manifest(p)
+    assert m.package.bash_hints == ()
+
+
+def test_bash_hints_loaded(tmp_path: Path) -> None:
+    raw = _minimal_manifest()
+    raw["package"]["bash_hints"] = ["^git( |$)", "^gh( |$)"]
+    p = _write_manifest(tmp_path, raw)
+    m = load_manifest(p)
+    assert m.package.bash_hints == ("^git( |$)", "^gh( |$)")
+
+
+def test_bash_hints_must_be_list(tmp_path: Path) -> None:
+    raw = _minimal_manifest()
+    raw["package"]["bash_hints"] = "^git( |$)"
+    p = _write_manifest(tmp_path, raw)
+    with pytest.raises(ManifestError, match="'bash_hints' must be a list"):
+        load_manifest(p)
+
+
+def test_bash_hints_items_must_be_strings(tmp_path: Path) -> None:
+    raw = _minimal_manifest()
+    raw["package"]["bash_hints"] = [42]
+    p = _write_manifest(tmp_path, raw)
+    with pytest.raises(ManifestError, match=r"bash_hints\[0\]: must be a string"):
+        load_manifest(p)
+
+
+def test_bash_hints_invalid_regex_rejected(tmp_path: Path) -> None:
+    raw = _minimal_manifest()
+    raw["package"]["bash_hints"] = ["(unterminated"]
+    p = _write_manifest(tmp_path, raw)
+    with pytest.raises(ManifestError, match="invalid regex"):
+        load_manifest(p)
+
+
 def test_missing_package_section_raises(tmp_path: Path) -> None:
     p = tmp_path / "manifest.yaml"
     p.write_text(
@@ -855,6 +893,28 @@ def test_merge_different_packages(tmp_path: Path) -> None:
     assert len(merged) == 2
     names = {m.package.name for m in merged}
     assert names == {"pkg-a", "pkg-b"}
+
+
+def test_merge_bash_hints_union_dedup(tmp_path: Path) -> None:
+    first_raw = _minimal_manifest()
+    first_raw["package"]["bash_hints"] = ["^git( |$)", "^gh( |$)"]
+    first = tmp_path / "a.yaml"
+    first.write_text(yaml.dump(first_raw))
+
+    second_raw = _minimal_manifest(tools={
+        "extra-tool": {
+            "description": "An extension test tool.",
+            "threat": {"read": "none", "write": "none"},
+            "template": {"command": ["echo", "x"]},
+        },
+    })
+    second_raw["package"]["bash_hints"] = ["^gh( |$)", "^git-lfs( |$)"]
+    second = tmp_path / "b.yaml"
+    second.write_text(yaml.dump(second_raw))
+
+    merged = merge_manifests([load_manifest(first), load_manifest(second)])
+    assert len(merged) == 1
+    assert merged[0].package.bash_hints == ("^git( |$)", "^gh( |$)", "^git-lfs( |$)")
 
 
 # -- Built-in manifest ---------------------------------------------------------

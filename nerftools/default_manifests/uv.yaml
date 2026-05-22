@@ -9,6 +9,8 @@ package:
     virtual environment. Use uv-pytest for testing, uv-ruff-check and
     uv-ruff-fix for linting, and uv-mypy for type checking. All tools
     forward arguments directly to the underlying command.
+  bash_hints:
+    - '\buv\b'
 
 tools:
   uv-pytest:

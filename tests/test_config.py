@@ -217,6 +217,49 @@ def test_load_config_keywords_must_be_strings(tmp_path: Path) -> None:
         load_config(path)
 
 
+def test_load_config_hooks_default_enabled(tmp_path: Path) -> None:
+    path = _write(tmp_path, "package:\n  name: x\n")
+    cfg = load_config(path)
+    hooks = cfg.targets.claude_plugin.hooks
+    assert hooks.session_start is True
+    assert hooks.pretool_bash_hint is True
+
+
+def test_load_config_hooks_explicit(tmp_path: Path) -> None:
+    path = _write(tmp_path, """
+targets:
+  claude-plugin:
+    hooks:
+      session_start: false
+      pretool_bash_hint: false
+""")
+    hooks = load_config(path).targets.claude_plugin.hooks
+    assert hooks.session_start is False
+    assert hooks.pretool_bash_hint is False
+
+
+def test_load_config_hooks_rejects_unknown_key(tmp_path: Path) -> None:
+    path = _write(tmp_path, """
+targets:
+  claude-plugin:
+    hooks:
+      bogus: true
+""")
+    with pytest.raises(ConfigError, match="unknown keys"):
+        load_config(path)
+
+
+def test_load_config_hooks_must_be_bool(tmp_path: Path) -> None:
+    path = _write(tmp_path, """
+targets:
+  claude-plugin:
+    hooks:
+      session_start: "yes"
+""")
+    with pytest.raises(ConfigError, match="must be a boolean"):
+        load_config(path)
+
+
 def test_load_config_marketplace_embed_false(tmp_path: Path) -> None:
     path = _write(tmp_path, """
 targets:

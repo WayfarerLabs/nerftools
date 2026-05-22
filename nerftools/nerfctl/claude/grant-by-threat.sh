@@ -4,8 +4,8 @@
 
 set -euo pipefail
 
-if [[ "${BASH_VERSINFO[0]}" -lt 4 ]]; then
-  echo "error: grant-by-threat requires bash 4+ (associative arrays). Found bash ${BASH_VERSION}" >&2
+if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
+  echo "error: nerfctl-grant-by-threat requires bash 4+. Found bash ${BASH_VERSION:-unknown}" >&2
   echo "  hint: on macOS, install a newer bash via 'brew install bash'" >&2
   exit 1
 fi

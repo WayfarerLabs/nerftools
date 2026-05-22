@@ -2,6 +2,12 @@
 # nerfctl-grant-reset -- Reset nerf tools to ask-every-time (default)
 # This is a control-plane tool for operators, not for agents.
 
+if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
+  echo "error: nerfctl-grant-reset requires bash 4+. Found bash ${BASH_VERSION:-unknown}" >&2
+  echo "  hint: on macOS, install a newer bash via 'brew install bash'" >&2
+  exit 1
+fi
+
 set -euo pipefail
 
 SCOPE="user"

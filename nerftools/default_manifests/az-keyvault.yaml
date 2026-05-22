@@ -12,6 +12,8 @@ package:
     content type, and last_modified for a single secret without revealing
     the value -- use last_modified to detect rotation.
     All tools accept --subscription to target a specific subscription.
+  bash_hints:
+    - '\baz keyvault\b'
 
 tools:
   az-keyvault-list:

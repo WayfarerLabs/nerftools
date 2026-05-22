@@ -12,6 +12,8 @@ package:
     az-aks-command-invoke runs a command via the AKS run-command API
     (works without VNet access; useful for break-glass diagnostics).
     All tools accept --subscription to target a specific subscription.
+  bash_hints:
+    - '\baz aks\b'
 
 tools:
   az-aks-list:

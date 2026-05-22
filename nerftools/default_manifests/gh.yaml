@@ -26,6 +26,8 @@ package:
     unresolved, set via the "Resolve conversation" button in the UI)
     is a GraphQL-only field on the GitHub API and is not exposed by
     this manifest. Use the GitHub UI to verify resolution state.
+  bash_hints:
+    - '\bgh\b'
 
 tools:
   gh-pr-list:

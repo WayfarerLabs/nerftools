@@ -7,7 +7,8 @@ guardrails, threat metadata, and AI skill documentation.
 
 Each tool defines exactly **one execution mode** (`template`, `passthrough`, or `script`) plus
 optional lifecycle hooks and shared configuration. The `nerf` CLI reads manifests and generates
-self-contained bash scripts, rulesync skills, and Claude Code plugins.
+self-contained bash scripts, rulesync skills, and agent plugins (e.g. for Claude Code). Run
+`nerf generate --help` for the current list of output targets.
 
 Generated scripts target **bash** (not POSIX sh).
 
@@ -123,9 +124,49 @@ package:
   description: <string> # Human-readable description of the package
   skill_group: <string> # Skill directory name (usually matches name)
   skill_intro: <string> # Optional multi-line intro for AI skill docs
+  bash_hints: # Optional list of regex patterns; see "Bash hint hook" below
+    - <regex>
 ```
 
-All fields except `skill_intro` are required.
+All fields except `skill_intro` and `bash_hints` are required.
+
+### Bash hint hook
+
+Plugin targets that support a pre-bash hook (Claude Code today; others as
+their APIs land) use `bash_hints` to generate a redirect: when the agent
+calls raw bash with a command that matches any pattern, the hook denies
+the call (silently, without prompting the user) and points the agent at
+the corresponding nerf skill. Multiple matching skills are listed
+together. Targets without a pre-bash hook simply ignore the field.
+
+Patterns are evaluated as POSIX ERE matches that may appear anywhere in
+the command — prefer word-boundary anchors (`\bgit\b`) over start-anchored
+ones (`^git`) so compound commands like `foo && git status` match. The
+generated hook evaluates patterns via bash's `[[ =~ ]]`, which on most
+platforms uses POSIX ERE. Manifest loading compiles each pattern as a
+Python regex (catching uncompilable patterns and control characters) but
+does not enforce ERE compatibility — Python-only constructs (lookaheads,
+named groups, etc.) will pass load-time validation but won't match at
+runtime. Stick to ERE. As a convenience, `\b` boundaries are translated to
+portable POSIX ERE at generation time so manifests can keep using them.
+
+The hook automatically skips when it detects an actual wrapper invocation:
+it splits the command on shell separators (`&&`, `||`, `;`, `|`, `&`),
+finds the first non-env-var token of each segment, and checks whether that
+token's basename starts with the wrapper prefix. Compound forms like
+`cd /repo && nerf-git status` and absolute-path invocations like
+`/abs/path/nerf-git-add .` skip cleanly; tokens that contain the prefix at
+arg position (e.g. `git log --grep nerf-X`) do not trigger the skip.
+
+When the same `package.name` is split across multiple manifests (extension
+pattern), `bash_hints` are unioned across them (order-preserved, deduped).
+An extension can add new patterns without restating the base set.
+
+An agent that genuinely needs to run the underlying command directly can
+include `# <brand>:bypass <reason>` anywhere in the command (reason
+required). The `<brand>` follows the wrapper prefix (default `nerf-` →
+`nerf`, `mytool-` → `mytool`). The hook lets the call through; the user's
+normal permission flow still applies.
 
 ## Tool definition
 

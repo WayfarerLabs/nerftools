@@ -9,6 +9,8 @@ package:
     only cover canonical HCL formatting via `terraform fmt`. Planning and
     applying for this codebase are done through Terragrunt (see the tg-*
     tools).
+  bash_hints:
+    - '\bterraform\b'
 
 tools:
   tf-fmt:

@@ -10,6 +10,8 @@ package:
     assignments which other queries miss. az-role-definition-list looks up
     role names and their permissions.
     All tools accept --subscription to target a specific subscription.
+  bash_hints:
+    - '\baz role\b'
 
 tools:
   az-role-assignment-list:
