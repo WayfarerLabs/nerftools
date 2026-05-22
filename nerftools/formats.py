@@ -668,7 +668,7 @@ if [[ -n "$_WRAPPER_PREFIX" ]]; then
   while IFS= read -r _seg; do
     _seg="${_seg#"${_seg%%[![:space:]]*}"}"
     [[ -z "$_seg" ]] && continue
-    read -ra _toks <<< "$_seg"
+    read -r -a _toks <<< "$_seg"
     _exec=""
     for _t in "${_toks[@]:-}"; do
       if [[ "$_t" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
@@ -691,16 +691,13 @@ emit_deny() {
 }
 
 # Bypass sentinel: "# <brand>:bypass <reason>" anywhere in the command.
-_bypass_re="# ${_BRAND_RE}:bypass([^"$'\\n'"]*)"
+# The phrase must be followed by at least one whitespace char and at
+# least one non-whitespace char, so partial words like "bypassed" don't
+# trigger and a bare marker with no reason isn't accepted. Malformed
+# markers don't match here -- they fall through to the standard redirect
+# below, whose deny message already documents the proper syntax.
+_bypass_re="# ${_BRAND_RE}:bypass[[:space:]]+[^[:space:]]"
 if [[ "$_cmd" =~ $_bypass_re ]]; then
-  _reason="${BASH_REMATCH[1]}"
-  # Trim surrounding whitespace.
-  _reason="${_reason#"${_reason%%[![:space:]]*}"}"
-  _reason="${_reason%"${_reason##*[![:space:]]}"}"
-  if [[ -n "$_reason" ]]; then
-    exit 0
-  fi
-  emit_deny "The \\`# ${_BRAND}:bypass\\` marker requires a reason. Retry with \\`# ${_BRAND}:bypass <one-line explanation>\\`."
   exit 0
 fi
 

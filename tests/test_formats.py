@@ -599,15 +599,31 @@ def test_hook_bypass_with_reason_allows(tmp_path: Path) -> None:
     assert stdout == ""
 
 
-def test_hook_bypass_empty_reason_denies(tmp_path: Path) -> None:
+def test_hook_malformed_bypass_falls_through_to_redirect(tmp_path: Path) -> None:
+    """A bypass marker missing its reason isn't recognized; redirect fires normally."""
     _build([_manifest_with_hints()], tmp_path, prefix="nerf-")
     script = tmp_path / "hooks" / "nerf-bash-hint"
+    # Marker with no following content: just falls through.
     stdout, _ = _run_hook(
         script,
         {"tool_name": "Bash", "tool_input": {"command": "git status  # nerf:bypass"}},
     )
     reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
-    assert "requires a reason" in reason
+    assert "`nerf-git`" in reason
+    # The standard redirect message documents the proper bypass syntax.
+    assert "# nerf:bypass <one-line explanation>" in reason
+
+
+def test_hook_bypass_partial_word_does_not_trigger(tmp_path: Path) -> None:
+    """`bypassed-test` shouldn't accidentally trigger the marker."""
+    _build([_manifest_with_hints()], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    stdout, _ = _run_hook(
+        script,
+        {"tool_name": "Bash", "tool_input": {"command": "git status  # nerf:bypassed-test"}},
+    )
+    reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "`nerf-git`" in reason
 
 
 def test_hook_brand_follows_prefix(tmp_path: Path) -> None:
@@ -633,7 +649,8 @@ def test_hook_brand_follows_prefix(tmp_path: Path) -> None:
     assert "# mytool:bypass" in reason
 
 
-def test_hook_bypass_whitespace_only_reason_denies(tmp_path: Path) -> None:
+def test_hook_bypass_whitespace_only_reason_falls_through(tmp_path: Path) -> None:
+    """Whitespace-only reason isn't a reason; marker is malformed; redirect fires."""
     _build([_manifest_with_hints()], tmp_path, prefix="nerf-")
     script = tmp_path / "hooks" / "nerf-bash-hint"
     stdout, _ = _run_hook(
@@ -641,7 +658,7 @@ def test_hook_bypass_whitespace_only_reason_denies(tmp_path: Path) -> None:
         {"tool_name": "Bash", "tool_input": {"command": "git status  # nerf:bypass   "}},
     )
     reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
-    assert "requires a reason" in reason
+    assert "`nerf-git`" in reason
 
 
 # -- codex-plugin format -------------------------------------------------------
