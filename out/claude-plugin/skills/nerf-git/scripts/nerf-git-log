@@ -18,7 +18,7 @@ Options:
 
 Arguments:
   <args...>
-      Flags, refs, and paths forwarded to `git log` (e.g. --oneline, -n 20, main..HEAD, -- src/)
+      Flags, refs, and paths forwarded to `git log` (e.g. --oneline, -n 20, main..HEAD, -- src/). Disallowed: --ext-diff / --textconv (would re-enable gitconfig-driven drivers) and --output / --output=<path> (writes the log to an arbitrary file).
       Not allowed: --ext-diff, --textconv
 
 Maps to: git <directory> log --no-ext-diff --no-textconv <args>

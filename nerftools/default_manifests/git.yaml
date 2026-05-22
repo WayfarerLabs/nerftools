@@ -357,7 +357,11 @@ tools:
         path_tests: [under_cwd]
     arguments:
       args:
-        description: Flags, refs, and paths forwarded to `git log` (e.g. --oneline, -n 20, main..HEAD, -- src/)
+        description: >-
+          Flags, refs, and paths forwarded to `git log` (e.g. --oneline, -n 20,
+          main..HEAD, -- src/). Disallowed: --ext-diff / --textconv (would
+          re-enable gitconfig-driven drivers) and --output / --output=<path>
+          (writes the log to an arbitrary file).
         variadic: true
         allow_flags: true
         # Reject flags that re-enable the gitconfig-driven drivers we disabled
@@ -449,14 +453,19 @@ tools:
         path_tests: [under_cwd]
     arguments:
       args:
-        description: Flags, refs, and paths forwarded to `git diff` (e.g. --staged, --stat, main..HEAD, src/)
+        description: >-
+          Flags, refs, and paths forwarded to `git diff` (e.g. --staged, --stat,
+          main..HEAD, src/). Disallowed: --ext-diff / --textconv (would re-enable
+          gitconfig-driven drivers), --no-index (reads arbitrary filesystem paths
+          outside the workspace), and --output / --output=<path> (writes the diff
+          to an arbitrary file).
         variadic: true
         allow_flags: true
         # Reject flags that re-enable the gitconfig-driven drivers we disabled
-        # in the prefix. git takes last-wins on these toggles, so without this
-        # an agent could pass `--ext-diff` after our `--no-ext-diff` and reach
-        # a configured external diff driver.
-        deny: [--ext-diff, --textconv]
+        # in the prefix (last-wins overrides --no-ext-diff / --no-textconv), and
+        # --no-index which lets `git diff` read arbitrary filesystem paths
+        # outside the workspace, breaking `read: workspace`.
+        deny: [--ext-diff, --textconv, --no-index]
     pre: |
       # `--output[=]<path>` would write the diff to an arbitrary file, breaking
       # the declared `write: none` threat profile. Variadic deny is exact-match

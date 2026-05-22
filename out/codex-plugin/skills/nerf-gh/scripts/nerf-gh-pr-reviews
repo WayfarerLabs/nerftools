@@ -90,10 +90,12 @@ if [[ "$_NERF_DRY_RUN" == "true" ]]; then
 fi
 
 LIMIT=${LIMIT:-10}
-# --paginate fetches all pages; --slurp collapses them into a single
-# JSON array so the jq sort+limit operates over the whole result set
-# rather than per page (which would only sort within each page).
+# --paginate fetches all pages; --slurp collapses them into an array
+# of per-page arrays so a single jq pass operates over the whole result
+# set rather than per page (which would only sort within each page).
 # Without these, the latest reviews would be silently missing on PRs
 # with >30 reviews because the GitHub API returns them oldest first.
-exec gh api --paginate --slurp "repos/{owner}/{repo}/pulls/${PR}/reviews" \
-  --jq "sort_by(.submitted_at) | reverse | .[:${LIMIT}] | map({id, author: .user.login, state, commit: .commit_id[0:7], submitted_at, body})"
+# gh's --slurp is mutually exclusive with --jq, so we pipe to a
+# separate jq invocation and flatten the per-page arrays.
+gh api --paginate --slurp "repos/{owner}/{repo}/pulls/${PR}/reviews" \
+  | jq "flatten | sort_by(.submitted_at) | reverse | .[:${LIMIT}] | map({id, author: .user.login, state, commit: .commit_id[0:7], submitted_at, body})"

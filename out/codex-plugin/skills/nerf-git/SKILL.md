@@ -225,7 +225,7 @@ Show commit history. Accepts any combination of git-log flags, refs, and pathspe
 
 **Arguments:**
 
-- `<args...>` (optional): Flags, refs, and paths forwarded to `git log` (e.g. --oneline, -n 20, main..HEAD, -- src/). not `--ext-diff`, `--textconv`
+- `<args...>` (optional): Flags, refs, and paths forwarded to `git log` (e.g. --oneline, -n 20, main..HEAD, -- src/). Disallowed: --ext-diff / --textconv (would re-enable gitconfig-driven drivers) and --output / --output=<path> (writes the log to an arbitrary file).. not `--ext-diff`, `--textconv`
 
 ---
 
@@ -273,7 +273,7 @@ Show diffs. Accepts any combination of git-diff flags, refs, and pathspecs (e.g.
 
 **Arguments:**
 
-- `<args...>` (optional): Flags, refs, and paths forwarded to `git diff` (e.g. --staged, --stat, main..HEAD, src/). not `--ext-diff`, `--textconv`
+- `<args...>` (optional): Flags, refs, and paths forwarded to `git diff` (e.g. --staged, --stat, main..HEAD, src/). Disallowed: --ext-diff / --textconv (would re-enable gitconfig-driven drivers), --no-index (reads arbitrary filesystem paths outside the workspace), and --output / --output=<path> (writes the diff to an arbitrary file).. not `--ext-diff`, `--textconv`, `--no-index`
 
 ---
 
