@@ -19,7 +19,7 @@ Options:
 Arguments:
   <subject> (required)
       Commit subject line: type[(scope)][!]: description (max 72 chars)
-      Must match: ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+
+      Must match: ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._,-]+\))?!?: .+
   <body>
       Optional commit body (rendered as a separate paragraph). Use for longer explanations.
 
@@ -156,12 +156,12 @@ if [[ -z "${SUBJECT}" ]]; then
   usage
 fi
 
-_NERF_PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+$'
+_NERF_PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._,-]+\))?!?: .+$'
 if [[ -n "${_SUBJECT_SET}" ]] && ! [[ "${SUBJECT}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-git-commit: argument <subject> does not match required pattern" >&2
   echo "  value:   \"${SUBJECT}\"" >&2
-  echo "  pattern: ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+" >&2
-  echo "  hint: value must match ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+" >&2
+  echo "  pattern: ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._,-]+\))?!?: .+" >&2
+  echo "  hint: value must match ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._,-]+\))?!?: .+" >&2
   exit 1
 fi
 

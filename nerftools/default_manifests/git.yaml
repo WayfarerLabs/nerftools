@@ -64,7 +64,7 @@ tools:
       subject:
         description: "Commit subject line: type[(scope)][!]: description (max 72 chars)"
         required: true
-        pattern: "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\([a-zA-Z0-9._-]+\\))?!?: .+"
+        pattern: "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\([a-zA-Z0-9._,-]+\\))?!?: .+"
       body:
         description: Optional commit body (rendered as a separate paragraph). Use for longer explanations.
         required: false
@@ -102,7 +102,7 @@ tools:
       subject:
         description: "Commit subject line: type[(scope)][!]: description (max 72 chars)"
         required: true
-        pattern: "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\([a-zA-Z0-9._-]+\\))?!?: .+"
+        pattern: "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\([a-zA-Z0-9._,-]+\\))?!?: .+"
       body:
         description: Optional commit body (rendered as a separate paragraph). Use for longer explanations.
         required: false

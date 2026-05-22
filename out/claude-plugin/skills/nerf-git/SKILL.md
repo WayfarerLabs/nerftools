@@ -51,7 +51,7 @@ Create a git commit with a Conventional Commits subject and an optional body (ch
 
 **Arguments:**
 
-- `<subject>` (required): Commit subject line: type[(scope)][!]: description (max 72 chars). must match `^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+`
+- `<subject>` (required): Commit subject line: type[(scope)][!]: description (max 72 chars). must match `^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._,-]+\))?!?: .+`
 - `<body>` (optional): Optional commit body (rendered as a separate paragraph). Use for longer explanations.
 
 ---
@@ -68,7 +68,7 @@ Amend the most recent commit with a new Conventional Commits subject and an opti
 
 **Arguments:**
 
-- `<subject>` (required): Commit subject line: type[(scope)][!]: description (max 72 chars). must match `^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+`
+- `<subject>` (required): Commit subject line: type[(scope)][!]: description (max 72 chars). must match `^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._,-]+\))?!?: .+`
 - `<body>` (optional): Optional commit body (rendered as a separate paragraph). Use for longer explanations.
 
 ---
