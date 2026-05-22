@@ -815,7 +815,7 @@ set -uo pipefail
 _PLUGIN_NAME="__PLUGIN_NAME__"
 _PREFIX="__PREFIX__"
 
-_intro="The \\`${_PLUGIN_NAME}\\` plugin is installed. It provides safety-constrained wrappers for __EXAMPLE_CLI_LIST__. Prefer these wrappers over raw bash for commands they cover. Load the \\`${_PLUGIN_NAME}\\` skill for the full overview, or any \\`${_PREFIX}<group>\\` skill__EXAMPLE_SKILL_HINT__ for specific tools. A pre-bash redirect hook will prompt you to use a wrapper when one is available."
+_intro="The \\`${_PLUGIN_NAME}\\` plugin is installed. It provides safety-constrained wrappers for __EXAMPLE_CLI_LIST__. Prefer these wrappers over raw bash for commands they cover. Load the \\`${_PLUGIN_NAME}\\` skill for the full overview, or any \\`${_PREFIX}<group>\\` skill__EXAMPLE_SKILL_HINT__ for specific tools. A pre-bash redirect hook may prompt you to use a wrapper when one is available."
 
 _msg="$_intro"
 if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
@@ -828,7 +828,7 @@ if command -v jq >/dev/null 2>&1; then
   jq -nc --arg m "$_msg" \\
     '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $m}}'
 else
-  printf '%s\\n' '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"nerftools: jq is required for the redirect and SessionStart hooks but is not installed. Tell the user to install jq."}}'
+  printf '%s\\n' '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"nerftools: jq is required for nerftools hooks but is not installed. Tell the user to install jq."}}'
 fi
 '''
 
