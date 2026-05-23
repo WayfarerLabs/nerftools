@@ -1,6 +1,6 @@
 ---
 name: nerf-tf
-description: "Terraform workflow tools (currently scoped to formatting helpers)"
+description: "Terraform workflow tools for formatting and static validation"
 targets: ["*"]
 ---
 
@@ -8,10 +8,10 @@ targets: ["*"]
 
 These tools are available as scripts within this skill. Call them using the paths shown in each usage line.
 
-These tools run Terraform commands in the current directory. Today they
-only cover canonical HCL formatting via `terraform fmt`. Planning and
-applying for this codebase are done through Terragrunt (see the tg-*
-tools).
+These tools run Terraform commands in the current directory. They cover
+canonical HCL formatting via `terraform fmt` and static configuration
+checks via `terraform validate`. Planning and applying for this codebase
+are done through Terragrunt (see the tg-* tools).
 
 ## nerf-tf-fmt
 
@@ -29,5 +29,19 @@ Run terraform fmt to canonically format Terraform files. Operates on the current
 **Arguments:**
 
 - `<directory>` (optional): Subdirectory of the workspace to format (default current)
+
+---
+
+## nerf-tf-validate
+
+Run terraform validate to check syntactic validity and internal consistency of the configuration in the current directory. Static checks only -- does not access remote state or provider APIs. Requires an initialized working directory (run `terraform init` or the tg-init tool first).
+
+**Usage:** `scripts/nerf-tf-validate [-json] [-no-tests]`
+**Maps to:** `terraform validate <json> <no_tests>`
+
+**Switches:**
+
+- `-json`: Produce output in a machine-readable JSON format
+- `-no-tests`: Skip validating .tftest.hcl test files
 
 ---

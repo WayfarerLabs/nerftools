@@ -18,7 +18,7 @@ usage() {
   cat >&2 <<'EOF'
 Usage: nerf-tg-output-all
 
-Maps to: terragrunt run --all output --non-interactive
+Maps to: terragrunt run --all -- output --non-interactive
 
 Run terragrunt output across all units under the current directory.
 EOF
@@ -35,11 +35,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(terragrunt run --all output --non-interactive)
+  _NERF_DRY_CMD=(terragrunt run --all -- output --non-interactive)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec terragrunt run --all output --non-interactive
+exec terragrunt run --all -- output --non-interactive
