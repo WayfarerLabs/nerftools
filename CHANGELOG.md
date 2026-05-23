@@ -1,5 +1,50 @@
 # Changelog
 
+## [2.0.0](https://github.com/WayfarerLabs/nerftools/compare/v1.4.0...v2.0.0) (2026-05-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* **git:** drop git-diff-staged in favor of relaxed git-diff
+* **git:** split commit message into required subject + optional body
+
+### Features
+
+* add bash_hints package field with cross-manifest merge ([569ace3](https://github.com/WayfarerLabs/nerftools/commit/569ace3105dd4ff71b8ff3ebec6909584b6d71f1))
+* generate configurable redirect and intro hooks for claude-plugin ([e412b11](https://github.com/WayfarerLabs/nerftools/commit/e412b11f85ee10e06a1c98da689933daca5432cc))
+* **git:** add restore/show/blame/stash/cherry-pick tools and relax log ([ce00f28](https://github.com/WayfarerLabs/nerftools/commit/ce00f283ccb49f862601552ca00075aec57e8799))
+* **git:** drop git-diff-staged in favor of relaxed git-diff ([69372d1](https://github.com/WayfarerLabs/nerftools/commit/69372d1baca2f7ac84491278c29da56aad2deb94))
+* **git:** split commit message into required subject + optional body ([49c9543](https://github.com/WayfarerLabs/nerftools/commit/49c954336afeb0ae2e046c0fca35bf836bdeedf6))
+* require bash 4+ in generated scripts and nerfctl helpers ([2d086b6](https://github.com/WayfarerLabs/nerftools/commit/2d086b64460c28d480391ce8ef87679f1175da9a))
+
+
+### Bug Fixes
+
+* block git-diff --no-index, document disallowed flags, fix gh-pr-reviews ([0a70058](https://github.com/WayfarerLabs/nerftools/commit/0a70058f0579e62bc594646b2adbf480f6212126))
+* clarify targets use in local rulesync config ([181a46b](https://github.com/WayfarerLabs/nerftools/commit/181a46b5dd3eb42e26c181a04c93b2b9f5f687b2))
+* **gh:** add jq guard on gh-pr-reviews ([da375d6](https://github.com/WayfarerLabs/nerftools/commit/da375d696fb8b6f63f5fa8d7346a3ea20f5ae598))
+* **git:** allow comma-separated scopes in commit subject pattern ([db434a5](https://github.com/WayfarerLabs/nerftools/commit/db434a57e842ff3b4d11f99979241617d074312c))
+* **git:** block git diff --no-index auto-engagement via path_tests ([af2d05d](https://github.com/WayfarerLabs/nerftools/commit/af2d05d48d287dc20a3f9d2ea834b497bc315a62))
+* **git:** correct -C quoting and add git-log driver re-enable denies ([888be4f](https://github.com/WayfarerLabs/nerftools/commit/888be4fba28e8d43e35d7a99b28d78c7b78cb417))
+* **git:** drop pathspec guard from git-restore-worktree ([239fb3a](https://github.com/WayfarerLabs/nerftools/commit/239fb3a06c85c8b98ff6626d3ad640e204eb3241))
+* **git:** trim redundant help text and pre-hook error prefixes ([3cdeeea](https://github.com/WayfarerLabs/nerftools/commit/3cdeeea433bc2fc6b52484e1b89470686c5dcdfe))
+* **git:** use pre-hook for --output, clarify variadic deny docs ([ef98fa0](https://github.com/WayfarerLabs/nerftools/commit/ef98fa015ddbadcb63d4a180978eb3ca170f4d6d))
+* harden bash hint hook and tighten SessionStart intro ([abb986d](https://github.com/WayfarerLabs/nerftools/commit/abb986dfd9af2b074e866cb35bca6d33dd7af0a5))
+* propagate read_version_file failures and note schema drift risk ([42fa3a2](https://github.com/WayfarerLabs/nerftools/commit/42fa3a2c26c0f1f684cd1daf442a05c8f48081c5))
+* regenerate agent and address copilot bash review feedback ([72275a0](https://github.com/WayfarerLabs/nerftools/commit/72275a05f8c9d5d8e0bd941ea9bdf7f52e102adc))
+* script path in remediation output ([7283fa6](https://github.com/WayfarerLabs/nerftools/commit/7283fa6682591a8fbbc285ef43fa925e3338496d))
+* soften SessionStart wording for opt-out configurations ([321e4f7](https://github.com/WayfarerLabs/nerftools/commit/321e4f75fd10216199fd985390aabb83ccd37eba))
+* tighten bypass regex; require explicit space-then-reason ([42b25a7](https://github.com/WayfarerLabs/nerftools/commit/42b25a77e5f089b6220beec1dcc80b8479a7e0df))
+* tighten wrapper-skip and align docs with current behavior ([3b84674](https://github.com/WayfarerLabs/nerftools/commit/3b84674d4769468add3073679e5e655af00ccb67))
+
+
+### Documentation
+
+* clarify how to get more info on config ([64e73ab](https://github.com/WayfarerLabs/nerftools/commit/64e73abb46dc89bc80b67438097284c27d6a8785))
+* **manifest:** document variadic flag injection and safe patterns ([68e04e9](https://github.com/WayfarerLabs/nerftools/commit/68e04e96dad37bf3d2b3ee1151e261f307cb8a49))
+* **manifest:** fix sentinel pattern vs allow_flags framing ([8aeae18](https://github.com/WayfarerLabs/nerftools/commit/8aeae18c70d8b05075f2bfa83b18dc3c06e129a6))
+* **manifest:** use underscore emphasis to satisfy markdownlint MD049 ([14776de](https://github.com/WayfarerLabs/nerftools/commit/14776de53b9bccba2fd47c4a61983e4342caaea5))
+
 ## [1.4.0](https://github.com/WayfarerLabs/nerftools/compare/v1.3.0...v1.4.0) (2026-05-10)
 
 

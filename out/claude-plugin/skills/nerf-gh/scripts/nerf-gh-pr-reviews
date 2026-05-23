@@ -4,6 +4,12 @@
 # nerf:threat:read=remote
 # nerf:threat:write=none
 
+if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
+  echo "error: nerf-gh-pr-reviews requires bash 4+. Found bash ${BASH_VERSION:-unknown}" >&2
+  echo "  hint: on macOS, install a newer bash via 'brew install bash'" >&2
+  exit 1
+fi
+
 set -euo pipefail
 
 _NERF_DRY_RUN=""
