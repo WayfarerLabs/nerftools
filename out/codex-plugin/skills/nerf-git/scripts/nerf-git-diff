@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-git-diff -- Show unstaged changes as a unified diff.
+# nerf-git-diff -- Show diffs. Accepts any combination of git-diff flags, refs, and pathspecs (e.g. --staged, --stat, main..HEAD, main...HEAD, src/). With no extra args, shows unstaged working-tree changes. External diff and textconv drivers are disabled so the tool cannot be hijacked via gitconfig.
 # Generated from git manifest. Do not edit directly.
 # nerf:threat:read=workspace
 # nerf:threat:write=none
@@ -10,15 +10,20 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-git-diff [-C <directory>]
+Usage: nerf-git-diff [-C <directory>] [<args...>]
 
 Options:
   -C <directory>
       Subdirectory of the workspace to run git in (must be under cwd)
 
-Maps to: git <directory> diff --no-ext-diff --no-textconv
+Arguments:
+  <args...>
+      Flags, refs, and paths forwarded to `git diff` (e.g. --staged, --stat, main..HEAD, src/). All positional arguments must resolve inside the workspace (paths outside cwd are rejected, which also blocks `git diff` from auto-engaging --no-index mode on two out-of-workspace paths). --output / --output=<path> is also rejected (would write the diff to an arbitrary file, violating `write: none`).
+      Not allowed: --ext-diff, --textconv, --no-index
 
-Show unstaged changes as a unified diff.
+Maps to: git <directory> diff --no-ext-diff --no-textconv <args>
+
+Show diffs. Accepts any combination of git-diff flags, refs, and pathspecs (e.g. --staged, --stat, main..HEAD, main...HEAD, src/). With no extra args, shows unstaged working-tree changes. External diff and textconv drivers are disabled so the tool cannot be hijacked via gitconfig.
 EOF
   exit 1
 }
@@ -32,9 +37,11 @@ while [[ $# -gt 0 ]]; do
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
-    *) echo "error: unknown argument: $1" >&2; usage ;;
+    *) break ;;
   esac
 done
+
+ARGS=("$@")
 
 _nerf_check_path() {
   local _label=$1 _input=$2 _tests=$3
@@ -117,12 +124,72 @@ if [[ -n "${_DIRECTORY_SET}" ]]; then
   _nerf_check_path 'option -C' "${DIRECTORY}" 'under_cwd' || exit 1
 fi
 
+for _v in "${ARGS[@]}"; do
+  if [[ "$_v" == "--nerf-dry-run" ]]; then
+    echo "error: nerf-git-diff: --nerf-dry-run inside the command tokens would be a no-op (it is a wrapper flag)" >&2
+    echo "  hint: place --nerf-dry-run before the command tokens" >&2
+    exit 1
+  fi
+done
+
+for _v in "${ARGS[@]}"; do
+  if [[ "$_v" == "--ext-diff" ]]; then
+    echo "error: nerf-git-diff: argument <args> is not allowed" >&2
+    echo "  value:  \"--ext-diff\"" >&2
+    echo "  denied: --ext-diff, --textconv, --no-index" >&2
+    echo "  hint: use a different value" >&2
+    exit 1
+  fi
+  if [[ "$_v" == "--textconv" ]]; then
+    echo "error: nerf-git-diff: argument <args> is not allowed" >&2
+    echo "  value:  \"--textconv\"" >&2
+    echo "  denied: --ext-diff, --textconv, --no-index" >&2
+    echo "  hint: use a different value" >&2
+    exit 1
+  fi
+  if [[ "$_v" == "--no-index" ]]; then
+    echo "error: nerf-git-diff: argument <args> is not allowed" >&2
+    echo "  value:  \"--no-index\"" >&2
+    echo "  denied: --ext-diff, --textconv, --no-index" >&2
+    echo "  hint: use a different value" >&2
+    exit 1
+  fi
+done
+
+for _v in "${ARGS[@]}"; do
+  _nerf_check_path 'argument <args>' "$_v" 'under_cwd' || exit 1
+done
+
+_nerf_pre() {
+  # `--output[=]<path>` would write the diff to an arbitrary file, breaking
+  # the declared `write: none` threat profile. Variadic deny is exact-match
+  # only, so it cannot catch the inline `--output=foo` form -- this loop
+  # rejects both bare and inline forms.
+  for a in "${ARGS[@]}"; do
+    case "$a" in
+      --output|--output=*)
+        echo "error: --output is not allowed (write: none)" >&2
+        echo "  value:  \"$a\"" >&2
+        echo "  hint:   pipe the output to a file instead of using --output" >&2
+        return 1
+        ;;
+    esac
+  done
+}
+
+_nerf_pre_rc=0
+_nerf_pre || _nerf_pre_rc=$?
+if [ $_nerf_pre_rc -ne 0 ]; then
+  echo "error: nerf-git-diff: pre-hook failed (exit code $_nerf_pre_rc)" >&2
+  exit $_nerf_pre_rc
+fi
+
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} diff --no-ext-diff --no-textconv)
+  _NERF_DRY_CMD=(git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} diff --no-ext-diff --no-textconv ${ARGS[@]+"${ARGS[@]}"})
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} diff --no-ext-diff --no-textconv
+exec git ${_DIRECTORY_SET:+"-C"} ${_DIRECTORY_SET:+"$DIRECTORY"} diff --no-ext-diff --no-textconv ${ARGS[@]+"${ARGS[@]}"}

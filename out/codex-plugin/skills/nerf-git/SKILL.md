@@ -51,7 +51,7 @@ Create a git commit with a Conventional Commits subject and an optional body (ch
 
 **Arguments:**
 
-- `<subject>` (required): Commit subject line: type[(scope)][!]: description (max 72 chars). must match `^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+`
+- `<subject>` (required): Commit subject line: type[(scope)][!]: description (max 72 chars). must match `^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._,-]+\))?!?: .+`
 - `<body>` (optional): Optional commit body (rendered as a separate paragraph). Use for longer explanations.
 
 ---
@@ -68,7 +68,7 @@ Amend the most recent commit with a new Conventional Commits subject and an opti
 
 **Arguments:**
 
-- `<subject>` (required): Commit subject line: type[(scope)][!]: description (max 72 chars). must match `^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._-]+\))?!?: .+`
+- `<subject>` (required): Commit subject line: type[(scope)][!]: description (max 72 chars). must match `^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._,-]+\))?!?: .+`
 - `<body>` (optional): Optional commit body (rendered as a separate paragraph). Use for longer explanations.
 
 ---
@@ -117,6 +117,29 @@ Fetch all branches and tags from a remote.
 **Arguments:**
 
 - `<remote>` (required): Remote name (e.g. origin). must match `^[a-zA-Z0-9_.-]+$`
+
+---
+
+## nerf-git-ls-remote
+
+List references (branches and tags) on a remote without fetching them locally. With no pattern, all refs are returned (can be large on busy repos). Optional <pattern> filters refs (e.g. `refs/tags/v1.*` or `feat/*`). Use --tags or --heads to restrict the listing to one ref type.
+
+**Usage:** `scripts/nerf-git-ls-remote [--tags] [--heads] [-C <directory>] <remote> [<pattern>]`
+**Maps to:** `git <directory> ls-remote <tags> <heads> <remote> <pattern>`
+
+**Switches:**
+
+- `--tags`: List only tag refs
+- `--heads`: List only branch refs
+
+**Options:**
+
+- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+**Arguments:**
+
+- `<remote>` (required): Remote name (e.g. origin). must match `^[a-zA-Z0-9_.-]+$`
+- `<pattern>` (optional): Optional ref pattern to filter results (e.g. refs/tags/v1.*, feat/*)
 
 ---
 
@@ -202,7 +225,7 @@ Show commit history. Accepts any combination of git-log flags, refs, and pathspe
 
 **Arguments:**
 
-- `<args...>` (optional): Flags, refs, and paths forwarded to `git log` (e.g. --oneline, -n 20, main..HEAD, -- src/). not `--ext-diff`, `--textconv`
+- `<args...>` (optional): Flags, refs, and paths forwarded to `git log` (e.g. --oneline, -n 20, main..HEAD, -- src/). --output / --output=<path> is also rejected (would write the log to an arbitrary file, violating `write: none`).. not `--ext-diff`, `--textconv`
 
 ---
 
@@ -239,27 +262,18 @@ Show the working-tree status in short porcelain format.
 
 ## nerf-git-diff
 
-Show unstaged changes as a unified diff.
+Show diffs. Accepts any combination of git-diff flags, refs, and pathspecs (e.g. --staged, --stat, main..HEAD, main...HEAD, src/). With no extra args, shows unstaged working-tree changes. External diff and textconv drivers are disabled so the tool cannot be hijacked via gitconfig.
 
-**Usage:** `scripts/nerf-git-diff [-C <directory>]`
-**Maps to:** `git <directory> diff --no-ext-diff --no-textconv`
-
-**Options:**
-
-- `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
-
----
-
-## nerf-git-diff-staged
-
-Show staged changes as a unified diff.
-
-**Usage:** `scripts/nerf-git-diff-staged [-C <directory>]`
-**Maps to:** `git <directory> diff --no-ext-diff --no-textconv --staged`
+**Usage:** `scripts/nerf-git-diff [-C <directory>] [<args...>]`
+**Maps to:** `git <directory> diff --no-ext-diff --no-textconv <args>`
 
 **Options:**
 
 - `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
+
+**Arguments:**
+
+- `<args...>` (optional): Flags, refs, and paths forwarded to `git diff` (e.g. --staged, --stat, main..HEAD, src/). All positional arguments must resolve inside the workspace (paths outside cwd are rejected, which also blocks `git diff` from auto-engaging --no-index mode on two out-of-workspace paths). --output / --output=<path> is also rejected (would write the diff to an arbitrary file, violating `write: none`).. not `--ext-diff`, `--textconv`, `--no-index`
 
 ---
 
