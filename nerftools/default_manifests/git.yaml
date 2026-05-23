@@ -455,10 +455,11 @@ tools:
       args:
         description: >-
           Flags, refs, and paths forwarded to `git diff` (e.g. --staged, --stat,
-          main..HEAD, src/). Disallowed: --ext-diff / --textconv (would re-enable
-          gitconfig-driven drivers), --no-index (reads arbitrary filesystem paths
-          outside the workspace), and --output / --output=<path> (writes the diff
-          to an arbitrary file).
+          main..HEAD, src/). All positional arguments must resolve inside the
+          workspace (paths outside cwd are rejected). Disallowed flags:
+          --ext-diff / --textconv (would re-enable gitconfig-driven drivers),
+          --no-index (reads arbitrary filesystem paths outside the workspace),
+          and --output / --output=<path> (writes the diff to an arbitrary file).
         variadic: true
         allow_flags: true
         # Reject flags that re-enable the gitconfig-driven drivers we disabled
@@ -466,6 +467,13 @@ tools:
         # --no-index which lets `git diff` read arbitrary filesystem paths
         # outside the workspace, breaking `read: workspace`.
         deny: [--ext-diff, --textconv, --no-index]
+        # `git diff` also auto-engages no-index mode when exactly two positional
+        # args both resolve to untracked files (e.g. `/etc/passwd /etc/shadow`).
+        # under_cwd applies realpath -m per element and rejects anything that
+        # resolves outside cwd; flags and ref-shaped tokens (`--stat`,
+        # `main..HEAD`) resolve to a non-existent component *inside* cwd and so
+        # are accepted, while real out-of-workspace paths are blocked.
+        path_tests: [under_cwd]
     pre: |
       # `--output[=]<path>` would write the diff to an arbitrary file, breaking
       # the declared `write: none` threat profile. Variadic deny is exact-match

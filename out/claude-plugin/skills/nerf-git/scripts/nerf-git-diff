@@ -18,7 +18,7 @@ Options:
 
 Arguments:
   <args...>
-      Flags, refs, and paths forwarded to `git diff` (e.g. --staged, --stat, main..HEAD, src/). Disallowed: --ext-diff / --textconv (would re-enable gitconfig-driven drivers), --no-index (reads arbitrary filesystem paths outside the workspace), and --output / --output=<path> (writes the diff to an arbitrary file).
+      Flags, refs, and paths forwarded to `git diff` (e.g. --staged, --stat, main..HEAD, src/). All positional arguments must resolve inside the workspace (paths outside cwd are rejected). Disallowed flags: --ext-diff / --textconv (would re-enable gitconfig-driven drivers), --no-index (reads arbitrary filesystem paths outside the workspace), and --output / --output=<path> (writes the diff to an arbitrary file).
       Not allowed: --ext-diff, --textconv, --no-index
 
 Maps to: git <directory> diff --no-ext-diff --no-textconv <args>
@@ -154,6 +154,10 @@ for _v in "${ARGS[@]}"; do
     echo "  hint: use a different value" >&2
     exit 1
   fi
+done
+
+for _v in "${ARGS[@]}"; do
+  _nerf_check_path 'argument <args>' "$_v" 'under_cwd' || exit 1
 done
 
 _nerf_pre() {
