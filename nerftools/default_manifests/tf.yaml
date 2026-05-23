@@ -2,13 +2,13 @@ version: 1
 
 package:
   name: tf
-  description: Terraform workflow tools (currently scoped to formatting helpers)
+  description: Terraform workflow tools for formatting and static validation
   skill_group: tf
   skill_intro: |
-    These tools run Terraform commands in the current directory. Today they
-    only cover canonical HCL formatting via `terraform fmt`. Planning and
-    applying for this codebase are done through Terragrunt (see the tg-*
-    tools).
+    These tools run Terraform commands in the current directory. They cover
+    canonical HCL formatting via `terraform fmt` and static configuration
+    checks via `terraform validate`. Planning and applying for this codebase
+    are done through Terragrunt (see the tg-* tools).
   bash_hints:
     - '\bterraform\b'
 
@@ -38,3 +38,23 @@ tools:
         description: Subdirectory of the workspace to format (default current)
         required: false
         path_tests: [under_cwd]
+
+  tf-validate:
+    description: >-
+      Run terraform validate to check syntactic validity and internal
+      consistency of the configuration in the current directory. Static
+      checks only -- does not access remote state or provider APIs.
+      Requires an initialized working directory (run `terraform init` or
+      the tg-init tool first).
+    threat:
+      read: workspace
+      write: none
+    template:
+      command: [terraform, validate, "{{switches.json}}", "{{switches.no_tests}}"]
+    switches:
+      json:
+        description: Produce output in a machine-readable JSON format
+        flag: -json
+      no_tests:
+        description: Skip validating .tftest.hcl test files
+        flag: -no-tests

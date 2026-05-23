@@ -9,7 +9,10 @@ package:
     --non-interactive mode. Tools with the -all suffix run across all units
     under the current directory using "terragrunt run --all". Use the non-all
     variant when working in a specific module directory, and the -all variant
-    when working at the root of a stack.
+    when working at the root of a stack. Note: `tg-fmt` and `tg-hcl-validate`
+    already recurse through HCL files from the current directory on their own,
+    so they usually cover an entire stack. `tg-hcl-validate` therefore has no
+    -all counterpart; `tg-fmt-all` exists for symmetry but is rarely needed.
   bash_hints:
     - '\bterragrunt\b'
 
@@ -28,7 +31,7 @@ tools:
       read: workspace
       write: none
     template:
-      command: [terragrunt, run, --all, validate, --non-interactive]
+      command: [terragrunt, run, --all, --, validate, --non-interactive]
 
   tg-init:
     description: Run terragrunt init in the current module directory.
@@ -48,7 +51,7 @@ tools:
       read: remote
       write: workspace
     template:
-      command: [terragrunt, run, --all, init, --non-interactive, -input=false, "{{switches.upgrade}}"]
+      command: [terragrunt, run, --all, --, init, --non-interactive, -input=false, "{{switches.upgrade}}"]
     switches:
       upgrade:
         description: Upgrade modules and plugins to latest versions
@@ -68,7 +71,7 @@ tools:
       read: remote
       write: none
     template:
-      command: [terragrunt, run, --all, plan, --non-interactive, -input=false]
+      command: [terragrunt, run, --all, --, plan, --non-interactive, -input=false]
 
   tg-output:
     description: Run terragrunt output in the current module directory.
@@ -84,26 +87,63 @@ tools:
       read: remote
       write: none
     template:
-      command: [terragrunt, run, --all, output, --non-interactive]
+      command: [terragrunt, run, --all, --, output, --non-interactive]
 
   tg-fmt:
-    description: Run terragrunt HCL format in the current module directory.
+    description: >-
+      Run terragrunt hcl format to canonically format HCL files. Recurses
+      through all HCL files (.hcl) under the current directory by default.
     threat:
       read: workspace
       write: workspace
     template:
-      command: [terragrunt, hcl, format, --non-interactive, "{{switches.check}}"]
+      command: [terragrunt, hcl, format, --non-interactive, "{{switches.check}}", "{{switches.diff}}"]
     switches:
       check:
         description: Check formatting without modifying files (exits non-zero if files are unformatted)
+        flag: --check
+      diff:
+        description: Print diff between original and modified file versions. Without --check, files are still rewritten in place.
+        flag: --diff
 
   tg-fmt-all:
-    description: Run terragrunt HCL format across all units under the current directory.
+    description: >-
+      Run terragrunt hcl format across all units under the current directory
+      via "terragrunt run --all". Note that tg-fmt already recurses through
+      HCL files on its own; this -all variant exists for symmetry with the
+      other tg-*-all tools and is rarely needed in practice.
     threat:
       read: workspace
       write: workspace
     template:
-      command: [terragrunt, run, --all, hcl, format, --non-interactive, "{{switches.check}}"]
+      command: [terragrunt, run, --all, --, hcl, format, --non-interactive, "{{switches.check}}", "{{switches.diff}}"]
     switches:
       check:
         description: Check formatting without modifying files (exits non-zero if files are unformatted)
+        flag: --check
+      diff:
+        description: Print diff between original and modified file versions. Without --check, files are still rewritten in place.
+        flag: --diff
+
+  tg-hcl-validate:
+    description: >-
+      Run terragrunt hcl validate to check the syntactic validity of
+      Terragrunt HCL configuration files. Recurses through all HCL files
+      under the current directory. Static checks only -- does not access
+      remote state or provider APIs. Distinct from tg-validate, which
+      validates the underlying Terraform configuration instead.
+    threat:
+      read: workspace
+      write: none
+    template:
+      command: [terragrunt, hcl, validate, --non-interactive, "{{switches.json}}", "{{switches.inputs}}", "{{switches.show_config_path}}"]
+    switches:
+      json:
+        description: Produce output in machine-readable JSON
+        flag: --json
+      inputs:
+        description: Check that Terragrunt inputs align with Terraform-defined variables
+        flag: --inputs
+      show_config_path:
+        description: After validation, print the paths of any files that failed validation
+        flag: --show-config-path

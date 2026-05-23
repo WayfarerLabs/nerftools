@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# nerf-tg-hcl-validate -- Run terragrunt hcl validate to check the syntactic validity of Terragrunt HCL configuration files. Recurses through all HCL files under the current directory. Static checks only -- does not access remote state or provider APIs. Distinct from tg-validate, which validates the underlying Terraform configuration instead.
+# Generated from tg manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=none
+
+if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
+  echo "error: nerf-tg-hcl-validate requires bash 4+. Found bash ${BASH_VERSION:-unknown}" >&2
+  echo "  hint: on macOS, install a newer bash via 'brew install bash'" >&2
+  exit 1
+fi
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-tg-hcl-validate [--json] [--inputs] [--show-config-path]
+
+Switches:
+  --json
+      Produce output in machine-readable JSON
+  --inputs
+      Check that Terragrunt inputs align with Terraform-defined variables
+  --show-config-path
+      After validation, print the paths of any files that failed validation
+
+Maps to: terragrunt hcl validate --non-interactive <json> <inputs> <show_config_path>
+
+Run terragrunt hcl validate to check the syntactic validity of Terragrunt HCL configuration files. Recurses through all HCL files under the current directory. Static checks only -- does not access remote state or provider APIs. Distinct from tg-validate, which validates the underlying Terraform configuration instead.
+EOF
+  exit 1
+}
+
+JSON=""
+INPUTS=""
+SHOW_CONFIG_PATH=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --json) if [[ -n "${JSON}" ]]; then echo "error: --json can only be specified once" >&2; exit 1; fi; JSON="true"; shift 1 ;;
+    --inputs) if [[ -n "${INPUTS}" ]]; then echo "error: --inputs can only be specified once" >&2; exit 1; fi; INPUTS="true"; shift 1 ;;
+    --show-config-path) if [[ -n "${SHOW_CONFIG_PATH}" ]]; then echo "error: --show-config-path can only be specified once" >&2; exit 1; fi; SHOW_CONFIG_PATH="true"; shift 1 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(terragrunt hcl validate --non-interactive ${JSON:+"--json"} ${INPUTS:+"--inputs"} ${SHOW_CONFIG_PATH:+"--show-config-path"})
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec terragrunt hcl validate --non-interactive ${JSON:+"--json"} ${INPUTS:+"--inputs"} ${SHOW_CONFIG_PATH:+"--show-config-path"}

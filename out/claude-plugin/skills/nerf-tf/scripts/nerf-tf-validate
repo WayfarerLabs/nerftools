@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# nerf-tf-validate -- Run terraform validate to check syntactic validity and internal consistency of the configuration in the current directory. Static checks only -- does not access remote state or provider APIs. Requires an initialized working directory (run `terraform init` or the tg-init tool first).
+# Generated from tf manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=none
+
+if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
+  echo "error: nerf-tf-validate requires bash 4+. Found bash ${BASH_VERSION:-unknown}" >&2
+  echo "  hint: on macOS, install a newer bash via 'brew install bash'" >&2
+  exit 1
+fi
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-tf-validate [-json] [-no-tests]
+
+Switches:
+  -json
+      Produce output in a machine-readable JSON format
+  -no-tests
+      Skip validating .tftest.hcl test files
+
+Maps to: terraform validate <json> <no_tests>
+
+Run terraform validate to check syntactic validity and internal consistency of the configuration in the current directory. Static checks only -- does not access remote state or provider APIs. Requires an initialized working directory (run `terraform init` or the tg-init tool first).
+EOF
+  exit 1
+}
+
+JSON=""
+NO_TESTS=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -json) if [[ -n "${JSON}" ]]; then echo "error: -json can only be specified once" >&2; exit 1; fi; JSON="true"; shift 1 ;;
+    -no-tests) if [[ -n "${NO_TESTS}" ]]; then echo "error: -no-tests can only be specified once" >&2; exit 1; fi; NO_TESTS="true"; shift 1 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) echo "error: unknown argument: $1" >&2; usage ;;
+  esac
+done
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(terraform validate ${JSON:+"-json"} ${NO_TESTS:+"-no-tests"})
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec terraform validate ${JSON:+"-json"} ${NO_TESTS:+"-no-tests"}
