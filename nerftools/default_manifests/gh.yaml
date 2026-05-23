@@ -131,6 +131,9 @@ tools:
     threat:
       read: remote
       write: none
+    guards:
+      - command: [which, jq]
+        fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
     script: |
       LIMIT=${LIMIT:-10}
       # --paginate fetches all pages; --slurp collapses them into an array
