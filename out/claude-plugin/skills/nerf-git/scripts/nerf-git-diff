@@ -18,7 +18,7 @@ Options:
 
 Arguments:
   <args...>
-      Flags, refs, and paths forwarded to `git diff` (e.g. --staged, --stat, main..HEAD, src/). All positional arguments must resolve inside the workspace (paths outside cwd are rejected). Disallowed flags: --ext-diff / --textconv (would re-enable gitconfig-driven drivers), --no-index (reads arbitrary filesystem paths outside the workspace), and --output / --output=<path> (writes the diff to an arbitrary file).
+      Flags, refs, and paths forwarded to `git diff` (e.g. --staged, --stat, main..HEAD, src/). All positional arguments must resolve inside the workspace (paths outside cwd are rejected, which also blocks `git diff` from auto-engaging --no-index mode on two out-of-workspace paths). --output / --output=<path> is also rejected (would write the diff to an arbitrary file, violating `write: none`).
       Not allowed: --ext-diff, --textconv, --no-index
 
 Maps to: git <directory> diff --no-ext-diff --no-textconv <args>
@@ -168,7 +168,7 @@ _nerf_pre() {
   for a in "${ARGS[@]}"; do
     case "$a" in
       --output|--output=*)
-        echo "error: nerf-git-diff: --output is not allowed (write: none)" >&2
+        echo "error: --output is not allowed (write: none)" >&2
         echo "  value:  \"$a\"" >&2
         echo "  hint:   pipe the output to a file instead of using --output" >&2
         return 1
