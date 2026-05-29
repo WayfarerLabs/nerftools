@@ -204,7 +204,7 @@ if [[ -z "${CURRENT_USER}" ]]; then
   exit 1
 fi
 SHOW_ARGS=(az boards work-item show --id "${WI_ID}" --output json)
-[[ -n "${PROJECT}" ]] && SHOW_ARGS+=(--project "${PROJECT}")
+[[ -n "${_PROJECT_SET}" ]] && SHOW_ARGS+=(--project "${PROJECT}")
 WI_JSON=$("${SHOW_ARGS[@]}") || {
   echo "error: az-boards-mywi-update: could not fetch work item ${WI_ID}" >&2
   exit 1
@@ -223,5 +223,5 @@ fi
 UPDATE_ARGS=(az boards work-item update --id "${WI_ID}" --output json)
 [[ -n "${STATE}" ]] && UPDATE_ARGS+=(--state "${STATE}")
 [[ -n "${TITLE}" ]] && UPDATE_ARGS+=(--title "${TITLE}")
-[[ -n "${PROJECT}" ]] && UPDATE_ARGS+=(--project "${PROJECT}")
+[[ -n "${_PROJECT_SET}" ]] && UPDATE_ARGS+=(--project "${PROJECT}")
 "${UPDATE_ARGS[@]}"

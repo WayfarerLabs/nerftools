@@ -190,7 +190,7 @@ if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
     echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2; exit 1
   }
 fi
-if [[ -n "${PROJECT}" ]]; then
+if [[ -n "${_PROJECT_SET}" ]]; then
   PROJECT_NAME="${PROJECT}"
 else
   PROJECT_NAME=$(az pipelines runs show --id "${RUN_ID}" --output json | jq -r '.project.name')

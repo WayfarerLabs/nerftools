@@ -190,7 +190,7 @@ if [[ -z "${CURRENT_USER}" ]]; then
   exit 1
 fi
 ARGS=(az boards work-item show --id "${WI_ID}" --output json)
-[[ -n "${PROJECT}" ]] && ARGS+=(--project "${PROJECT}")
+[[ -n "${_PROJECT_SET}" ]] && ARGS+=(--project "${PROJECT}")
 WI_JSON=$("${ARGS[@]}") || {
   echo "error: az-boards-mywi-show: could not fetch work item ${WI_ID}" >&2
   exit 1

@@ -741,8 +741,14 @@ The pre script is wrapped in a shell function (`_nerf_pre`). Key points:
   This is the documented contract for pre-only / `-C`-style options whose effect is to derive a
   value the wrapped tool needs as an explicit flag (used pervasively by the `az-*` tools to
   resolve project from `-C`). The variable name pattern is always `_<UPPERCASE_OPTION>_SET`.
-  The same principle applies to pre-only inputs: gate on `${_DIRECTORY_SET}` rather than
-  `${DIRECTORY}` so `-C ""` is distinguishable from `-C` being omitted.
+  The same principle applies whenever you read or forward an option's value from `pre` or a
+  script-mode body: gate on the `_<NAME>_SET` sentinel, **never** on the value string.
+  - For pre-only inputs: `if [[ -n "${_DIRECTORY_SET}" ]]; then ...` distinguishes `-C ""` from
+    `-C` being omitted.
+  - For conditional argv forwarding from `script:` mode: write
+    `[[ -n "${_PROJECT_SET}" ]] && ARGS+=(--project "${PROJECT}")`, not
+    `[[ -n "${PROJECT}" ]] && ...`, so the agent's explicit empty value is preserved through to
+    the wrapped tool rather than silently dropped.
 
 Example:
 
