@@ -222,8 +222,7 @@ if [[ -z "${DESCRIPTION}" ]]; then
 fi
 
 _nerf_pre() {
-  _GIT_DIR="${DIRECTORY}"
-  _GIT_DIR="${_GIT_DIR:-.}"
+  if [[ -n "${_DIRECTORY_SET}" ]]; then _GIT_DIR="${DIRECTORY}"; else _GIT_DIR="."; fi
   # Source branch + branch guards: always run against the resolved repo so
   # that -C correctly checks the directory the agent is creating the PR from.
   _BRANCH=$(git -C "${_GIT_DIR}" symbolic-ref --quiet --short HEAD 2>/dev/null) || {
@@ -236,11 +235,11 @@ _nerf_pre() {
   fi
   # az reads HEAD from cwd; when -C is passed, pass --source-branch explicitly
   # so az creates the PR for the right branch.
-  if [[ -n "${DIRECTORY}" && -z "${SOURCE_BRANCH}" ]]; then
+  if [[ -n "${_DIRECTORY_SET}" && -z "${_SOURCE_BRANCH_SET}" ]]; then
     SOURCE_BRANCH="${_BRANCH}"
     _SOURCE_BRANCH_SET=true
   fi
-  if [[ -n "${DIRECTORY}" ]]; then
+  if [[ -n "${_DIRECTORY_SET}" ]]; then
     _URL=$(git -C "${DIRECTORY}" remote get-url origin 2>/dev/null) \
       || { echo "error: -C: no 'origin' remote in '${DIRECTORY}'" >&2; return 1; }
     _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
@@ -251,11 +250,11 @@ _nerf_pre() {
       echo "error: -C: could not parse Azure DevOps project/repo from remote URL '${_URL}'" >&2
       return 1
     fi
-    if [[ -z "${PROJECT}" ]]; then
+    if [[ -z "${_PROJECT_SET}" ]]; then
       PROJECT="${_PROJ}"
       _PROJECT_SET=true
     fi
-    if [[ -z "${REPOSITORY}" ]]; then
+    if [[ -z "${_REPOSITORY_SET}" ]]; then
       REPOSITORY="${_REPO}"
       _REPOSITORY_SET=true
     fi

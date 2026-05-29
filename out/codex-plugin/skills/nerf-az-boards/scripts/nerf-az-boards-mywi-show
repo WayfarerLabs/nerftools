@@ -173,7 +173,7 @@ if [[ "$_NERF_DRY_RUN" == "true" ]]; then
   exit 0
 fi
 
-if [[ -n "${DIRECTORY}" && -z "${PROJECT}" ]]; then
+if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
   _URL=$(git -C "${DIRECTORY}" remote get-url origin 2>/dev/null) || {
     echo "error: -C: no 'origin' remote in '${DIRECTORY}'" >&2; exit 1
   }

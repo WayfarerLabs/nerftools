@@ -187,7 +187,7 @@ if [[ -z "${STATE}" && -z "${TITLE}" ]]; then
   echo "error: az-boards-mywi-update: at least one of --state or --title is required" >&2
   exit 1
 fi
-if [[ -n "${DIRECTORY}" && -z "${PROJECT}" ]]; then
+if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
   _URL=$(git -C "${DIRECTORY}" remote get-url origin 2>/dev/null) || {
     echo "error: -C: no 'origin' remote in '${DIRECTORY}'" >&2; exit 1
   }

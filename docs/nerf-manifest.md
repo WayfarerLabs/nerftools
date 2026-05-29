@@ -728,10 +728,21 @@ The pre script is wrapped in a shell function (`_nerf_pre`). Key points:
 - **Populating an option's value from pre.** Optional-scalar options emit conditionally based on a
   parser-set sentinel `_<NAME>_SET`, not on the value variable itself. To make the template emit
   `--flag $VAR` when pre computes a value that the CLI parser never saw, assign **both** the value
-  and the sentinel: `PROJECT="${PROJECT:-detected}"; _PROJECT_SET=true`. This is the documented
-  contract for pre-only / `-C`-style options whose effect is to derive a value the wrapped tool
-  needs as an explicit flag (used pervasively by the `az-*` tools to resolve project from `-C`).
-  The variable name pattern is always `_<UPPERCASE_OPTION>_SET`.
+  and the sentinel, and **gate on the sentinel, not the value**, so an explicit `--flag ""` from the
+  agent is respected as-set rather than silently overwritten:
+
+  ```bash
+  if [[ -z "${_PROJECT_SET}" ]]; then
+    PROJECT="detected-value"
+    _PROJECT_SET=true
+  fi
+  ```
+
+  This is the documented contract for pre-only / `-C`-style options whose effect is to derive a
+  value the wrapped tool needs as an explicit flag (used pervasively by the `az-*` tools to
+  resolve project from `-C`). The variable name pattern is always `_<UPPERCASE_OPTION>_SET`.
+  The same principle applies to pre-only inputs: gate on `${_DIRECTORY_SET}` rather than
+  `${DIRECTORY}` so `-C ""` is distinguishable from `-C` being omitted.
 
 Example:
 

@@ -63,7 +63,7 @@ tools:
         flag: -C
         path_tests: [under_cwd]
     pre: |
-      if [[ -n "{{options.directory}}" ]]; then
+      if [[ -n "${_DIRECTORY_SET}" ]]; then
         _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
           || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
         _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
@@ -72,7 +72,7 @@ tools:
           echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
           return 1
         fi
-        if [[ -z "${PROJECT}" ]]; then
+        if [[ -z "${_PROJECT_SET}" ]]; then
           PROJECT="${_PROJ}"
           _PROJECT_SET=true
         fi
@@ -109,7 +109,7 @@ tools:
         flag: -C
         path_tests: [under_cwd]
     pre: |
-      if [[ -n "{{options.directory}}" ]]; then
+      if [[ -n "${_DIRECTORY_SET}" ]]; then
         _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
           || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
         _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
@@ -118,7 +118,7 @@ tools:
           echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
           return 1
         fi
-        if [[ -z "${PROJECT}" ]]; then
+        if [[ -z "${_PROJECT_SET}" ]]; then
           PROJECT="${_PROJ}"
           _PROJECT_SET=true
         fi
@@ -135,7 +135,7 @@ tools:
       read: remote
       write: none
     script: |
-      _GIT_DIR="${DIRECTORY:-.}"
+      if [[ -n "${_DIRECTORY_SET}" ]]; then _GIT_DIR="${DIRECTORY}"; else _GIT_DIR="."; fi
       REMOTE_URL=$(git -C "${_GIT_DIR}" remote get-url origin 2>/dev/null || true)
       if [ -z "$REMOTE_URL" ]; then
         echo "error: could not detect git remote 'origin' in '${_GIT_DIR}'" >&2
@@ -159,8 +159,13 @@ tools:
         exit 1
       fi
       REPO_NAME="${REPO_NAME//%20/ }"
-      # User-supplied --project overrides the auto-detected project; repo is always taken from origin.
-      PROJECT="${PROJECT:-$DETECTED_PROJECT}"
+      # User-supplied --project overrides the auto-detected project (use the
+      # _PROJECT_SET sentinel so '--project ""' is respected as-set, not
+      # silently overwritten); repo is always taken from origin.
+      if [[ -z "${_PROJECT_SET}" ]]; then
+        PROJECT="$DETECTED_PROJECT"
+        _PROJECT_SET=true
+      fi
       if [ -z "$PROJECT" ] || [ -z "$REPO_NAME" ]; then
         echo "error: could not extract project/repo from remote URL '$REMOTE_URL'" >&2
         exit 1
@@ -247,8 +252,7 @@ tools:
         flag: -C
         path_tests: [under_cwd]
     pre: |
-      _GIT_DIR="{{options.directory}}"
-      _GIT_DIR="${_GIT_DIR:-.}"
+      if [[ -n "${_DIRECTORY_SET}" ]]; then _GIT_DIR="{{options.directory}}"; else _GIT_DIR="."; fi
       # Source branch + branch guards: always run against the resolved repo so
       # that -C correctly checks the directory the agent is creating the PR from.
       _BRANCH=$(git -C "${_GIT_DIR}" symbolic-ref --quiet --short HEAD 2>/dev/null) || {
@@ -261,11 +265,11 @@ tools:
       fi
       # az reads HEAD from cwd; when -C is passed, pass --source-branch explicitly
       # so az creates the PR for the right branch.
-      if [[ -n "{{options.directory}}" && -z "${SOURCE_BRANCH}" ]]; then
+      if [[ -n "${_DIRECTORY_SET}" && -z "${_SOURCE_BRANCH_SET}" ]]; then
         SOURCE_BRANCH="${_BRANCH}"
         _SOURCE_BRANCH_SET=true
       fi
-      if [[ -n "{{options.directory}}" ]]; then
+      if [[ -n "${_DIRECTORY_SET}" ]]; then
         _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
           || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
         _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
@@ -276,11 +280,11 @@ tools:
           echo "error: -C: could not parse Azure DevOps project/repo from remote URL '${_URL}'" >&2
           return 1
         fi
-        if [[ -z "${PROJECT}" ]]; then
+        if [[ -z "${_PROJECT_SET}" ]]; then
           PROJECT="${_PROJ}"
           _PROJECT_SET=true
         fi
-        if [[ -z "${REPOSITORY}" ]]; then
+        if [[ -z "${_REPOSITORY_SET}" ]]; then
           REPOSITORY="${_REPO}"
           _REPOSITORY_SET=true
         fi
@@ -327,7 +331,7 @@ tools:
         flag: -C
         path_tests: [under_cwd]
     pre: |
-      if [[ -n "{{options.directory}}" ]]; then
+      if [[ -n "${_DIRECTORY_SET}" ]]; then
         _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
           || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
         _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
@@ -336,7 +340,7 @@ tools:
           echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
           return 1
         fi
-        if [[ -z "${PROJECT}" ]]; then
+        if [[ -z "${_PROJECT_SET}" ]]; then
           PROJECT="${_PROJ}"
           _PROJECT_SET=true
         fi
@@ -389,7 +393,7 @@ tools:
           [ -n "$TITLE" ] || [ -n "$DESCRIPTION" ]
         fail_message: At least one of --title or --description must be provided.
     pre: |
-      if [[ -n "{{options.directory}}" ]]; then
+      if [[ -n "${_DIRECTORY_SET}" ]]; then
         _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
           || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
         _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
@@ -398,7 +402,7 @@ tools:
           echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
           return 1
         fi
-        if [[ -z "${PROJECT}" ]]; then
+        if [[ -z "${_PROJECT_SET}" ]]; then
           PROJECT="${_PROJ}"
           _PROJECT_SET=true
         fi
@@ -444,7 +448,7 @@ tools:
         flag: -C
         path_tests: [under_cwd]
     pre: |
-      if [[ -n "{{options.directory}}" ]]; then
+      if [[ -n "${_DIRECTORY_SET}" ]]; then
         _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
           || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
         _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
@@ -453,7 +457,7 @@ tools:
           echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
           return 1
         fi
-        if [[ -z "${PROJECT}" ]]; then
+        if [[ -z "${_PROJECT_SET}" ]]; then
           PROJECT="${_PROJ}"
           _PROJECT_SET=true
         fi
