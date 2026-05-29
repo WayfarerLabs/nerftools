@@ -196,6 +196,7 @@ if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
   [[ -z "${PROJECT}" ]] && {
     echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2; exit 1
   }
+  _PROJECT_SET=true
 fi
 CURRENT_USER=$(az devops invoke --area connectionData --resource connectionData --output json \
   | jq -r '.authenticatedUser.uniqueName // ""')

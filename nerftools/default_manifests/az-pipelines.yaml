@@ -219,6 +219,7 @@ tools:
         [[ -z "${PROJECT}" ]] && {
           echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2; exit 1
         }
+        _PROJECT_SET=true
       fi
       if [[ -n "${_PROJECT_SET}" ]]; then
         PROJECT_NAME="${PROJECT}"
@@ -316,6 +317,7 @@ tools:
         [[ -z "${PROJECT}" ]] && {
           echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2; exit 1
         }
+        _PROJECT_SET=true
       fi
       if [[ -n "${_PROJECT_SET}" ]]; then
         PROJECT_NAME="${PROJECT}"

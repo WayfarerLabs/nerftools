@@ -140,6 +140,7 @@ if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
   [[ -z "${PROJECT}" ]] && {
     echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2; exit 1
   }
+  _PROJECT_SET=true
 fi
 WIQL="SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType], [System.ChangedDate] FROM WorkItems WHERE [System.AssignedTo] = @Me AND [System.State] <> 'Closed' AND [System.State] <> 'Removed' ORDER BY [System.ChangedDate] DESC"
 ARGS=(az boards query --wiql "${WIQL}" --output json)
