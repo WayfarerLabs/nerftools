@@ -166,46 +166,56 @@ if [[ -n "${_PR_ID_SET}" ]] && ! [[ "${PR_ID}" =~ $_NERF_PATTERN ]]; then
   exit 1
 fi
 
+_nerf_pre() {
+  if [[ -n "${_DIRECTORY_SET}" ]]; then _GIT_DIR="${DIRECTORY}"; else _GIT_DIR="."; fi
+  REMOTE_URL=$(git -C "${_GIT_DIR}" remote get-url origin 2>/dev/null || true)
+  if [ -z "$REMOTE_URL" ]; then
+    echo "error: could not detect git remote 'origin' in '${_GIT_DIR}'" >&2
+    return 1
+  fi
+  # Extract project and repo from Azure DevOps remote URL. Three shapes are supported:
+  #   HTTPS (modern):  https://dev.azure.com/{org}/{project}/_git/{repo}
+  #   HTTPS (legacy):  https://{org}.visualstudio.com/[DefaultCollection/]{project}/_git/{repo}
+  #   SSH:             git@ssh.dev.azure.com:v3/{org}/{project}/{repo}
+  DETECTED_PROJECT=$(echo "$REMOTE_URL" | sed -nE '
+    s|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p
+    s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p
+    s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+  DETECTED_PROJECT="${DETECTED_PROJECT//%20/ }"
+  if echo "$REMOTE_URL" | grep -q '/_git/'; then
+    REPO_NAME=$(echo "$REMOTE_URL" | sed -E 's|.*/_git/([^?/]+).*|\1|; s|\.git$||')
+  elif echo "$REMOTE_URL" | grep -q ':v3/'; then
+    REPO_NAME=$(echo "$REMOTE_URL" | sed -E 's|.*:v3/[^/]+/[^/]+/([^/]+).*|\1|; s|\.git$||')
+  else
+    echo "error: unrecognized Azure DevOps remote URL format: '$REMOTE_URL'" >&2
+    return 1
+  fi
+  REPO_NAME="${REPO_NAME//%20/ }"
+  # User-supplied --project overrides the auto-detected project (use the
+  # _PROJECT_SET sentinel so '--project ""' is respected as-set, not
+  # silently overwritten); repo is always taken from origin.
+  if [[ -z "${_PROJECT_SET}" ]]; then
+    PROJECT="$DETECTED_PROJECT"
+    _PROJECT_SET=true
+  fi
+  if [ -z "$PROJECT" ] || [ -z "$REPO_NAME" ]; then
+    echo "error: could not extract project/repo from remote URL '$REMOTE_URL'" >&2
+    return 1
+  fi
+}
+
+_nerf_pre_rc=0
+_nerf_pre || _nerf_pre_rc=$?
+if [ $_nerf_pre_rc -ne 0 ]; then
+  echo "error: nerf-az-repos-pr-comments: pre-hook failed (exit code $_nerf_pre_rc)" >&2
+  exit $_nerf_pre_rc
+fi
+
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
   echo "dry-run: nerf-az-repos-pr-comments would run inline script"
   exit 0
 fi
 
-if [[ -n "${_DIRECTORY_SET}" ]]; then _GIT_DIR="${DIRECTORY}"; else _GIT_DIR="."; fi
-REMOTE_URL=$(git -C "${_GIT_DIR}" remote get-url origin 2>/dev/null || true)
-if [ -z "$REMOTE_URL" ]; then
-  echo "error: could not detect git remote 'origin' in '${_GIT_DIR}'" >&2
-  exit 1
-fi
-# Extract project and repo from Azure DevOps remote URL. Three shapes are supported:
-#   HTTPS (modern):  https://dev.azure.com/{org}/{project}/_git/{repo}
-#   HTTPS (legacy):  https://{org}.visualstudio.com/[DefaultCollection/]{project}/_git/{repo}
-#   SSH:             git@ssh.dev.azure.com:v3/{org}/{project}/{repo}
-DETECTED_PROJECT=$(echo "$REMOTE_URL" | sed -nE '
-  s|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p
-  s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p
-  s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-DETECTED_PROJECT="${DETECTED_PROJECT//%20/ }"
-if echo "$REMOTE_URL" | grep -q '/_git/'; then
-  REPO_NAME=$(echo "$REMOTE_URL" | sed -E 's|.*/_git/([^?/]+).*|\1|; s|\.git$||')
-elif echo "$REMOTE_URL" | grep -q ':v3/'; then
-  REPO_NAME=$(echo "$REMOTE_URL" | sed -E 's|.*:v3/[^/]+/[^/]+/([^/]+).*|\1|; s|\.git$||')
-else
-  echo "error: unrecognized Azure DevOps remote URL format: '$REMOTE_URL'" >&2
-  exit 1
-fi
-REPO_NAME="${REPO_NAME//%20/ }"
-# User-supplied --project overrides the auto-detected project (use the
-# _PROJECT_SET sentinel so '--project ""' is respected as-set, not
-# silently overwritten); repo is always taken from origin.
-if [[ -z "${_PROJECT_SET}" ]]; then
-  PROJECT="$DETECTED_PROJECT"
-  _PROJECT_SET=true
-fi
-if [ -z "$PROJECT" ] || [ -z "$REPO_NAME" ]; then
-  echo "error: could not extract project/repo from remote URL '$REMOTE_URL'" >&2
-  exit 1
-fi
 exec az devops invoke \
   --area git \
   --resource pullRequestThreads \

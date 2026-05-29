@@ -397,18 +397,20 @@ tools:
     threat:
       read: remote
       write: none
-    script: |
+    pre: |
       if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
-        _URL=$(git -C "${DIRECTORY}" remote get-url origin 2>/dev/null) || {
-          echo "error: -C: no 'origin' remote in '${DIRECTORY}'" >&2; exit 1
-        }
-        PROJECT=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        PROJECT="${PROJECT//%20/ }"
-        [[ -z "${PROJECT}" ]] && {
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2; exit 1
-        }
+        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+        _PROJ="${_PROJ//%20/ }"
+        if [[ -z "${_PROJ}" ]]; then
+          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+          return 1
+        fi
+        PROJECT="${_PROJ}"
         _PROJECT_SET=true
       fi
+    script: |
       WIQL="SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType], [System.ChangedDate] FROM WorkItems WHERE [System.AssignedTo] = @Me AND [System.State] <> 'Closed' AND [System.State] <> 'Removed' ORDER BY [System.ChangedDate] DESC"
       ARGS=(az boards query --wiql "${WIQL}" --output json)
       [[ -n "${_PROJECT_SET}" ]] && ARGS+=(--project "${PROJECT}")
@@ -434,18 +436,20 @@ tools:
     guards:
       - command: [which, jq]
         fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
-    script: |
+    pre: |
       if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
-        _URL=$(git -C "${DIRECTORY}" remote get-url origin 2>/dev/null) || {
-          echo "error: -C: no 'origin' remote in '${DIRECTORY}'" >&2; exit 1
-        }
-        PROJECT=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        PROJECT="${PROJECT//%20/ }"
-        [[ -z "${PROJECT}" ]] && {
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2; exit 1
-        }
+        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+        _PROJ="${_PROJ//%20/ }"
+        if [[ -z "${_PROJ}" ]]; then
+          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+          return 1
+        fi
+        PROJECT="${_PROJ}"
         _PROJECT_SET=true
       fi
+    script: |
       CURRENT_USER=$(az devops invoke --area connectionData --resource connectionData --output json \
         | jq -r '.authenticatedUser.uniqueName // ""')
       if [[ -z "${CURRENT_USER}" ]]; then
@@ -496,18 +500,20 @@ tools:
     guards:
       - command: [which, jq]
         fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
-    script: |
+    pre: |
       if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
-        _URL=$(git -C "${DIRECTORY}" remote get-url origin 2>/dev/null) || {
-          echo "error: -C: no 'origin' remote in '${DIRECTORY}'" >&2; exit 1
-        }
-        PROJECT=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        PROJECT="${PROJECT//%20/ }"
-        [[ -z "${PROJECT}" ]] && {
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2; exit 1
-        }
+        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+        _PROJ="${_PROJ//%20/ }"
+        if [[ -z "${_PROJ}" ]]; then
+          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+          return 1
+        fi
+        PROJECT="${_PROJ}"
         _PROJECT_SET=true
       fi
+    script: |
       CURRENT_USER=$(az devops invoke --area connectionData --resource connectionData --output json \
         | jq -r '.authenticatedUser.uniqueName // ""')
       if [[ -z "${CURRENT_USER}" ]]; then
@@ -567,22 +573,23 @@ tools:
     guards:
       - command: [which, jq]
         fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
-    script: |
-      if [[ -z "${STATE}" && -z "${TITLE}" ]]; then
-        echo "error: az-boards-mywi-update: at least one of --state or --title is required" >&2
-        exit 1
-      fi
+      - script: |
+          [[ -n "${STATE}" || -n "${TITLE}" ]]
+        fail_message: 'at least one of --state or --title is required'
+    pre: |
       if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
-        _URL=$(git -C "${DIRECTORY}" remote get-url origin 2>/dev/null) || {
-          echo "error: -C: no 'origin' remote in '${DIRECTORY}'" >&2; exit 1
-        }
-        PROJECT=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        PROJECT="${PROJECT//%20/ }"
-        [[ -z "${PROJECT}" ]] && {
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2; exit 1
-        }
+        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+        _PROJ="${_PROJ//%20/ }"
+        if [[ -z "${_PROJ}" ]]; then
+          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+          return 1
+        fi
+        PROJECT="${_PROJ}"
         _PROJECT_SET=true
       fi
+    script: |
       CURRENT_USER=$(az devops invoke --area connectionData --resource connectionData --output json \
         | jq -r '.authenticatedUser.uniqueName // ""')
       if [[ -z "${CURRENT_USER}" ]]; then

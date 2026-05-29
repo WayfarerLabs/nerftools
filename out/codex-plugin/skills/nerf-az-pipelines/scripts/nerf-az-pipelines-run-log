@@ -226,22 +226,33 @@ fi
 which jq > /dev/null 2>&1 || { echo 'error: nerf-az-pipelines-run-log: jq is required but not installed (e.g. apt-get install jq, brew install jq).' >&2; exit 1; }
 which python3 > /dev/null 2>&1 || { echo 'error: nerf-az-pipelines-run-log: python3 is required but not installed.' >&2; exit 1; }
 
+_nerf_pre() {
+  if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
+    _URL=$(git -C "${DIRECTORY}" remote get-url origin 2>/dev/null) \
+      || { echo "error: -C: no 'origin' remote in '${DIRECTORY}'" >&2; return 1; }
+    _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+    _PROJ="${_PROJ//%20/ }"
+    if [[ -z "${_PROJ}" ]]; then
+      echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+      return 1
+    fi
+    PROJECT="${_PROJ}"
+    _PROJECT_SET=true
+  fi
+}
+
+_nerf_pre_rc=0
+_nerf_pre || _nerf_pre_rc=$?
+if [ $_nerf_pre_rc -ne 0 ]; then
+  echo "error: nerf-az-pipelines-run-log: pre-hook failed (exit code $_nerf_pre_rc)" >&2
+  exit $_nerf_pre_rc
+fi
+
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
   echo "dry-run: nerf-az-pipelines-run-log would run inline script"
   exit 0
 fi
 
-if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
-  _URL=$(git -C "${DIRECTORY}" remote get-url origin 2>/dev/null) || {
-    echo "error: -C: no 'origin' remote in '${DIRECTORY}'" >&2; exit 1
-  }
-  PROJECT=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-  PROJECT="${PROJECT//%20/ }"
-  [[ -z "${PROJECT}" ]] && {
-    echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2; exit 1
-  }
-  _PROJECT_SET=true
-fi
 if [[ -n "${_PROJECT_SET}" ]]; then
   PROJECT_NAME="${PROJECT}"
 else

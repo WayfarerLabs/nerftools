@@ -134,12 +134,12 @@ tools:
     threat:
       read: remote
       write: none
-    script: |
-      if [[ -n "${_DIRECTORY_SET}" ]]; then _GIT_DIR="${DIRECTORY}"; else _GIT_DIR="."; fi
+    pre: |
+      if [[ -n "${_DIRECTORY_SET}" ]]; then _GIT_DIR="{{options.directory}}"; else _GIT_DIR="."; fi
       REMOTE_URL=$(git -C "${_GIT_DIR}" remote get-url origin 2>/dev/null || true)
       if [ -z "$REMOTE_URL" ]; then
         echo "error: could not detect git remote 'origin' in '${_GIT_DIR}'" >&2
-        exit 1
+        return 1
       fi
       # Extract project and repo from Azure DevOps remote URL. Three shapes are supported:
       #   HTTPS (modern):  https://dev.azure.com/{org}/{project}/_git/{repo}
@@ -156,7 +156,7 @@ tools:
         REPO_NAME=$(echo "$REMOTE_URL" | sed -E 's|.*:v3/[^/]+/[^/]+/([^/]+).*|\1|; s|\.git$||')
       else
         echo "error: unrecognized Azure DevOps remote URL format: '$REMOTE_URL'" >&2
-        exit 1
+        return 1
       fi
       REPO_NAME="${REPO_NAME//%20/ }"
       # User-supplied --project overrides the auto-detected project (use the
@@ -168,8 +168,9 @@ tools:
       fi
       if [ -z "$PROJECT" ] || [ -z "$REPO_NAME" ]; then
         echo "error: could not extract project/repo from remote URL '$REMOTE_URL'" >&2
-        exit 1
+        return 1
       fi
+    script: |
       exec az devops invoke \
         --area git \
         --resource pullRequestThreads \
