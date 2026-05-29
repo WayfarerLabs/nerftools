@@ -737,6 +737,40 @@ def test_unreferenced_param_raises(tmp_path: Path) -> None:
         load_manifest(p)
 
 
+def test_param_referenced_in_pre_is_accepted(tmp_path: Path) -> None:
+    """A parameter that is consumed only by a pre-hook (and never appears
+    in template.command) is a legitimate use case -- e.g. a -C directory
+    whose only effect is to influence a value that the template emits
+    elsewhere. The validator must accept it."""
+    raw = _minimal_manifest(tools={
+        "t": {
+            "description": "A test tool.",
+            "threat": {"read": "none", "write": "none"},
+            "template": {"command": ["echo", "hello"]},
+            "options": {"dir": {"description": "Pre-only param.", "flag": "-C"}},
+            "pre": "echo {{options.dir}} >/dev/null",
+        },
+    })
+    p = _write_manifest(tmp_path, raw)
+    load_manifest(p)  # does not raise
+
+
+def test_param_referenced_in_guard_is_accepted(tmp_path: Path) -> None:
+    """A parameter referenced only inside a guard (script or command) is
+    likewise legitimate -- guards see placeholders too per the schema."""
+    raw = _minimal_manifest(tools={
+        "t": {
+            "description": "A test tool.",
+            "threat": {"read": "none", "write": "none"},
+            "template": {"command": ["echo", "hello"]},
+            "options": {"dir": {"description": "Guard-only param.", "flag": "-C"}},
+            "guards": [{"fail_message": "x", "script": "test -d {{options.dir}}"}],
+        },
+    })
+    p = _write_manifest(tmp_path, raw)
+    load_manifest(p)  # does not raise
+
+
 def test_name_overlap_raises(tmp_path: Path) -> None:
     raw = _minimal_manifest(tools={
         "t": {

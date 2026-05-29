@@ -6,13 +6,16 @@ package:
   skill_group: az-pipelines
   skill_intro: |
     These tools query Azure Pipelines. The organization and project are
-    auto-detected from the git remote; pass --project to target a different
-    project in the same org. Use az-pipelines-list to see all pipelines,
-    az-pipelines-runs to see recent runs across all pipelines, and
-    az-pipelines-check to inspect a specific pipeline with its recent run
-    history. Use az-pipelines-run-show to drill into a single run.
-    Use az-pipelines-run-timeline to see step-by-step status for a failed run
-    and az-pipelines-run-log to fetch a specific step's log content.
+    auto-detected from the git remote in the current directory. Pass
+    --project to target a different project, or -C <directory> to resolve
+    the project from the git remote of a sub-directory (useful when
+    multiple repos live under one workspace root and you don't want to cd
+    around). Use az-pipelines-list to see all pipelines, az-pipelines-runs
+    to see recent runs across all pipelines, and az-pipelines-check to
+    inspect a specific pipeline with its recent run history. Use
+    az-pipelines-run-show to drill into a single run.
+    Use az-pipelines-run-timeline to see step-by-step status for a failed
+    run and az-pipelines-run-log to fetch a specific step's log content.
   bash_hints:
     - '\baz pipelines\b'
 
@@ -35,6 +38,25 @@ tools:
         description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
         flag: --project
         short: -p
+      directory:
+        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    pre: |
+      if [[ -n "{{options.directory}}" ]]; then
+        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+        _PROJ="${_PROJ//%20/ }"
+        if [[ -z "${_PROJ}" ]]; then
+          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+          return 1
+        fi
+        if [[ -z "${PROJECT}" ]]; then
+          PROJECT="${_PROJ}"
+          _PROJECT_SET=true
+        fi
+      fi
 
   az-pipelines-runs:
     description: List the 20 most recent pipeline runs across all pipelines.
@@ -57,6 +79,25 @@ tools:
         description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
         flag: --project
         short: -p
+      directory:
+        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    pre: |
+      if [[ -n "{{options.directory}}" ]]; then
+        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+        _PROJ="${_PROJ//%20/ }"
+        if [[ -z "${_PROJ}" ]]; then
+          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+          return 1
+        fi
+        if [[ -z "${PROJECT}" ]]; then
+          PROJECT="${_PROJ}"
+          _PROJECT_SET=true
+        fi
+      fi
 
   az-pipelines-check:
     description: Show details and the 10 most recent runs for a specific pipeline (by ID).
@@ -86,6 +127,25 @@ tools:
         description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
         flag: --project
         short: -p
+      directory:
+        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    pre: |
+      if [[ -n "{{options.directory}}" ]]; then
+        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+        _PROJ="${_PROJ//%20/ }"
+        if [[ -z "${_PROJ}" ]]; then
+          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+          return 1
+        fi
+        if [[ -z "${PROJECT}" ]]; then
+          PROJECT="${_PROJ}"
+          _PROJECT_SET=true
+        fi
+      fi
 
   az-pipelines-run-show:
     description: >-
@@ -116,6 +176,25 @@ tools:
         description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
         flag: --project
         short: -p
+      directory:
+        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
+    pre: |
+      if [[ -n "{{options.directory}}" ]]; then
+        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+        _PROJ="${_PROJ//%20/ }"
+        if [[ -z "${_PROJ}" ]]; then
+          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+          return 1
+        fi
+        if [[ -z "${PROJECT}" ]]; then
+          PROJECT="${_PROJ}"
+          _PROJECT_SET=true
+        fi
+      fi
 
   az-pipelines-run-timeline:
     description: >-
@@ -131,6 +210,16 @@ tools:
       - command: [which, python3]
         fail_message: 'python3 is required but not installed.'
     script: |
+      if [[ -n "${DIRECTORY}" && -z "${PROJECT}" ]]; then
+        _URL=$(git -C "${DIRECTORY}" remote get-url origin 2>/dev/null) || {
+          echo "error: -C: no 'origin' remote in '${DIRECTORY}'" >&2; exit 1
+        }
+        PROJECT=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+        PROJECT="${PROJECT//%20/ }"
+        [[ -z "${PROJECT}" ]] && {
+          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2; exit 1
+        }
+      fi
       if [[ -n "${PROJECT}" ]]; then
         PROJECT_NAME="${PROJECT}"
       else
@@ -194,9 +283,13 @@ tools:
         flag: --json
     options:
       project:
-        description: Azure DevOps project name or ID (auto-detected from the run if omitted)
+        description: Azure DevOps project name or ID (auto-detected from the run, or from the git remote if -C is passed)
         flag: --project
         short: -p
+      directory:
+        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]
 
   az-pipelines-run-log:
     description: >-
@@ -214,6 +307,16 @@ tools:
       - command: [which, python3]
         fail_message: 'python3 is required but not installed.'
     script: |
+      if [[ -n "${DIRECTORY}" && -z "${PROJECT}" ]]; then
+        _URL=$(git -C "${DIRECTORY}" remote get-url origin 2>/dev/null) || {
+          echo "error: -C: no 'origin' remote in '${DIRECTORY}'" >&2; exit 1
+        }
+        PROJECT=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+        PROJECT="${PROJECT//%20/ }"
+        [[ -z "${PROJECT}" ]] && {
+          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2; exit 1
+        }
+      fi
       if [[ -n "${PROJECT}" ]]; then
         PROJECT_NAME="${PROJECT}"
       else
@@ -292,6 +395,10 @@ tools:
         flag: --tail
         pattern: "^[1-9][0-9]*$"
       project:
-        description: Azure DevOps project name or ID (auto-detected from the run if omitted)
+        description: Azure DevOps project name or ID (auto-detected from the run, or from the git remote if -C is passed)
         flag: --project
         short: -p
+      directory:
+        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+        flag: -C
+        path_tests: [under_cwd]

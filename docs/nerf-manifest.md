@@ -272,7 +272,10 @@ template:
 Rules:
 
 - Every `{{kind.name}}` in `command` must be defined in `switches`, `options`, or `arguments`.
-- Every parameter must be referenced by a `{{kind.name}}` in `command`.
+- Every parameter must be referenced by a `{{kind.name}}` somewhere observable at execution time:
+  `command`, `pre`, or a `guard` (script or command). The reference can live in any one of those --
+  e.g. a `-C directory` whose only effect is to populate a value consumed by `pre` is a legitimate
+  pre-only parameter and is accepted without appearing in `command`.
 - A variadic argument's `{{kind.name}}` must be the last element of `command`.
 - The generated script ends with `exec`, replacing the process.
 
@@ -722,6 +725,13 @@ The pre script is wrapped in a shell function (`_nerf_pre`). Key points:
   function whose return code is being tested by the caller, and the wrapper invokes pre via
   `_nerf_pre || _nerf_pre_rc=$?`. Even adding `set -e` inside the function body has no effect per
   POSIX/bash semantics. **Always check command results explicitly with `if`/`||` and `return 1`.**
+- **Populating an option's value from pre.** Optional-scalar options emit conditionally based on a
+  parser-set sentinel `_<NAME>_SET`, not on the value variable itself. To make the template emit
+  `--flag $VAR` when pre computes a value that the CLI parser never saw, assign **both** the value
+  and the sentinel: `PROJECT="${PROJECT:-detected}"; _PROJECT_SET=true`. This is the documented
+  contract for pre-only / `-C`-style options whose effect is to derive a value the wrapped tool
+  needs as an explicit flag (used pervasively by the `az-*` tools to resolve project from `-C`).
+  The variable name pattern is always `_<UPPERCASE_OPTION>_SET`.
 
 Example:
 
@@ -859,7 +869,7 @@ Generated skill files follow the same structure formatted as markdown for AI ass
 | Exactly one of `template`, `passthrough`, `script`                       | tool                  |
 | `switches`/`options`/`arguments` not allowed with `passthrough`          | tool                  |
 | `{{kind.name}}` refs must exist in switches/options/arguments            | template, guards, pre |
-| All switches/options/arguments must be referenced in `{{kind.name}}`     | template only         |
+| All switches/options/arguments must be referenced in `{{kind.name}}`     | template, pre, guards |
 | Variadic argument must be last in `arguments`                            | arguments             |
 | Variadic `{{kind.name}}` must be last element in `template.command`      | template              |
 | `allow` and `deny` are mutually exclusive                                | options, arguments    |

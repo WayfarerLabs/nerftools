@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-az-repos-pr-create -- Create a pull request from the current branch. Source branch is auto-detected from HEAD. The target branch defaults to the repo's default branch unless --target-branch is given. Cannot be run from detached HEAD or from main.
+# nerf-az-repos-pr-create -- Create a pull request from the current branch (or from the branch in the -C directory). Source branch is auto-detected from HEAD. The target branch defaults to the repo's default branch unless --target-branch is given. Cannot be run from detached HEAD or from main. When -C is passed, the project, repository, and source branch are all resolved from the given directory's git remote and HEAD.
 # Generated from az-repos manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=remote
@@ -16,7 +16,7 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-az-repos-pr-create [--draft] [--target-branch|-t <target_branch>] [--project|-p <project>] <title> <description>
+Usage: nerf-az-repos-pr-create [--draft] [--target-branch|-t <target_branch>] [--project|-p <project>] [--repository|-r <repository>] [--source-branch|-s <source_branch>] [-C <directory>] <title> <description>
 
 Switches:
   --draft
@@ -28,6 +28,13 @@ Options:
       Must match: ^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$
   --project, -p <project>
       Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+  --repository, -r <repository>
+      Azure DevOps repository name or ID (auto-detected from the git remote if omitted)
+  --source-branch, -s <source_branch>
+      Source branch of the PR (auto-detected from HEAD if omitted; required when -C is passed since az reads HEAD from cwd, not from -C)
+      Must match: ^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$
+  -C <directory>
+      Resolve project, repository, and source branch from the git remote/HEAD of this directory instead of cwd (must be under cwd)
 
 Arguments:
   <title> (required)
@@ -35,9 +42,9 @@ Arguments:
   <description> (required)
       PR description (body text; supports markdown)
 
-Maps to: az repos pr create --title <title> --description <description> <draft> <target_branch> <project> --output json
+Maps to: az repos pr create --title <title> --description <description> <draft> <target_branch> <project> <repository> <source_branch> --output json
 
-Create a pull request from the current branch. Source branch is auto-detected from HEAD. The target branch defaults to the repo's default branch unless --target-branch is given. Cannot be run from detached HEAD or from main.
+Create a pull request from the current branch (or from the branch in the -C directory). Source branch is auto-detected from HEAD. The target branch defaults to the repo's default branch unless --target-branch is given. Cannot be run from detached HEAD or from main. When -C is passed, the project, repository, and source branch are all resolved from the given directory's git remote and HEAD.
 EOF
   exit 1
 }
@@ -47,12 +54,21 @@ TARGET_BRANCH=""
 _TARGET_BRANCH_SET=""
 PROJECT=""
 _PROJECT_SET=""
+REPOSITORY=""
+_REPOSITORY_SET=""
+SOURCE_BRANCH=""
+_SOURCE_BRANCH_SET=""
+DIRECTORY=""
+_DIRECTORY_SET=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --draft) if [[ -n "${DRAFT}" ]]; then echo "error: --draft can only be specified once" >&2; exit 1; fi; DRAFT="true"; shift 1 ;;
     --target-branch|-t) if [[ -n "${_TARGET_BRANCH_SET}" ]]; then echo "error: --target-branch can only be specified once" >&2; exit 1; fi; TARGET_BRANCH="$2"; _TARGET_BRANCH_SET=true; shift 2 ;;
     --project|-p) if [[ -n "${_PROJECT_SET}" ]]; then echo "error: --project can only be specified once" >&2; exit 1; fi; PROJECT="$2"; _PROJECT_SET=true; shift 2 ;;
+    --repository|-r) if [[ -n "${_REPOSITORY_SET}" ]]; then echo "error: --repository can only be specified once" >&2; exit 1; fi; REPOSITORY="$2"; _REPOSITORY_SET=true; shift 2 ;;
+    --source-branch|-s) if [[ -n "${_SOURCE_BRANCH_SET}" ]]; then echo "error: --source-branch can only be specified once" >&2; exit 1; fi; SOURCE_BRANCH="$2"; _SOURCE_BRANCH_SET=true; shift 2 ;;
+    -C) if [[ -n "${_DIRECTORY_SET}" ]]; then echo "error: -C can only be specified once" >&2; exit 1; fi; DIRECTORY="$2"; _DIRECTORY_SET=true; shift 2 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -82,6 +98,83 @@ if [[ $# -gt 0 ]]; then
   exit 1
 fi
 
+_nerf_check_path() {
+  local _label=$1 _input=$2 _tests=$3
+  local _cwd _canonical
+  case "$_input" in
+    *$'\n'*|*$'\r'*|*$'\t'*)
+      echo "error: nerf-az-repos-pr-create: ${_label}: contains illegal control character" >&2
+      echo "  hint: paths must not contain newlines, carriage returns, or tabs" >&2
+      return 1 ;;
+  esac
+  _cwd=$(realpath -- "$PWD") || {
+    echo "error: nerf-az-repos-pr-create: failed to canonicalize cwd '$PWD'" >&2
+    echo "  hint: invoke from a valid directory" >&2
+    return 1
+  }
+  _canonical=$(realpath -m -- "$_input") || {
+    echo "error: nerf-az-repos-pr-create: ${_label}: failed to canonicalize '${_input}'" >&2
+    echo "  hint: pass a syntactically valid path" >&2
+    return 1
+  }
+  if [[ ",$_tests," == *",under_cwd,"* ]]; then
+    # Skip the prefix check when cwd is root: every absolute path qualifies, and the
+    # naive prefix comparison would build "//" and reject otherwise-valid paths.
+    if [[ "$_cwd" != "/" && "$_canonical" != "$_cwd" && "$_canonical" != "$_cwd"/* ]]; then
+      echo "error: nerf-az-repos-pr-create: ${_label}: 'under_cwd' failed: '${_input}'" >&2
+      echo "  resolves to '${_canonical}', not under '${_cwd}'" >&2
+      echo "  hint: pass a path inside the current workspace" >&2
+      echo "  hint: symlinks are followed -- if the link's target is outside the workspace it is rejected" >&2
+      return 1
+    fi
+  fi
+  if [[ ",$_tests," == *",exists,"* ]] && [[ ! -e "$_input" ]]; then
+    echo "error: nerf-az-repos-pr-create: ${_label}: 'exists' failed: '${_input}' does not exist" >&2
+    echo "  hint: create the path or pass an existing one" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",not_exists,"* ]] && [[ -e "$_input" ]]; then
+    echo "error: nerf-az-repos-pr-create: ${_label}: 'not_exists' failed: '${_input}' already exists" >&2
+    echo "  hint: choose a different path or remove the existing one first" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",file,"* ]] && [[ ! -f "$_input" ]]; then
+    echo "error: nerf-az-repos-pr-create: ${_label}: 'file' failed: '${_input}' is not a regular file" >&2
+    echo "  hint: pass a regular file path (not a directory, symlink-to-dir, device, or missing path)" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",dir,"* ]] && [[ ! -d "$_input" ]]; then
+    echo "error: nerf-az-repos-pr-create: ${_label}: 'dir' failed: '${_input}' is not a directory" >&2
+    echo "  hint: pass a directory path (not a regular file or missing path)" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",symlink,"* ]] && [[ ! -L "$_input" ]]; then
+    echo "error: nerf-az-repos-pr-create: ${_label}: 'symlink' failed: '${_input}' is not a symlink" >&2
+    echo "  hint: pass a symbolic link (the test does not follow the link)" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",not_symlink,"* ]] && [[ -L "$_input" ]]; then
+    echo "error: nerf-az-repos-pr-create: ${_label}: 'not_symlink' failed: '${_input}' is a symlink" >&2
+    echo "  hint: pass a real path, not a symlink (the test does not follow the link)" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",readable,"* ]] && [[ ! -r "$_input" ]]; then
+    echo "error: nerf-az-repos-pr-create: ${_label}: 'readable' failed: '${_input}' is not readable" >&2
+    echo "  hint: check filesystem permissions for the current user" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",writable,"* ]] && [[ ! -w "$_input" ]]; then
+    echo "error: nerf-az-repos-pr-create: ${_label}: 'writable' failed: '${_input}' is not writable" >&2
+    echo "  hint: check filesystem permissions for the current user" >&2
+    return 1
+  fi
+  if [[ ",$_tests," == *",executable,"* ]] && [[ ! -x "$_input" ]]; then
+    echo "error: nerf-az-repos-pr-create: ${_label}: 'executable' failed: '${_input}' is not executable" >&2
+    echo "  hint: check filesystem permissions for the current user" >&2
+    return 1
+  fi
+}
+
 _NERF_PATTERN='^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$'
 if [[ -n "${_TARGET_BRANCH_SET}" ]] && ! [[ "${TARGET_BRANCH}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-az-repos-pr-create: option --target-branch does not match required pattern" >&2
@@ -89,6 +182,19 @@ if [[ -n "${_TARGET_BRANCH_SET}" ]] && ! [[ "${TARGET_BRANCH}" =~ $_NERF_PATTERN
   echo "  pattern: ^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$" >&2
   echo "  hint: value must match ^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$" >&2
   exit 1
+fi
+
+_NERF_PATTERN='^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$'
+if [[ -n "${_SOURCE_BRANCH_SET}" ]] && ! [[ "${SOURCE_BRANCH}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-az-repos-pr-create: option --source-branch does not match required pattern" >&2
+  echo "  value:   \"${SOURCE_BRANCH}\"" >&2
+  echo "  pattern: ^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$" >&2
+  echo "  hint: value must match ^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$" >&2
+  exit 1
+fi
+
+if [[ -n "${_DIRECTORY_SET}" ]]; then
+  _nerf_check_path 'option -C' "${DIRECTORY}" 'under_cwd' || exit 1
 fi
 
 if [[ -n "${_TITLE_SET}" ]] && [[ "${TITLE}" == -* ]]; then
@@ -115,15 +221,60 @@ if [[ -z "${DESCRIPTION}" ]]; then
   usage
 fi
 
-git symbolic-ref --quiet HEAD > /dev/null 2>&1 || { echo 'error: nerf-az-repos-pr-create: Cannot create a PR from detached HEAD state. Check out a feature branch first.' >&2; exit 1; }
-( [ "$(git symbolic-ref --short HEAD 2>/dev/null)" != "main" ] ) || { echo 'error: nerf-az-repos-pr-create: Cannot create a PR from main. Check out a feature branch first.' >&2; exit 1; }
+_nerf_pre() {
+  _GIT_DIR="${DIRECTORY}"
+  _GIT_DIR="${_GIT_DIR:-.}"
+  # Source branch + branch guards: always run against the resolved repo so
+  # that -C correctly checks the directory the agent is creating the PR from.
+  _BRANCH=$(git -C "${_GIT_DIR}" symbolic-ref --quiet --short HEAD 2>/dev/null) || {
+    echo "error: cannot create a PR from detached HEAD state in '${_GIT_DIR}'" >&2
+    return 1
+  }
+  if [[ "${_BRANCH}" == "main" ]]; then
+    echo "error: cannot create a PR from main. Check out a feature branch first." >&2
+    return 1
+  fi
+  # az reads HEAD from cwd; when -C is passed, pass --source-branch explicitly
+  # so az creates the PR for the right branch.
+  if [[ -n "${DIRECTORY}" && -z "${SOURCE_BRANCH}" ]]; then
+    SOURCE_BRANCH="${_BRANCH}"
+    _SOURCE_BRANCH_SET=true
+  fi
+  if [[ -n "${DIRECTORY}" ]]; then
+    _URL=$(git -C "${DIRECTORY}" remote get-url origin 2>/dev/null) \
+      || { echo "error: -C: no 'origin' remote in '${DIRECTORY}'" >&2; return 1; }
+    _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+    _PROJ="${_PROJ//%20/ }"
+    _REPO=$(echo "${_URL}" | sed -nE 's|.*/_git/([^?/]+).*|\1|p; s|.*:v3/[^/]+/[^/]+/([^/]+).*|\1|p' | sed 's|\.git$||')
+    _REPO="${_REPO//%20/ }"
+    if [[ -z "${_PROJ}" || -z "${_REPO}" ]]; then
+      echo "error: -C: could not parse Azure DevOps project/repo from remote URL '${_URL}'" >&2
+      return 1
+    fi
+    if [[ -z "${PROJECT}" ]]; then
+      PROJECT="${_PROJ}"
+      _PROJECT_SET=true
+    fi
+    if [[ -z "${REPOSITORY}" ]]; then
+      REPOSITORY="${_REPO}"
+      _REPOSITORY_SET=true
+    fi
+  fi
+}
+
+_nerf_pre_rc=0
+_nerf_pre || _nerf_pre_rc=$?
+if [ $_nerf_pre_rc -ne 0 ]; then
+  echo "error: nerf-az-repos-pr-create: pre-hook failed (exit code $_nerf_pre_rc)" >&2
+  exit $_nerf_pre_rc
+fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(az repos pr create --title "${TITLE}" --description "${DESCRIPTION}" ${DRAFT:+"--draft"} ${_TARGET_BRANCH_SET:+"--target-branch"} ${_TARGET_BRANCH_SET:+"$TARGET_BRANCH"} ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json)
+  _NERF_DRY_CMD=(az repos pr create --title "${TITLE}" --description "${DESCRIPTION}" ${DRAFT:+"--draft"} ${_TARGET_BRANCH_SET:+"--target-branch"} ${_TARGET_BRANCH_SET:+"$TARGET_BRANCH"} ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} ${_REPOSITORY_SET:+"--repository"} ${_REPOSITORY_SET:+"$REPOSITORY"} ${_SOURCE_BRANCH_SET:+"--source-branch"} ${_SOURCE_BRANCH_SET:+"$SOURCE_BRANCH"} --output json)
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec az repos pr create --title "${TITLE}" --description "${DESCRIPTION}" ${DRAFT:+"--draft"} ${_TARGET_BRANCH_SET:+"--target-branch"} ${_TARGET_BRANCH_SET:+"$TARGET_BRANCH"} ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} --output json
+exec az repos pr create --title "${TITLE}" --description "${DESCRIPTION}" ${DRAFT:+"--draft"} ${_TARGET_BRANCH_SET:+"--target-branch"} ${_TARGET_BRANCH_SET:+"$TARGET_BRANCH"} ${_PROJECT_SET:+"--project"} ${_PROJECT_SET:+"$PROJECT"} ${_REPOSITORY_SET:+"--repository"} ${_REPOSITORY_SET:+"$REPOSITORY"} ${_SOURCE_BRANCH_SET:+"--source-branch"} ${_SOURCE_BRANCH_SET:+"$SOURCE_BRANCH"} --output json
