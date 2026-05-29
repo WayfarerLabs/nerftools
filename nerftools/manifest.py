@@ -774,10 +774,28 @@ def _validate_template_refs(tool: ToolSpec, all_params: set[str], ctx: str) -> N
                 )
             referenced_names.add(resolved[1])
 
-    # All params must be referenced in command
+    # Params may also be consumed by pre-hooks and guards (placeholders work
+    # there too, per the schema). A pre-only parameter -- e.g. a -C directory
+    # whose only effect is to alter the project resolved by a later step -- is
+    # a legitimate use case, so count those references as well.
+    extra_sources: list[str] = []
+    if tool.pre:
+        extra_sources.append(tool.pre)
+    for guard in tool.guards:
+        if guard.script:
+            extra_sources.append(guard.script)
+        if guard.command:
+            extra_sources.extend(guard.command)
+    for source in extra_sources:
+        for match in PLACEHOLDER_RE.finditer(source):
+            resolved = resolve_placeholder(match.group(1), tool)
+            if resolved is not None:
+                referenced_names.add(resolved[1])
+
+    # All params must be referenced somewhere observable at execution time
     for name in all_params:
         if name not in referenced_names:
-            raise ManifestError(f"{ctx}: '{name}' is defined but not referenced in template command")
+            raise ManifestError(f"{ctx}: '{name}' is defined but not referenced in template command, pre, or guards")
 
     # Variadic arg placeholder must be last element in command
     arg_names = list(tool.arguments.keys())
