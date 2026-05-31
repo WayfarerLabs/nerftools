@@ -41,8 +41,17 @@ to preview the output:
 uv run nerf generate --target claude-plugin -c nerf.yaml --outdir ./out/claude-plugin
 ```
 
+You can also omit `--outdir`; it defaults to `./out/<target>/` and each target writes to its own
+subdirectory.
+
 You don't need to commit the regenerated `out/` -- CI regenerates it as part of the release PR.
 But committing it can be useful so reviewers can see the exact generated output in your PR diff.
+
+`nerf generate` cleans the output directory before writing, but refuses to clean any directory it
+did not produce itself (detected via a `.nerf-build-manifest` marker file written at the end of
+each successful build). If you ever see "refusing to clean output directory", pass `--outdir` to a
+fresh location, `--keep-existing` to preserve the existing files, or `--force` to clean the
+directory anyway.
 
 ## AI Tooling (Rulesync)
 

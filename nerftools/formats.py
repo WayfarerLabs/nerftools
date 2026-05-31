@@ -147,6 +147,7 @@ def build_claude_plugin(
     marketplace_meta: MarketplaceMetadata | None = None,
     emit_session_start_hook: bool = True,
     emit_pretool_bash_hint_hook: bool = True,
+    force: bool = False,
 ) -> list[Path]:
     """Build a self-contained Claude Code plugin.
 
@@ -169,20 +170,16 @@ def build_claude_plugin(
     source.
     """
     import json
-    import shutil
 
     from nerftools import install_nerfctl
     from nerftools.builder import build_script_text
+    from nerftools.outdir import prepare_output_dir
 
     written: list[Path] = []
 
-    # Always start clean
-    output_dir.mkdir(parents=True, exist_ok=True)
-    for item in output_dir.iterdir():
-        if item.is_dir():
-            shutil.rmtree(item)
-        elif item.is_file():
-            item.unlink()
+    prepare_output_dir(
+        output_dir, target="claude-plugin", keep_existing=False, force=force, clean="all"
+    )
 
     # Plugin manifest
     plugin_dir = output_dir / ".claude-plugin"
@@ -296,6 +293,9 @@ def build_claude_plugin(
         out.write_text(overview_text)
         written.append(out)
 
+    from nerftools.outdir import write_build_marker
+
+    write_build_marker(output_dir, target="claude-plugin")
     return written
 
 
@@ -468,6 +468,7 @@ def build_codex_plugin(
     plugin_meta: PluginMetadata,
     *,
     prefix: str = "nerf-",
+    force: bool = False,
 ) -> list[Path]:
     """Build a self-contained Codex plugin.
 
@@ -491,24 +492,15 @@ def build_codex_plugin(
     verified end-to-end, a parallel dispatcher can be wired up here.
     """
     import json
-    import shutil
 
     from nerftools.builder import build_script_text
+    from nerftools.outdir import prepare_output_dir
 
     written: list[Path] = []
 
-    # Always start clean
-    output_dir.mkdir(parents=True, exist_ok=True)
-    for item in output_dir.iterdir():
-        if item.is_symlink():
-            raise ValueError(
-                f"refusing to clean symlink in output directory: {item}. "
-                "Please remove the symlink manually before proceeding."
-            )
-        if item.is_dir():
-            shutil.rmtree(item)
-        elif item.is_file():
-            item.unlink()
+    prepare_output_dir(
+        output_dir, target="codex-plugin", keep_existing=False, force=force, clean="all"
+    )
 
     # Plugin manifest
     plugin_dir = output_dir / ".codex-plugin"
@@ -561,6 +553,9 @@ def build_codex_plugin(
         out.write_text(overview_text)
         written.append(out)
 
+    from nerftools.outdir import write_build_marker
+
+    write_build_marker(output_dir, target="codex-plugin")
     return written
 
 

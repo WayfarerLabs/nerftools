@@ -363,6 +363,7 @@ def test_switch_usage_shows_bracketed_flag() -> None:
 
 
 def test_build_skills_clears_stale_dirs_by_default(tmp_path: Path) -> None:
+    (tmp_path / ".nerf-build-manifest").write_text("skills\n")
     stale = tmp_path / "old-group"
     stale.mkdir()
     (stale / "SKILL.md").write_text("old")

@@ -28,24 +28,25 @@ def build_scripts(
     output_dir: Path,
     *,
     keep_existing: bool = False,
+    force: bool = False,
     prefix: str = "nerf-",
 ) -> list[Path]:
     """Generate shell scripts for all tools in all manifests.
 
     By default, all files in output_dir are removed before writing so stale
     tools do not linger. Pass keep_existing=True to preserve unmanaged files.
+    Pass force=True to clean an unmanaged output directory anyway.
 
     The prefix is prepended to every generated script filename and tool name
     within the script (usage, header comment). Defaults to "nerf-".
 
     Returns the list of files written.
     """
-    output_dir.mkdir(parents=True, exist_ok=True)
+    from nerftools.outdir import prepare_output_dir, write_build_marker
 
-    if not keep_existing:
-        for f in output_dir.iterdir():
-            if f.is_file():
-                f.unlink()
+    prepare_output_dir(
+        output_dir, target="bin", keep_existing=keep_existing, force=force, clean="files"
+    )
 
     written: list[Path] = []
 
@@ -58,6 +59,7 @@ def build_scripts(
             out.chmod(0o755)
             written.append(out)
 
+    write_build_marker(output_dir, target="bin")
     return written
 
 
