@@ -70,3 +70,5 @@ List role definitions (optionally filtered by name or scope).
 - `--subscription` (optional): Subscription name or ID (defaults to active)
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

@@ -276,3 +276,5 @@ View details of a workflow run.
 - `<run_id>` (required): Workflow run ID. must match `^[0-9]+$`
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

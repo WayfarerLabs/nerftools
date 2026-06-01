@@ -163,3 +163,5 @@ Run a kubectl/shell command on the cluster via the AKS run-command API. The comm
 - `<command...>` (required): Command and args to run on the cluster (e.g. kubectl get pods -A)
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

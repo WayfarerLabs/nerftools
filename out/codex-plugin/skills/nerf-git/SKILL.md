@@ -685,3 +685,5 @@ Show the status of each submodule (current SHA, configured path, and describe ou
 - `-C` (optional): Subdirectory of the workspace to run git in (must be under cwd)
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

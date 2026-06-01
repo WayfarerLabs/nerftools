@@ -63,3 +63,5 @@ List explicit network rules on a storage account.
 - `<account_name>` (required): Storage account name
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

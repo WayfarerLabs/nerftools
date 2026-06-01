@@ -159,3 +159,5 @@ Cast or reset a review vote on a pull request. The signed-in identity must be a 
 - `<vote>` (required): Vote to cast. one of `approve`, `approve-with-suggestions`, `reject`, `reset`, `wait-for-author`
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

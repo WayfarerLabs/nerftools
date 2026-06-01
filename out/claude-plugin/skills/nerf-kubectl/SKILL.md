@@ -288,3 +288,5 @@ Trigger a rolling restart of a deployment, daemonset, or statefulset.
 - `<target>` (required): Resource to restart (e.g. deployment/<name>). must match `^(deployment|deploy|daemonset|ds|statefulset|sts)/[a-z0-9]([-a-z0-9.]*[a-z0-9])?$`
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

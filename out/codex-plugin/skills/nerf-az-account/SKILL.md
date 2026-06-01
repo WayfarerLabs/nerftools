@@ -55,3 +55,5 @@ Switch the active Azure subscription for this session.
 - `<subscription>` (required): Subscription name or ID
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

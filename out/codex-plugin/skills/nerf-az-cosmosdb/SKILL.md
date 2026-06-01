@@ -82,3 +82,5 @@ List virtual network rules on a Cosmos DB account.
 - `<account_name>` (required): Cosmos DB account name
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

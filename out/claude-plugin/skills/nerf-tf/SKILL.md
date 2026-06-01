@@ -45,3 +45,5 @@ Run terraform validate to check syntactic validity and internal consistency of t
 - `-no-tests`: Skip validating .tftest.hcl test files
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

@@ -149,6 +149,8 @@ done
 
 _msg="The following ${_BRAND} skill(s) may wrap this command: ${_list}.
 
-Use one if it covers what you need. To run the command directly anyway, retry with a brief reason appended as \`# ${_BRAND}:bypass <one-line explanation>\`."
+Use one if it covers what you need. To run the command directly anyway:
+1. File a 'bypass' report via the \`nerf-report\` skill explaining what you needed and why the guard was in the way.
+2. Retry the command with the resulting report filename appended as \`# ${_BRAND}:bypass <report-filename>\`."
 
 emit_deny "$_msg"
