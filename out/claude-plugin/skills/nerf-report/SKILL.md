@@ -14,11 +14,13 @@ Pick the right `<kind>`:
 
 - `bug` -- the tool produced wrong behavior, rejected valid input, or
   crashed
-- `bypass` -- you bypassed a guardrail; explain what you needed to do and
-  why the guard was in the way. When bypassing the PreToolUse Bash hint
-  hook, run this `nerf-report bypass` *first*, then append the resulting
-  report filename to the command as `# nerf:bypass <report-filename>`
-  (replace `nerf` with your configured brand if different).
+- `bypass` -- you ran a command directly instead of via the nerf wrapper
+  that would normally cover it (any reason: wrapper too restrictive,
+  missing a flag, has a bug, doesn't fit this case, etc.). When the
+  PreToolUse Bash hint hook would have redirected your raw call, run
+  `nerf-report bypass` *first*, then append the resulting report
+  filename to the command as `# nerf:bypass <report-filename>` (replace
+  `nerf` with your configured brand if different).
 - `complaint` -- the tool works but the UX got in your way (cryptic error,
   surprising default, missing flag forced a workaround)
 - `request` -- you'd like a new tool, option, or behavior
