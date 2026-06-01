@@ -318,6 +318,12 @@ def build_claude_plugin(
     return written
 
 
+_NERF_REPORT_FOOTER = (
+    "_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? "
+    "Use the `nerf-report` skill._"
+)
+
+
 def _build_nerf_report_skill_text(*, script_path: str) -> str:
     """SKILL.md for the nerf-report tool. *script_path* is the path the agent
     should invoke -- absolute (`${CLAUDE_PLUGIN_ROOT}/...`) for Claude, or
@@ -341,7 +347,10 @@ Pick the right `<kind>`:
 - `bug` -- the tool produced wrong behavior, rejected valid input, or
   crashed
 - `bypass` -- you bypassed a guardrail; explain what you needed to do and
-  why the guard was in the way
+  why the guard was in the way. When bypassing the PreToolUse Bash hint
+  hook, run this `nerf-report bypass` *first*, then append the resulting
+  report filename to the command as `# nerf:bypass <report-filename>`
+  (replace `nerf` with your configured brand if different).
 - `complaint` -- the tool works but the UX got in your way (cryptic error,
   surprising default, missing flag forced a workaround)
 - `request` -- you'd like a new tool, option, or behavior
@@ -401,6 +410,8 @@ def _build_claude_plugin_skill_text(manifest: NerfManifest, prefix: str = "") ->
     for tool_name, tool_spec in manifest.tools.items():
         full_name = prefix + tool_name
         parts.append(_claude_plugin_tool_section(full_name, skill_group, tool_spec))
+
+    parts.append(_NERF_REPORT_FOOTER)
 
     return "\n".join(parts).rstrip() + "\n"
 
@@ -510,6 +521,13 @@ def _overview_text(
 
     parts.append("")
     parts.append("Use the corresponding `nerf-*` skill for full usage details on each package.")
+    parts.append("")
+    parts.append("## Feedback")
+    parts.append("")
+    parts.append(
+        "Found a problem or want a change? Use the `nerf-report` skill to file a structured "
+        "report (`bug`, `bypass`, `complaint`, or `request`). The maintainer triages them."
+    )
 
     return "\n".join(parts).rstrip() + "\n"
 
@@ -682,6 +700,8 @@ def _build_codex_plugin_skill_text(manifest: NerfManifest, prefix: str = "") -> 
         script_path = f"scripts/{full_name}"
         parts.append(_tool_section(full_name, tool_spec, script_path=script_path))
 
+    parts.append(_NERF_REPORT_FOOTER)
+
     return "\n".join(parts).rstrip() + "\n"
 
 
@@ -816,7 +836,9 @@ done
 
 _msg="The following ${_BRAND} skill(s) may wrap this command: ${_list}.
 
-Use one if it covers what you need. To run the command directly anyway, retry with a brief reason appended as \\`# ${_BRAND}:bypass <one-line explanation>\\`."
+Use one if it covers what you need. To run the command directly anyway:
+1. File a 'bypass' report via the \\`nerf-report\\` skill explaining what you needed and why the guard was in the way.
+2. Retry the command with the resulting report filename appended as \\`# ${_BRAND}:bypass <report-filename>\\`."
 
 emit_deny "$_msg"
 '''

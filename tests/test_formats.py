@@ -156,6 +156,15 @@ def test_claude_plugin_overview_skill_named_after_plugin(tmp_path: Path) -> None
     content = overview.read_text()
     assert "# my-plugin" in content
     assert "nerf-git" in content
+    # Overview reminds the agent about the feedback channel.
+    assert "nerf-report" in content
+
+
+def test_claude_plugin_per_package_skill_has_nerf_report_footer(tmp_path: Path) -> None:
+    tools = {"git-log": _template_tool(["git", "log"])}
+    _build([_manifest(skill_group="git", tools=tools)], tmp_path, prefix="nerf-")
+    skill = tmp_path / "skills" / "nerf-git" / "SKILL.md"
+    assert "nerf-report" in skill.read_text()
 
 
 def test_claude_plugin_nerfctl_scripts(tmp_path: Path) -> None:
@@ -450,8 +459,11 @@ def test_hook_denies_matching_command(tmp_path: Path) -> None:
     out = payload["hookSpecificOutput"]
     assert out["hookEventName"] == "PreToolUse"
     assert out["permissionDecision"] == "deny"
-    assert "`nerf-git`" in out["permissionDecisionReason"]
-    assert "# nerf:bypass <one-line explanation>" in out["permissionDecisionReason"]
+    reason = out["permissionDecisionReason"]
+    assert "`nerf-git`" in reason
+    assert "# nerf:bypass <report-filename>" in reason
+    # Bypass message now points the agent at nerf-report to record the reason.
+    assert "nerf-report" in reason
 
 
 def test_hook_lists_all_matching_skills(tmp_path: Path) -> None:
@@ -622,7 +634,7 @@ def test_hook_malformed_bypass_falls_through_to_redirect(tmp_path: Path) -> None
     reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
     assert "`nerf-git`" in reason
     # The standard redirect message documents the proper bypass syntax.
-    assert "# nerf:bypass <one-line explanation>" in reason
+    assert "# nerf:bypass <report-filename>" in reason
 
 
 def test_hook_bypass_partial_word_does_not_trigger(tmp_path: Path) -> None:
@@ -728,6 +740,14 @@ def test_codex_plugin_overview_skill(tmp_path: Path) -> None:
     content = overview.read_text()
     assert "# my-plugin" in content
     assert "nerf-git" in content
+    assert "nerf-report" in content
+
+
+def test_codex_plugin_per_package_skill_has_nerf_report_footer(tmp_path: Path) -> None:
+    tools = {"git-log": _template_tool(["git", "log"])}
+    _build_codex([_manifest(skill_group="git", tools=tools)], tmp_path, prefix="nerf-")
+    skill = tmp_path / "skills" / "nerf-git" / "SKILL.md"
+    assert "nerf-report" in skill.read_text()
 
 
 def test_codex_plugin_no_nerfctl(tmp_path: Path) -> None:
