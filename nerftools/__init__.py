@@ -1,5 +1,6 @@
 """nerftools: build and manage nerf tools."""
 
+import re
 from importlib.resources import files
 from pathlib import Path
 
@@ -10,6 +11,10 @@ BUILTIN_MANIFESTS_DIR = Path(str(files("nerftools.default_manifests")))
 _NERFCTL_DIR = Path(__file__).parent / "nerfctl" / "claude"
 _NERF_REPORT_SCRIPT = Path(__file__).parent / "nerf_report" / "script.sh"
 _NERF_REPORT_VERSION_PLACEHOLDER = "__NERFTOOLS_VERSION__"
+# Versions land inside a double-quoted bash string in the generated script
+# and inside report filenames -- restrict to a semver-friendly safe set to
+# preclude shell injection and filesystem weirdness.
+_NERF_REPORT_VERSION_RE = re.compile(r"^[A-Za-z0-9._+-]+$")
 
 NERFCTL_SCRIPTS: dict[str, Path] = {
     "nerfctl-grant-allow": _NERFCTL_DIR / "grant-allow.sh",
@@ -48,6 +53,13 @@ def install_nerf_report(output: Path, *, version: str) -> Path:
     if not _NERF_REPORT_SCRIPT.exists():
         msg = f"nerf-report script template not found: {_NERF_REPORT_SCRIPT}"
         raise FileNotFoundError(msg)
+    if not _NERF_REPORT_VERSION_RE.match(version):
+        msg = (
+            f"nerf-report version {version!r} contains characters outside "
+            f"the safe set [A-Za-z0-9._+-]; refusing to stamp it into a "
+            f"shell script and filename"
+        )
+        raise ValueError(msg)
     output.mkdir(parents=True, exist_ok=True)
     text = _NERF_REPORT_SCRIPT.read_text(encoding="utf-8")
     if _NERF_REPORT_VERSION_PLACEHOLDER not in text:

@@ -54,7 +54,14 @@ if [[ -z "$SANITIZED_TOOL" ]]; then
 fi
 
 REPORTS_DIR="${HOME}/.nerftools/reports"
+# Reports may contain sensitive context (cwd, session ID, agent-written
+# body). Restrict permissions so other users on a shared machine cannot
+# read them. umask makes new files 0600 and new directories 0700; the
+# explicit chmod tightens an existing reports/ dir that may have been
+# created with a looser umask by an older script.
+umask 077
 mkdir -p "$REPORTS_DIR"
+chmod 0700 "$REPORTS_DIR" 2>/dev/null || true
 
 TIMESTAMP_COMPACT="$(date -u +%Y%m%dT%H%M%SZ)"
 TIMESTAMP_ISO="$(date -u +%Y-%m-%dT%H:%M:%SZ)"

@@ -182,3 +182,54 @@ def test_install_raises_when_template_lacks_placeholder(
     monkeypatch.setattr(nerftools, "_NERF_REPORT_SCRIPT", bogus)
     with pytest.raises(ValueError, match="missing.*placeholder"):
         nerftools.install_nerf_report(tmp_path / "out", version="1.2.3")
+
+
+@pytest.mark.parametrize(
+    "bad_version",
+    [
+        '1.0"; rm -rf /',  # quote-based shell injection attempt
+        "1.0\n2.0",  # newline
+        "1.0 2.0",  # space
+        "1.0;echo pwned",  # semicolon
+        "1.0$(whoami)",  # command substitution
+        "1.0`whoami`",  # backtick
+        "",  # empty
+    ],
+)
+def test_install_rejects_unsafe_version(tmp_path: Path, bad_version: str) -> None:
+    with pytest.raises(ValueError, match="safe set"):
+        install_nerf_report(tmp_path / "out", version=bad_version)
+
+
+@pytest.mark.parametrize(
+    "good_version",
+    [
+        "1.2.3",
+        "0.0.0-rc.1",
+        "2.0.0+build.42",
+        "1.0.0-alpha.1+sha.abcdef",
+    ],
+)
+def test_install_accepts_semver_shapes(tmp_path: Path, good_version: str) -> None:
+    # Each variant should install without raising.
+    install_nerf_report(tmp_path / good_version, version=good_version)
+
+
+def test_reports_dir_and_files_are_user_only(tmp_path: Path) -> None:
+    import stat
+
+    script = _install(tmp_path)
+    home = tmp_path / "home"
+    # Pre-create the reports dir with a loose mode to verify the script
+    # tightens it (covers the upgrade-from-older-script case).
+    reports = home / ".nerftools" / "reports"
+    reports.mkdir(parents=True)
+    reports.chmod(0o755)
+    result = _run(script, ["bug", "nerf-foo", "x"], home=home)
+    assert result.returncode == 0, result.stderr
+
+    # Directory must be 0700.
+    assert stat.S_IMODE(reports.stat().st_mode) == 0o700
+    # Report file must be 0600 (umask 077 applied to default 0666).
+    report = next(reports.iterdir())
+    assert stat.S_IMODE(report.stat().st_mode) == 0o600
