@@ -248,6 +248,30 @@ tools:
         flag: --reviewer
         short: -r
 
+  gh-pr-ready:
+    description: >-
+      Mark a draft pull request as ready for review. Pass --undo to
+      convert a non-draft PR back to a draft. Does nothing (and reports
+      success) if the PR is already in the requested state.
+    threat:
+      read: remote
+      write: remote
+    template:
+      command:
+        - gh
+        - pr
+        - ready
+        - "{{arguments.pr}}"
+        - "{{switches.undo}}"
+    switches:
+      undo:
+        description: Convert the PR back to a draft instead of marking it ready
+        flag: --undo
+    arguments:
+      pr:
+        description: PR number, URL, or branch name
+        required: true
+
   gh-pr-thread-comment:
     description: >-
       Add a top-level conversation comment to a pull request (the

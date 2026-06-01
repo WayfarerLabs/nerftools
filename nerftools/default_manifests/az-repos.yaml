@@ -349,10 +349,12 @@ tools:
 
   az-repos-pr-edit:
     description: >-
-      Edit a pull request's title and/or description. At least one of
-      --title or --description must be provided. Useful for keeping a PR's
-      metadata in sync with its scope as the branch evolves. Does not
-      change the PR's status, target branch, or reviewers.
+      Edit a pull request's title, description, and/or draft state. At
+      least one of --title, --description, or --draft must be provided.
+      Pass --draft true to convert the PR back to a draft or --draft
+      false to mark a draft PR as ready for review. Does not change the
+      PR's status (active/abandoned/completed), target branch, or
+      reviewers.
     threat:
       read: remote
       write: remote
@@ -366,6 +368,7 @@ tools:
         - "{{arguments.pr_id}}"
         - "{{options.title}}"
         - "{{options.description}}"
+        - "{{options.draft}}"
         - "{{options.project}}"
         - --output
         - json
@@ -381,6 +384,10 @@ tools:
       description:
         description: New PR description (body text; supports markdown)
         flag: --description
+      draft:
+        description: Set draft state -- "true" to convert to draft, "false" to mark ready for review
+        flag: --draft
+        allow: ["true", "false"]
       project:
         description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
         flag: --project
@@ -391,8 +398,8 @@ tools:
         path_tests: [under_cwd]
     guards:
       - script: |
-          [ -n "$TITLE" ] || [ -n "$DESCRIPTION" ]
-        fail_message: At least one of --title or --description must be provided.
+          [[ -n "${_TITLE_SET}" ]] || [[ -n "${_DESCRIPTION_SET}" ]] || [[ -n "${_DRAFT_SET}" ]]
+        fail_message: At least one of --title, --description, or --draft must be provided.
     pre: |
       if [[ -n "${_DIRECTORY_SET}" ]]; then
         _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
