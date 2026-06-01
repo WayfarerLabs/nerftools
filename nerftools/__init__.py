@@ -40,14 +40,30 @@ def install_nerfctl(output: Path) -> list[Path]:
 def install_nerf_report(output: Path, *, version: str) -> Path:
     """Install the nerf-report script into *output*, stamping in *version*.
 
-    Returns the path written.
+    Returns the path written. Raises ValueError if the template is missing
+    its version placeholder, or if the placeholder somehow survives the
+    substitution (defense against a malformed template shipping a script
+    that misreports its own version).
     """
     if not _NERF_REPORT_SCRIPT.exists():
         msg = f"nerf-report script template not found: {_NERF_REPORT_SCRIPT}"
         raise FileNotFoundError(msg)
     output.mkdir(parents=True, exist_ok=True)
     text = _NERF_REPORT_SCRIPT.read_text(encoding="utf-8")
+    if _NERF_REPORT_VERSION_PLACEHOLDER not in text:
+        msg = (
+            f"nerf-report script template at {_NERF_REPORT_SCRIPT} is "
+            f"missing the {_NERF_REPORT_VERSION_PLACEHOLDER!r} placeholder"
+        )
+        raise ValueError(msg)
     text = text.replace(_NERF_REPORT_VERSION_PLACEHOLDER, version)
+    if _NERF_REPORT_VERSION_PLACEHOLDER in text:
+        msg = (
+            f"nerf-report version stamping incomplete: "
+            f"{_NERF_REPORT_VERSION_PLACEHOLDER!r} still present after "
+            f"substitution (version={version!r})"
+        )
+        raise ValueError(msg)
     dest = output / "nerf-report"
     dest.write_bytes(text.encode("utf-8"))
     dest.chmod(0o755)

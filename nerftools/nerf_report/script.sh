@@ -7,6 +7,10 @@ set -euo pipefail
 # Stamped at plugin build time.
 NERFTOOLS_VERSION="__NERFTOOLS_VERSION__"
 
+# Reports live under $HOME; fail fast with an actionable message if it's
+# unset rather than relying on `set -u` to crash later with "unbound variable".
+: "${HOME:?nerf-report: HOME is not set; cannot determine reports directory}"
+
 _usage() {
     cat >&2 <<EOF
 Usage: nerf-report <kind> <tool> <body>
@@ -62,10 +66,16 @@ FILENAME="${TIMESTAMP_COMPACT}_${RAND}_${KIND}_${SANITIZED_TOOL}_${NERFTOOLS_VER
 DEST="${REPORTS_DIR}/${FILENAME}"
 
 # YAML-safe double-quoted string escaping for the frontmatter fields.
+# Order matters: escape backslashes first, then quotes, then control chars,
+# so the later substitutions don't double-escape the backslashes we just
+# inserted.
 _yaml_escape() {
     local s="$1"
     s="${s//\\/\\\\}"
     s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\r'/\\r}"
+    s="${s//$'\t'/\\t}"
     printf '%s' "$s"
 }
 

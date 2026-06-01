@@ -136,3 +136,49 @@ def test_session_override_takes_precedence(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     content = next((home / ".nerftools" / "reports").iterdir()).read_text()
     assert 'session: "explicit"' in content
+
+
+def test_unset_home_emits_actionable_error(tmp_path: Path) -> None:
+    script = _install(tmp_path)
+    result = subprocess.run(
+        ["bash", str(script), "bug", "nerf-foo", "x"],
+        capture_output=True,
+        text=True,
+        env={"PATH": "/usr/bin:/bin"},  # no HOME
+        check=False,
+    )
+    assert result.returncode != 0
+    assert "HOME is not set" in result.stderr
+
+
+def test_frontmatter_escapes_newlines_in_session(tmp_path: Path) -> None:
+    script = _install(tmp_path)
+    home = tmp_path / "home"
+    # Embed a literal newline in the session ID; the YAML frontmatter must
+    # remain a valid single-line double-quoted string.
+    result = subprocess.run(
+        ["bash", str(script), "bug", "nerf-foo", "body"],
+        capture_output=True,
+        text=True,
+        env={
+            "HOME": str(home),
+            "PATH": "/usr/bin:/bin",
+            "NERF_REPORT_SESSION": "line1\nline2\ttabbed",
+        },
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    content = next((home / ".nerftools" / "reports").iterdir()).read_text()
+    assert 'session: "line1\\nline2\\ttabbed"' in content
+
+
+def test_install_raises_when_template_lacks_placeholder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import nerftools
+
+    bogus = tmp_path / "bogus.sh"
+    bogus.write_text("#!/usr/bin/env bash\necho no placeholder here\n")
+    monkeypatch.setattr(nerftools, "_NERF_REPORT_SCRIPT", bogus)
+    with pytest.raises(ValueError, match="missing.*placeholder"):
+        nerftools.install_nerf_report(tmp_path / "out", version="1.2.3")
