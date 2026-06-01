@@ -8,6 +8,8 @@ from pathlib import Path
 BUILTIN_MANIFESTS_DIR = Path(str(files("nerftools.default_manifests")))
 
 _NERFCTL_DIR = Path(__file__).parent / "nerfctl" / "claude"
+_NERF_REPORT_SCRIPT = Path(__file__).parent / "nerf_report" / "script.sh"
+_NERF_REPORT_VERSION_PLACEHOLDER = "__NERFTOOLS_VERSION__"
 
 NERFCTL_SCRIPTS: dict[str, Path] = {
     "nerfctl-grant-allow": _NERFCTL_DIR / "grant-allow.sh",
@@ -33,3 +35,20 @@ def install_nerfctl(output: Path) -> list[Path]:
         dest.chmod(0o755)
         written.append(dest)
     return written
+
+
+def install_nerf_report(output: Path, *, version: str) -> Path:
+    """Install the nerf-report script into *output*, stamping in *version*.
+
+    Returns the path written.
+    """
+    if not _NERF_REPORT_SCRIPT.exists():
+        msg = f"nerf-report script template not found: {_NERF_REPORT_SCRIPT}"
+        raise FileNotFoundError(msg)
+    output.mkdir(parents=True, exist_ok=True)
+    text = _NERF_REPORT_SCRIPT.read_text(encoding="utf-8")
+    text = text.replace(_NERF_REPORT_VERSION_PLACEHOLDER, version)
+    dest = output / "nerf-report"
+    dest.write_bytes(text.encode("utf-8"))
+    dest.chmod(0o755)
+    return dest
