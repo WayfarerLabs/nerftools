@@ -30,10 +30,10 @@ def prepare_output_dir(
     keep_existing: bool,
     clean: CleanStrategy,
     force: bool = False,
-) -> None:
+) -> bool:
     """Ensure output_dir exists, refuse if it looks unmanaged, then clean it.
 
-    A directory is considered managed if it is empty or contains the
+    A directory is considered managed if it is empty or contains a regular
     BUILD_MARKER file written by a previous nerf generate run. Any other
     non-empty directory is refused (with --outdir / --keep-existing /
     --force hints) so we never wipe a user's working tree.
@@ -44,32 +44,40 @@ def prepare_output_dir(
     symlinked entry at the top level triggers shutil.rmtree to error
     partway through). keep_existing=True skips the clean step entirely
     while still ensuring the directory exists. force=True skips the
-    marker/.git checks but does not relax the symlink check.
+    marker check but does not relax the symlink check.
+
+    Returns True iff it is safe for the caller to mark this directory as a
+    managed build output at the end of the build. keep_existing on an
+    unmanaged non-empty directory returns False so we do not claim
+    ownership of (and thus authorize future wipes of) foreign files.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    if keep_existing:
-        return
+    marker = output_dir / BUILD_MARKER
+    # A symlinked marker would otherwise both bypass the per-entry symlink
+    # check below (entries excludes BUILD_MARKER) and let exists()/is_file()
+    # be tricked into treating a foreign path as managed.
+    if marker.is_symlink():
+        raise OutdirGuardError(
+            f"refusing to use output directory {output_dir} for target "
+            f"'{target}': {BUILD_MARKER} is a symlink. Remove it manually "
+            f"before proceeding."
+        )
 
     entries = [e for e in output_dir.iterdir() if e.name != BUILD_MARKER]
-    marker = output_dir / BUILD_MARKER
+    has_marker = marker.is_file()
 
-    if not force:
-        if entries and not marker.exists():
-            raise OutdirGuardError(
-                f"refusing to clean output directory {output_dir} for target "
-                f"'{target}': it is non-empty and was not produced by a previous "
-                f"nerf generate run (no {BUILD_MARKER} marker). Pass --outdir "
-                f"to a fresh or previously-built location, --keep-existing to "
-                f"preserve unmanaged files, or --force to clean it anyway."
-            )
+    if keep_existing:
+        return has_marker or not entries
 
-        if (output_dir / ".git").exists():
-            raise OutdirGuardError(
-                f"refusing to clean output directory {output_dir} for target "
-                f"'{target}': it contains a .git entry. Pass --outdir to a "
-                f"different location, or --force to clean it anyway."
-            )
+    if not force and entries and not has_marker:
+        raise OutdirGuardError(
+            f"refusing to clean output directory {output_dir} for target "
+            f"'{target}': it is non-empty and was not produced by a previous "
+            f"nerf generate run (no {BUILD_MARKER} marker). Pass --outdir "
+            f"to a fresh or previously-built location, --keep-existing to "
+            f"preserve unmanaged files, or --force to clean it anyway."
+        )
 
     for entry in entries:
         if entry.is_symlink():
@@ -82,7 +90,15 @@ def prepare_output_dir(
         elif entry.is_file() and clean in ("files", "all"):
             entry.unlink()
 
+    return True
+
 
 def write_build_marker(output_dir: Path, *, target: str) -> None:
     """Mark output_dir as a managed nerf build output."""
-    (output_dir / BUILD_MARKER).write_text(f"{target}\n")
+    marker = output_dir / BUILD_MARKER
+    if marker.is_symlink():
+        raise OutdirGuardError(
+            f"refusing to write {BUILD_MARKER} in {output_dir}: it is a "
+            f"symlink. Remove it manually before proceeding."
+        )
+    marker.write_text(f"{target}\n")

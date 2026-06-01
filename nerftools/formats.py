@@ -177,7 +177,7 @@ def build_claude_plugin(
 
     written: list[Path] = []
 
-    prepare_output_dir(
+    safe_to_mark = prepare_output_dir(
         output_dir, target="claude-plugin", keep_existing=False, force=force, clean="all"
     )
 
@@ -293,9 +293,10 @@ def build_claude_plugin(
         out.write_text(overview_text)
         written.append(out)
 
-    from nerftools.outdir import write_build_marker
+    if safe_to_mark:
+        from nerftools.outdir import write_build_marker
 
-    write_build_marker(output_dir, target="claude-plugin")
+        write_build_marker(output_dir, target="claude-plugin")
     return written
 
 
@@ -498,7 +499,7 @@ def build_codex_plugin(
 
     written: list[Path] = []
 
-    prepare_output_dir(
+    safe_to_mark = prepare_output_dir(
         output_dir, target="codex-plugin", keep_existing=False, force=force, clean="all"
     )
 
@@ -553,9 +554,10 @@ def build_codex_plugin(
         out.write_text(overview_text)
         written.append(out)
 
-    from nerftools.outdir import write_build_marker
+    if safe_to_mark:
+        from nerftools.outdir import write_build_marker
 
-    write_build_marker(output_dir, target="codex-plugin")
+        write_build_marker(output_dir, target="codex-plugin")
     return written
 
 

@@ -40,7 +40,7 @@ def build_skills(
     """
     from nerftools.outdir import prepare_output_dir
 
-    prepare_output_dir(
+    safe_to_mark = prepare_output_dir(
         output_dir, target="skills", keep_existing=keep_existing, force=force, clean="subdirs"
     )
 
@@ -63,9 +63,10 @@ def build_skills(
         out.write_text(overview_text)
         written.append(out)
 
-    from nerftools.outdir import write_build_marker
+    if safe_to_mark:
+        from nerftools.outdir import write_build_marker
 
-    write_build_marker(output_dir, target="skills")
+        write_build_marker(output_dir, target="skills")
     return written
 
 

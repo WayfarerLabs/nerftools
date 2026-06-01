@@ -44,7 +44,7 @@ def build_scripts(
     """
     from nerftools.outdir import prepare_output_dir, write_build_marker
 
-    prepare_output_dir(
+    safe_to_mark = prepare_output_dir(
         output_dir, target="bin", keep_existing=keep_existing, force=force, clean="files"
     )
 
@@ -59,7 +59,8 @@ def build_scripts(
             out.chmod(0o755)
             written.append(out)
 
-    write_build_marker(output_dir, target="bin")
+    if safe_to_mark:
+        write_build_marker(output_dir, target="bin")
     return written
 
 

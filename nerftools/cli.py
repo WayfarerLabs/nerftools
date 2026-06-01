@@ -119,7 +119,7 @@ def generate(
         typer.Option(
             "--force",
             help="Clean outdir even if it was not produced by a previous nerf generate run "
-            "(bypasses the .nerf-build-manifest / .git safety checks)",
+            "(bypasses the .nerf-build-manifest safety check)",
         ),
     ] = False,
     config_path: Annotated[
