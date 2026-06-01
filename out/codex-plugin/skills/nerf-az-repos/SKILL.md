@@ -16,10 +16,11 @@ sub-directory under the workspace (useful when multiple repos live
 under one workspace root and you don't want to cd around).
 Use az-repos-pr-list to see open PRs, az-repos-pr-show to inspect a
 specific PR, and az-repos-pr-create to create a new PR from the
-current branch. az-repos-pr-edit updates a PR's title and/or
-description. az-repos-pr-set-status changes a PR's lifecycle state
-(active / abandoned / completed). az-repos-pr-vote casts or resets
-a review vote on a PR.
+current branch. az-repos-pr-edit updates a PR's title, description,
+and/or draft state (use --draft true|false to toggle draft vs
+ready-for-review). az-repos-pr-set-status changes a PR's lifecycle
+state (active / abandoned / completed). az-repos-pr-vote casts or
+resets a review vote on a PR.
 
 ## nerf-az-repos-pr-list
 
