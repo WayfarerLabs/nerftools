@@ -1060,6 +1060,37 @@ def test_build_scripts_rejects_symlink_marker(tmp_path: Path) -> None:
         build_scripts([_simple_manifest()], outdir, prefix="nerf-")
 
 
+def test_build_scripts_refuses_outdir_with_git_dir_even_when_managed(tmp_path: Path) -> None:
+    from nerftools.outdir import OutdirGuardError
+
+    (tmp_path / ".nerf-build-manifest").write_text("bin\n")
+    (tmp_path / ".git").mkdir()
+    with pytest.raises(OutdirGuardError, match=r"\.git"):
+        build_scripts([_simple_manifest()], tmp_path, prefix="nerf-")
+
+
+def test_build_scripts_force_bypasses_git_guard(tmp_path: Path) -> None:
+    (tmp_path / ".git").mkdir()
+    build_scripts([_simple_manifest()], tmp_path, force=True, prefix="nerf-")
+    assert (tmp_path / "nerf-my-tool").exists()
+    # bin's "files" clean strategy leaves .git (a dir) alone.
+    assert (tmp_path / ".git").exists()
+
+
+def test_build_scripts_symlink_check_leaves_other_entries_untouched(tmp_path: Path) -> None:
+    from nerftools.outdir import OutdirGuardError
+
+    (tmp_path / ".nerf-build-manifest").write_text("bin\n")
+    sibling = tmp_path / "sibling.txt"
+    sibling.write_text("keep")
+    # Place a symlink whose name sorts AFTER sibling.txt in any plausible
+    # iter order so a single-pass implementation would delete sibling first.
+    (tmp_path / "zz-link").symlink_to(tmp_path / "sibling.txt")
+    with pytest.raises(OutdirGuardError, match=r"symlink"):
+        build_scripts([_simple_manifest()], tmp_path, prefix="nerf-")
+    assert sibling.exists()
+
+
 # -- npm_pkgrun ----------------------------------------------------------------
 
 

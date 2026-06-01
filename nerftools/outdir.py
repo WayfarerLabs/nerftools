@@ -44,7 +44,7 @@ def prepare_output_dir(
     symlinked entry at the top level triggers shutil.rmtree to error
     partway through). keep_existing=True skips the clean step entirely
     while still ensuring the directory exists. force=True skips the
-    marker check but does not relax the symlink check.
+    marker and .git checks but does not relax the symlink check.
 
     Returns True iff it is safe for the caller to mark this directory as a
     managed build output at the end of the build. keep_existing on an
@@ -70,21 +70,35 @@ def prepare_output_dir(
     if keep_existing:
         return has_marker or not entries
 
-    if not force and entries and not has_marker:
-        raise OutdirGuardError(
-            f"refusing to clean output directory {output_dir} for target "
-            f"'{target}': it is non-empty and was not produced by a previous "
-            f"nerf generate run (no {BUILD_MARKER} marker). Pass --outdir "
-            f"to a fresh or previously-built location, --keep-existing to "
-            f"preserve unmanaged files, or --force to clean it anyway."
-        )
+    if not force:
+        if entries and not has_marker:
+            raise OutdirGuardError(
+                f"refusing to clean output directory {output_dir} for target "
+                f"'{target}': it is non-empty and was not produced by a previous "
+                f"nerf generate run (no {BUILD_MARKER} marker). Pass --outdir "
+                f"to a fresh or previously-built location, --keep-existing to "
+                f"preserve unmanaged files, or --force to clean it anyway."
+            )
+        # Defense in depth: even a marker-bearing dir is refused if it also
+        # contains a .git -- that combination almost always means the marker
+        # was committed/copied into a place that shouldn't be wiped.
+        if (output_dir / ".git").exists():
+            raise OutdirGuardError(
+                f"refusing to clean output directory {output_dir} for target "
+                f"'{target}': it contains a .git entry. Pass --outdir to a "
+                f"different location, or --force to clean it anyway."
+            )
 
+    # Scan for symlinks before deleting anything so a rejected directory is
+    # left untouched.
     for entry in entries:
         if entry.is_symlink():
             raise OutdirGuardError(
                 f"refusing to clean symlink in output directory: {entry}. "
                 "Remove the symlink manually before proceeding."
             )
+
+    for entry in entries:
         if entry.is_dir() and clean in ("subdirs", "all"):
             shutil.rmtree(entry)
         elif entry.is_file() and clean in ("files", "all"):

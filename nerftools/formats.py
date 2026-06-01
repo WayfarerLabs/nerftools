@@ -147,6 +147,7 @@ def build_claude_plugin(
     marketplace_meta: MarketplaceMetadata | None = None,
     emit_session_start_hook: bool = True,
     emit_pretool_bash_hint_hook: bool = True,
+    keep_existing: bool = False,
     force: bool = False,
 ) -> list[Path]:
     """Build a self-contained Claude Code plugin.
@@ -178,7 +179,11 @@ def build_claude_plugin(
     written: list[Path] = []
 
     safe_to_mark = prepare_output_dir(
-        output_dir, target="claude-plugin", keep_existing=False, force=force, clean="all"
+        output_dir,
+        target="claude-plugin",
+        keep_existing=keep_existing,
+        force=force,
+        clean="all",
     )
 
     # Plugin manifest
@@ -469,6 +474,7 @@ def build_codex_plugin(
     plugin_meta: PluginMetadata,
     *,
     prefix: str = "nerf-",
+    keep_existing: bool = False,
     force: bool = False,
 ) -> list[Path]:
     """Build a self-contained Codex plugin.
@@ -500,7 +506,11 @@ def build_codex_plugin(
     written: list[Path] = []
 
     safe_to_mark = prepare_output_dir(
-        output_dir, target="codex-plugin", keep_existing=False, force=force, clean="all"
+        output_dir,
+        target="codex-plugin",
+        keep_existing=keep_existing,
+        force=force,
+        clean="all",
     )
 
     # Plugin manifest

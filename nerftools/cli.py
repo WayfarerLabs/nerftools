@@ -119,7 +119,7 @@ def generate(
         typer.Option(
             "--force",
             help="Clean outdir even if it was not produced by a previous nerf generate run "
-            "(bypasses the .nerf-build-manifest safety check)",
+            "(bypasses the .nerf-build-manifest and .git safety checks)",
         ),
     ] = False,
     config_path: Annotated[
@@ -208,6 +208,7 @@ def generate(
                     marketplace_meta=marketplace_meta,
                     emit_session_start_hook=hooks_cfg.session_start,
                     emit_pretool_bash_hint_hook=hooks_cfg.pretool_bash_hint,
+                    keep_existing=keep_existing,
                     force=force,
                 )
                 for path in written:
@@ -224,6 +225,7 @@ def generate(
                     out_dir,
                     plugin_meta,
                     prefix=prefix,
+                    keep_existing=keep_existing,
                     force=force,
                 )
                 for path in written:

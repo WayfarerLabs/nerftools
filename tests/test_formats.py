@@ -194,6 +194,16 @@ def test_claude_plugin_cleans_output_by_default(tmp_path: Path) -> None:
     assert not stale.exists()
 
 
+def test_claude_plugin_keep_existing_preserves_unmanaged_content(tmp_path: Path) -> None:
+    keep_me = tmp_path / "unrelated"
+    keep_me.mkdir()
+    (keep_me / "file.txt").write_text("important")
+    _build([_manifest()], tmp_path, keep_existing=True)
+    assert (keep_me / "file.txt").read_text() == "important"
+    # Unmanaged dir + keep_existing -> no marker written.
+    assert not (tmp_path / ".nerf-build-manifest").exists()
+
+
 def test_claude_plugin_maps_to_line(tmp_path: Path) -> None:
     tools = {"git-push": _template_tool(["git", "push", "{{arguments.remote}}", "HEAD"])}
     _build([_manifest(skill_group="git", tools=tools)], tmp_path, prefix="nerf-")
