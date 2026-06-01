@@ -949,6 +949,7 @@ def _simple_manifest(name: str = "test-pkg") -> NerfManifest:
 
 
 def test_build_scripts_clears_stale_files_by_default(tmp_path: Path) -> None:
+    (tmp_path / ".nerf-build-manifest").write_text("bin\n")
     stale = tmp_path / "stale-tool"
     stale.write_text("old")
     build_scripts([_simple_manifest()], tmp_path, prefix="")
@@ -969,6 +970,7 @@ def test_build_scripts_always_writes_generated_files(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("keep", [True, False])
 def test_build_scripts_overwrites_existing_generated_file(tmp_path: Path, keep: bool) -> None:
+    (tmp_path / ".nerf-build-manifest").write_text("bin\n")
     (tmp_path / "nerf-my-tool").write_text("old content")
     build_scripts([_simple_manifest()], tmp_path, keep_existing=keep, prefix="nerf-")
     assert "old content" not in (tmp_path / "nerf-my-tool").read_text()
@@ -983,6 +985,110 @@ def test_build_scripts_prefix_in_script_header(tmp_path: Path) -> None:
     build_scripts([_simple_manifest()], tmp_path, prefix="nerf-")
     content = (tmp_path / "nerf-my-tool").read_text()
     assert "# nerf-my-tool" in content
+
+
+# -- outdir guard --------------------------------------------------------------
+
+
+def test_build_scripts_writes_build_marker(tmp_path: Path) -> None:
+    build_scripts([_simple_manifest()], tmp_path, prefix="nerf-")
+    marker = tmp_path / ".nerf-build-manifest"
+    assert marker.exists()
+    assert marker.read_text().strip() == "bin"
+
+
+def test_build_scripts_refuses_unmanaged_non_empty_outdir(tmp_path: Path) -> None:
+    from nerftools.outdir import OutdirGuardError
+
+    (tmp_path / "README.md").write_text("not a nerf build")
+    with pytest.raises(OutdirGuardError, match=r"refusing to clean"):
+        build_scripts([_simple_manifest()], tmp_path, prefix="nerf-")
+    assert (tmp_path / "README.md").read_text() == "not a nerf build"
+
+
+def test_build_scripts_keep_existing_bypasses_guard(tmp_path: Path) -> None:
+    keep_me = tmp_path / "unrelated.txt"
+    keep_me.write_text("important")
+    build_scripts([_simple_manifest()], tmp_path, keep_existing=True, prefix="nerf-")
+    assert keep_me.read_text() == "important"
+
+
+def test_build_scripts_keep_existing_on_unmanaged_dir_does_not_write_marker(tmp_path: Path) -> None:
+    (tmp_path / "unrelated.txt").write_text("important")
+    build_scripts([_simple_manifest()], tmp_path, keep_existing=True, prefix="nerf-")
+    assert not (tmp_path / ".nerf-build-manifest").exists()
+
+
+def test_build_scripts_keep_existing_on_empty_dir_writes_marker(tmp_path: Path) -> None:
+    build_scripts([_simple_manifest()], tmp_path, keep_existing=True, prefix="nerf-")
+    assert (tmp_path / ".nerf-build-manifest").exists()
+
+
+def test_build_scripts_keep_existing_on_managed_dir_keeps_marker(tmp_path: Path) -> None:
+    (tmp_path / ".nerf-build-manifest").write_text("bin\n")
+    (tmp_path / "stale-tool").write_text("old")
+    build_scripts([_simple_manifest()], tmp_path, keep_existing=True, prefix="nerf-")
+    assert (tmp_path / ".nerf-build-manifest").exists()
+    assert (tmp_path / "stale-tool").exists()
+
+
+def test_build_scripts_managed_outdir_proceeds(tmp_path: Path) -> None:
+    (tmp_path / ".nerf-build-manifest").write_text("bin\n")
+    stale = tmp_path / "stale-tool"
+    stale.write_text("old")
+    build_scripts([_simple_manifest()], tmp_path, prefix="nerf-")
+    assert not stale.exists()
+
+
+def test_build_scripts_force_bypasses_unmanaged_guard(tmp_path: Path) -> None:
+    (tmp_path / "stale.txt").write_text("old")
+    build_scripts([_simple_manifest()], tmp_path, force=True, prefix="nerf-")
+    assert not (tmp_path / "stale.txt").exists()
+    assert (tmp_path / "nerf-my-tool").exists()
+    assert (tmp_path / ".nerf-build-manifest").exists()
+
+
+def test_build_scripts_rejects_symlink_marker(tmp_path: Path) -> None:
+    from nerftools.outdir import OutdirGuardError
+
+    real_marker = tmp_path / "elsewhere"
+    real_marker.write_text("bin\n")
+    outdir = tmp_path / "outdir"
+    outdir.mkdir()
+    (outdir / ".nerf-build-manifest").symlink_to(real_marker)
+    with pytest.raises(OutdirGuardError, match=r"symlink"):
+        build_scripts([_simple_manifest()], outdir, prefix="nerf-")
+
+
+def test_build_scripts_refuses_outdir_with_git_dir_even_when_managed(tmp_path: Path) -> None:
+    from nerftools.outdir import OutdirGuardError
+
+    (tmp_path / ".nerf-build-manifest").write_text("bin\n")
+    (tmp_path / ".git").mkdir()
+    with pytest.raises(OutdirGuardError, match=r"\.git"):
+        build_scripts([_simple_manifest()], tmp_path, prefix="nerf-")
+
+
+def test_build_scripts_force_bypasses_git_guard(tmp_path: Path) -> None:
+    (tmp_path / ".git").mkdir()
+    build_scripts([_simple_manifest()], tmp_path, force=True, prefix="nerf-")
+    assert (tmp_path / "nerf-my-tool").exists()
+    # bin's "files" clean strategy leaves .git (a dir) alone.
+    assert (tmp_path / ".git").exists()
+
+
+def test_build_scripts_symlink_check_leaves_other_entries_untouched(tmp_path: Path) -> None:
+    from nerftools.outdir import OutdirGuardError
+
+    (tmp_path / ".nerf-build-manifest").write_text("bin\n")
+    sibling = tmp_path / "sibling.txt"
+    sibling.write_text("keep")
+    # Place a symlink whose name sorts AFTER sibling.txt in any plausible
+    # iter order so a single-pass implementation would delete sibling first.
+    (tmp_path / "zz-link").symlink_to(tmp_path / "sibling.txt")
+    with pytest.raises(OutdirGuardError, match=r"symlink"):
+        build_scripts([_simple_manifest()], tmp_path, prefix="nerf-")
+    assert sibling.exists()
 
 
 # -- npm_pkgrun ----------------------------------------------------------------

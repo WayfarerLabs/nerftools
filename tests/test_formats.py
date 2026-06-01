@@ -186,11 +186,22 @@ def test_claude_plugin_nerfctl_skills(tmp_path: Path) -> None:
 
 
 def test_claude_plugin_cleans_output_by_default(tmp_path: Path) -> None:
+    (tmp_path / ".nerf-build-manifest").write_text("claude-plugin\n")
     stale = tmp_path / "old-stuff"
     stale.mkdir()
     (stale / "file.txt").write_text("stale")
     _build([_manifest()], tmp_path)
     assert not stale.exists()
+
+
+def test_claude_plugin_keep_existing_preserves_unmanaged_content(tmp_path: Path) -> None:
+    keep_me = tmp_path / "unrelated"
+    keep_me.mkdir()
+    (keep_me / "file.txt").write_text("important")
+    _build([_manifest()], tmp_path, keep_existing=True)
+    assert (keep_me / "file.txt").read_text() == "important"
+    # Unmanaged dir + keep_existing -> no marker written.
+    assert not (tmp_path / ".nerf-build-manifest").exists()
 
 
 def test_claude_plugin_maps_to_line(tmp_path: Path) -> None:
@@ -738,6 +749,7 @@ def test_codex_plugin_no_marketplace_json(tmp_path: Path) -> None:
 
 
 def test_codex_plugin_cleans_output(tmp_path: Path) -> None:
+    (tmp_path / ".nerf-build-manifest").write_text("codex-plugin\n")
     stale = tmp_path / "old-stuff"
     stale.mkdir()
     (stale / "file.txt").write_text("stale")
@@ -748,6 +760,7 @@ def test_codex_plugin_cleans_output(tmp_path: Path) -> None:
 def test_codex_plugin_rejects_symlink_in_output_directory(tmp_path: Path) -> None:
     output_dir = tmp_path / "out"
     output_dir.mkdir()
+    (output_dir / ".nerf-build-manifest").write_text("codex-plugin\n")
 
     outside = tmp_path / "outside"
     outside.mkdir()

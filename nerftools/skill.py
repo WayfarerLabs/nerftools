@@ -23,6 +23,7 @@ def build_skills(
     output_dir: Path,
     *,
     keep_existing: bool = False,
+    force: bool = False,
     prefix: str = "nerf-",
 ) -> list[Path]:
     """Generate rulesync skill files for all manifests.
@@ -37,14 +38,11 @@ def build_skills(
 
     Returns written paths.
     """
-    import shutil
+    from nerftools.outdir import prepare_output_dir
 
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    if not keep_existing:
-        for d in output_dir.iterdir():
-            if d.is_dir():
-                shutil.rmtree(d)
+    safe_to_mark = prepare_output_dir(
+        output_dir, target="skills", keep_existing=keep_existing, force=force, clean="subdirs"
+    )
 
     written: list[Path] = []
 
@@ -65,6 +63,10 @@ def build_skills(
         out.write_text(overview_text)
         written.append(out)
 
+    if safe_to_mark:
+        from nerftools.outdir import write_build_marker
+
+        write_build_marker(output_dir, target="skills")
     return written
 
 
