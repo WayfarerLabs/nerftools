@@ -16,10 +16,11 @@ sub-directory under the workspace (useful when multiple repos live
 under one workspace root and you don't want to cd around).
 Use az-repos-pr-list to see open PRs, az-repos-pr-show to inspect a
 specific PR, and az-repos-pr-create to create a new PR from the
-current branch. az-repos-pr-edit updates a PR's title and/or
-description. az-repos-pr-set-status changes a PR's lifecycle state
-(active / abandoned / completed). az-repos-pr-vote casts or resets
-a review vote on a PR.
+current branch. az-repos-pr-edit updates a PR's title, description,
+and/or draft state (use --draft true|false to toggle draft vs
+ready-for-review). az-repos-pr-set-status changes a PR's lifecycle
+state (active / abandoned / completed). az-repos-pr-vote casts or
+resets a review vote on a PR.
 
 ## nerf-az-repos-pr-list
 
@@ -121,15 +122,16 @@ Update a pull request's lifecycle status. Use "abandoned" to close a PR without 
 
 ## nerf-az-repos-pr-edit
 
-Edit a pull request's title and/or description. At least one of --title or --description must be provided. Useful for keeping a PR's metadata in sync with its scope as the branch evolves. Does not change the PR's status, target branch, or reviewers.
+Edit a pull request's title, description, and/or draft state. At least one of --title, --description, or --draft must be provided. Pass --draft true to convert the PR back to a draft or --draft false to mark a draft PR as ready for review. Does not change the PR's status (active/abandoned/completed), target branch, or reviewers.
 
-**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-repos/scripts/nerf-az-repos-pr-edit [--title <title>] [--description <description>] [--project|-p <project>] [-C <directory>] <pr_id>`
-**Maps to:** `az repos pr update --id <pr_id> <title> <description> <project> --output json`
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-az-repos/scripts/nerf-az-repos-pr-edit [--title <title>] [--description <description>] [--draft <draft>] [--project|-p <project>] [-C <directory>] <pr_id>`
+**Maps to:** `az repos pr update --id <pr_id> <title> <description> <draft> <project> --output json`
 
 **Options:**
 
 - `--title` (optional): New PR title
 - `--description` (optional): New PR description (body text; supports markdown)
+- `--draft` (optional): Set draft state -- "true" to convert to draft, "false" to mark ready for review. one of `true`, `false`
 - `--project|-p` (optional): Azure DevOps project name or ID (auto-detected from the git remote if omitted)
 - `-C` (optional): Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
 

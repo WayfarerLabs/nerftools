@@ -155,6 +155,23 @@ Create a pull request from the current branch. Pushes the branch if needed.
 
 ---
 
+## nerf-gh-pr-ready
+
+Mark a draft pull request as ready for review. Pass --undo to convert a non-draft PR back to a draft. Does nothing (and reports success) if the PR is already in the requested state.
+
+**Usage:** `scripts/nerf-gh-pr-ready [--undo] <pr>`
+**Maps to:** `gh pr ready <pr> <undo>`
+
+**Switches:**
+
+- `--undo`: Convert the PR back to a draft instead of marking it ready
+
+**Arguments:**
+
+- `<pr>` (required): PR number, URL, or branch name
+
+---
+
 ## nerf-gh-pr-thread-comment
 
 Add a top-level conversation comment to a pull request (the issue-style comments shown in the main PR thread). For inline review comments, see gh-pr-review-comments (one review) or gh-pr-inline-comments (across all reviews).

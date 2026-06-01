@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# nerf-gh-pr-ready -- Mark a draft pull request as ready for review. Pass --undo to convert a non-draft PR back to a draft. Does nothing (and reports success) if the PR is already in the requested state.
+# Generated from gh manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=remote
+
+if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
+  echo "error: nerf-gh-pr-ready requires bash 4+. Found bash ${BASH_VERSION:-unknown}" >&2
+  echo "  hint: on macOS, install a newer bash via 'brew install bash'" >&2
+  exit 1
+fi
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-gh-pr-ready [--undo] <pr>
+
+Switches:
+  --undo
+      Convert the PR back to a draft instead of marking it ready
+
+Arguments:
+  <pr> (required)
+      PR number, URL, or branch name
+
+Maps to: gh pr ready <pr> <undo>
+
+Mark a draft pull request as ready for review. Pass --undo to convert a non-draft PR back to a draft. Does nothing (and reports success) if the PR is already in the requested state.
+EOF
+  exit 1
+}
+
+UNDO=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --undo) if [[ -n "${UNDO}" ]]; then echo "error: --undo can only be specified once" >&2; exit 1; fi; UNDO="true"; shift 1 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+_PR_SET=""
+if [[ $# -gt 0 ]]; then
+  PR="$1"
+  _PR_SET=true
+  shift
+else
+  PR=""
+fi
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-gh-pr-ready: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+if [[ -n "${_PR_SET}" ]] && [[ "${PR}" == -* ]]; then
+  echo "error: nerf-gh-pr-ready: <pr> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${PR}" ]]; then
+  echo "error: nerf-gh-pr-ready: missing required argument <pr>" >&2
+  echo "  hint: provide a value for <pr>" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(gh pr ready "${PR}" ${UNDO:+"--undo"})
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec gh pr ready "${PR}" ${UNDO:+"--undo"}
