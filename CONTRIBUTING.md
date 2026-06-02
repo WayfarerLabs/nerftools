@@ -42,7 +42,7 @@ The pre-built Claude Code and Codex plugin outputs under `out/` are committed. A
 ```
 
 and commit the resulting changes under `out/`. CI's `plugins-drift` job runs the same script with
-`--check` and fails the PR if committed outputs don't match the sources -- so a forgotten regen
+`--check` and fails the PR if committed outputs don't match the sources -- so a forgotten regeneration
 surfaces as a CI failure with a clear "run `./scripts/generate-plugins.sh` and commit" message,
 not as silent drift.
 
