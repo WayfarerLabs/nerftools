@@ -6,7 +6,7 @@
 # Runs version-pinned rulesync install --update and generate commands.
 # The version is read from .rulesync-version at the repo root.
 #
-# Usage: ./scripts/rulesync-upgen.bash
+# Usage: ./scripts/rulesync-upgen.sh
 # ============================================================================
 
 set -euo pipefail

@@ -37,7 +37,19 @@ jobs:
           branch=$(echo '${{ steps.release.outputs.pr }}' | jq -r .headBranchName)
           echo "pr_branch=$branch" >> "$GITHUB_OUTPUT"
 
-  regenerate-dist:
+  sync-version-artifacts:
+    # release-please bumps the version in pyproject.toml and nerf.yaml, which
+    # leaves two artifacts mechanically stale:
+    #   - uv.lock: pins the local package version, so `uv sync --frozen` would
+    #     fail in CI until re-locked.
+    #   - out/*/plugin.json: nerf.yaml's version is baked into plugin.json at
+    #     generation time, so CI's plugins-drift check would fail until
+    #     regenerated.
+    # Both are mechanical consequences of the version bump release-please
+    # already made -- so we apply them on the release PR branch automatically.
+    # Contributor-driven changes (manifests, generator code, dependencies)
+    # still go through the verify-in-CI path: they must be committed by the
+    # author and CI fails if they're out of sync.
     needs: release-please
     if: needs.release-please.outputs.pr_branch
     runs-on: ubuntu-latest
@@ -58,23 +70,20 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Sync lockfile and install dependencies
-        run: uv sync
+      - name: Re-lock (preserves existing pins; only the workspace version moves)
+        run: uv lock
 
-      - name: Regenerate Claude Code plugin
-        run: uv run nerf generate --target claude-plugin -c nerf.yaml --outdir ./out/claude-plugin
+      - name: Regenerate plugins (picks up new version in plugin.json)
+        run: ./scripts/generate-plugins.sh
 
-      - name: Regenerate Codex plugin
-        run: uv run nerf generate --target codex-plugin -c nerf.yaml --outdir ./out/codex-plugin
-
-      - name: Commit updated plugins and lockfile
+      - name: Commit version-bump artifacts if changed
         run: |
           git config user.name "nerftools-release[bot]"
           git config user.email "nerftools-release[bot]@users.noreply.github.com"
-          git add out/claude-plugin/ out/codex-plugin/ uv.lock
+          git add uv.lock out/claude-plugin/ out/codex-plugin/
           if git diff --cached --quiet; then
-            echo "No changes to plugin output or lockfile"
+            echo "Version-bump artifacts already in sync"
           else
-            git commit -m "build: regenerate plugins for release"
+            git commit -m "chore: sync version-bump artifacts (uv.lock, plugin outputs)"
             git push
           fi
