@@ -182,15 +182,20 @@ tools:
     script: |
       # Copilot's login varies by API surface: "Copilot" in the
       # requested_reviewers display vs "copilot-pull-request-reviewer[bot]"
-      # in reviews. Match case-insensitively on the substring "copilot" to
-      # cover both (and any future renames).
+      # in reviews. Match on both the substring "copilot" (case-insensitive,
+      # covers any future renames) AND user.type == "Bot" so a human with
+      # "copilot" in their login is never misidentified.
       _REQUESTED=$(gh api "repos/{owner}/{repo}/pulls/${PR}/requested_reviewers" \
-        | jq '[.users[]?.login // empty] | any(. | ascii_downcase | contains("copilot"))')
+        | jq '(.users // []) | any(.type == "Bot" and ((.login // "") | ascii_downcase | contains("copilot")))')
       # --paginate + --slurp to catch the latest review on long-running PRs;
       # gh's --slurp is mutually exclusive with --jq so the projection runs
-      # in a separate jq invocation.
+      # in a separate jq invocation. Skip PENDING/null-submitted_at entries
+      # so an in-progress draft review never poses as "the latest submitted".
       _LATEST=$(gh api --paginate --slurp "repos/{owner}/{repo}/pulls/${PR}/reviews" \
-        | jq '[.[] | .[] | select((.user.login // "") | ascii_downcase | contains("copilot"))]
+        | jq '[.[] | .[]
+               | select((.user.type // "") == "Bot")
+               | select((.user.login // "") | ascii_downcase | contains("copilot"))
+               | select(.submitted_at != null and .state != "PENDING")]
               | sort_by(.submitted_at) | last
               | if . == null then null else {id, state, submitted_at, body} end')
       jq -n --argjson req "$_REQUESTED" --argjson latest "$_LATEST" \
