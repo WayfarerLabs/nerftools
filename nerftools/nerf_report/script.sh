@@ -58,18 +58,26 @@ REPORTS_DIR="${HOME}/.nerftools/reports"
 # body). Restrict permissions so other users on a shared machine cannot
 # read them. umask makes new files 0600 and new directories 0700; the
 # explicit chmod tightens an existing reports/ dir that may have been
-# created with a looser umask by an older script.
+# created with a looser umask by an older script. If we can't tighten,
+# refuse to write rather than leaking sensitive context.
 umask 077
 mkdir -p "$REPORTS_DIR"
-chmod 0700 "$REPORTS_DIR" 2>/dev/null || true
+if ! chmod 0700 "$REPORTS_DIR"; then
+    echo "error: nerf-report: could not restrict permissions on ${REPORTS_DIR}; refusing to write report" >&2
+    exit 1
+fi
 
 TIMESTAMP_COMPACT="$(date -u +%Y%m%dT%H%M%SZ)"
 TIMESTAMP_ISO="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-RAND="$(printf '%04x' $((RANDOM * RANDOM % 65536)))"
 SESSION="${NERF_REPORT_SESSION:-${CLAUDE_SESSION_ID:-${CODEX_SESSION_ID:-unknown}}}"
 CWD="$(pwd)"
 
-FILENAME="${TIMESTAMP_COMPACT}_${RAND}_${KIND}_${SANITIZED_TOOL}_${NERFTOOLS_VERSION}.md"
+# Deterministic filename: timestamp + kind + tool + version. Two reports
+# in the same second land in the same file via `>>` -- frontmatter and
+# all -- which is fine: the maintainer sees both entries together. No
+# randomness means no collision-by-bad-luck concerns and no TOCTOU on
+# create.
+FILENAME="${TIMESTAMP_COMPACT}_${KIND}_${SANITIZED_TOOL}_${NERFTOOLS_VERSION}.md"
 DEST="${REPORTS_DIR}/${FILENAME}"
 
 # YAML-safe double-quoted string escaping for the frontmatter fields.
@@ -96,6 +104,6 @@ _yaml_escape() {
     printf 'timestamp: "%s"\n' "$TIMESTAMP_ISO"
     printf -- '---\n\n'
     printf '%s\n' "$BODY"
-} > "$DEST"
+} >> "$DEST"
 
 echo "report written: $DEST"

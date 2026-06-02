@@ -74,10 +74,26 @@ def test_filename_composition(tmp_path: Path) -> None:
     reports = list((home / ".nerftools" / "reports").iterdir())
     assert len(reports) == 1
     name = reports[0].name
-    # 20260601T123456Z_abcd_bug_nerf-az-repos-pr-edit_2.0.0.md
+    # 20260601T123456Z_bug_nerf-az-repos-pr-edit_2.0.0.md
     assert re.match(
-        r"^\d{8}T\d{6}Z_[0-9a-f]{4}_bug_nerf-az-repos-pr-edit_2\.0\.0\.md$", name
+        r"^\d{8}T\d{6}Z_bug_nerf-az-repos-pr-edit_2\.0\.0\.md$", name
     ), name
+
+
+def test_same_second_collision_appends_rather_than_clobbers(tmp_path: Path) -> None:
+    """Two reports with identical (timestamp, kind, tool, version) end up
+    in the same file via `>>`. Either both write to one file or each lands
+    in its own file (when the second crosses a 1-second boundary); in
+    both cases nothing is clobbered."""
+    script = _install(tmp_path)
+    home = tmp_path / "home"
+    _run(script, ["bug", "nerf-foo", "first body"], home=home)
+    _run(script, ["bug", "nerf-foo", "second body"], home=home)
+    reports = list((home / ".nerftools" / "reports").iterdir())
+    assert 1 <= len(reports) <= 2
+    combined = "".join(r.read_text() for r in reports)
+    assert "first body" in combined
+    assert "second body" in combined
 
 
 def test_frontmatter_fields_present(tmp_path: Path) -> None:
