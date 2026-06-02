@@ -172,7 +172,7 @@ def build_claude_plugin(
     """
     import json
 
-    from nerftools import install_nerfctl
+    from nerftools import install_nerf_report, install_nerfctl
     from nerftools.builder import build_script_text
     from nerftools.outdir import prepare_output_dir
 
@@ -289,6 +289,19 @@ def build_claude_plugin(
         out.write_text(nerfctl_skill["content"])
         written.append(out)
 
+    # nerf-report skill: bundled script + SKILL.md
+    nerf_report_dir = skills_dir / "nerf-report"
+    nerf_report_scripts = nerf_report_dir / "scripts"
+    nerf_report_script = install_nerf_report(nerf_report_scripts, version=plugin_meta.version)
+    written.append(nerf_report_script)
+    nerf_report_skill = nerf_report_dir / "SKILL.md"
+    nerf_report_skill.write_text(
+        _build_nerf_report_skill_text(
+            script_path="${CLAUDE_PLUGIN_ROOT}/skills/nerf-report/scripts/nerf-report"
+        )
+    )
+    written.append(nerf_report_skill)
+
     # Overview skill (named after the plugin, so the user-facing invocation is /<plugin>:<plugin>)
     if manifests:
         overview_text = _build_claude_plugin_overview_text(manifests, plugin_meta, prefix=prefix)
@@ -303,6 +316,70 @@ def build_claude_plugin(
 
         write_build_marker(output_dir, target="claude-plugin")
     return written
+
+
+_NERF_REPORT_FOOTER = (
+    "_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? "
+    "Use the `nerf-report` skill._"
+)
+
+
+def _build_nerf_report_skill_text(*, script_path: str) -> str:
+    """SKILL.md for the nerf-report tool. *script_path* is the path the agent
+    should invoke -- absolute (`${CLAUDE_PLUGIN_ROOT}/...`) for Claude, or
+    relative-to-skill (`scripts/nerf-report`) for Codex.
+    """
+    return f"""\
+---
+name: nerf-report
+description: Report bugs, bypass reasons, complaints, or feature requests about nerf tools
+argument-hint: <kind> <tool> <body>
+allowed-tools: Bash
+---
+
+Use this when you hit something worth telling the nerftools maintainer about:
+a bug, a guardrail you had to bypass (and why), a UX annoyance, or a feature
+you wish existed. Reports land in `~/.nerftools/reports/` as Markdown files;
+the maintainer triages them.
+
+Pick the right `<kind>`:
+
+- `bug` -- the tool produced wrong behavior, rejected valid input, or
+  crashed
+- `bypass` -- you ran a command directly instead of via the nerf wrapper
+  that would normally cover it (any reason: wrapper too restrictive,
+  missing a flag, has a bug, doesn't fit this case, etc.). When the
+  PreToolUse Bash hint hook would have redirected your raw call, run
+  `nerf-report bypass` *first*, then append the resulting report
+  filename to the command as `# nerf:bypass <report-filename>` (replace
+  `nerf` with your configured brand if different).
+- `complaint` -- the tool works but the UX got in your way (cryptic error,
+  surprising default, missing flag forced a workaround)
+- `request` -- you'd like a new tool, option, or behavior
+
+`<tool>` is the nerf tool you're reporting about (e.g. `nerf-az-repos-pr-edit`),
+or `nerftools` for meta-issues about the package itself.
+
+`<body>` is free-form prose. Quote it so the shell passes it through as a
+single argument.
+
+```bash
+{script_path} <kind> <tool> "<body>"
+```
+
+Examples:
+
+```bash
+{script_path} bypass nerf-az-repos-pr-edit "guard demanded --title|--description|--draft; I wanted to update reviewers only"
+{script_path} bug nerf-gh-pr-ready "rejected --undo on a draft PR even though gh pr ready --undo is documented"
+{script_path} complaint nerf-git-commit "Conventional Commits regex rejects multi-scope (gh,az); had to commit twice"
+{script_path} request nerf-az-repos-pr-comments "would like --since <timestamp> to filter recent comments"
+```
+
+The script auto-captures the timestamp, working directory, agent session
+ID, and nerftools version into the report's frontmatter -- you don't need
+to include those in the body.
+"""
 
 
 def _build_claude_plugin_skill_text(manifest: NerfManifest, prefix: str = "") -> str:
@@ -335,6 +412,8 @@ def _build_claude_plugin_skill_text(manifest: NerfManifest, prefix: str = "") ->
     for tool_name, tool_spec in manifest.tools.items():
         full_name = prefix + tool_name
         parts.append(_claude_plugin_tool_section(full_name, skill_group, tool_spec))
+
+    parts.append(_NERF_REPORT_FOOTER)
 
     return "\n".join(parts).rstrip() + "\n"
 
@@ -444,6 +523,13 @@ def _overview_text(
 
     parts.append("")
     parts.append("Use the corresponding `nerf-*` skill for full usage details on each package.")
+    parts.append("")
+    parts.append("## Feedback")
+    parts.append("")
+    parts.append(
+        "Found a problem or want a change? Use the `nerf-report` skill to file a structured "
+        "report (`bug`, `bypass`, `complaint`, or `request`). The maintainer triages them."
+    )
 
     return "\n".join(parts).rstrip() + "\n"
 
@@ -500,6 +586,7 @@ def build_codex_plugin(
     """
     import json
 
+    from nerftools import install_nerf_report
     from nerftools.builder import build_script_text
     from nerftools.outdir import prepare_output_dir
 
@@ -546,6 +633,18 @@ def build_codex_plugin(
         out = skill_dir / "SKILL.md"
         out.write_text(skill_text)
         written.append(out)
+
+    # nerf-report skill: bundled script + SKILL.md (paths relative to the
+    # skill dir, matching the codex per-package skill convention).
+    nerf_report_dir = skills_dir / "nerf-report"
+    nerf_report_scripts = nerf_report_dir / "scripts"
+    nerf_report_script = install_nerf_report(nerf_report_scripts, version=plugin_meta.version)
+    written.append(nerf_report_script)
+    nerf_report_skill = nerf_report_dir / "SKILL.md"
+    nerf_report_skill.write_text(
+        _build_nerf_report_skill_text(script_path="scripts/nerf-report")
+    )
+    written.append(nerf_report_skill)
 
     # Overview skill
     if manifests:
@@ -602,6 +701,8 @@ def _build_codex_plugin_skill_text(manifest: NerfManifest, prefix: str = "") -> 
         full_name = prefix + tool_name
         script_path = f"scripts/{full_name}"
         parts.append(_tool_section(full_name, tool_spec, script_path=script_path))
+
+    parts.append(_NERF_REPORT_FOOTER)
 
     return "\n".join(parts).rstrip() + "\n"
 
@@ -737,7 +838,9 @@ done
 
 _msg="The following ${_BRAND} skill(s) may wrap this command: ${_list}.
 
-Use one if it covers what you need. To run the command directly anyway, retry with a brief reason appended as \\`# ${_BRAND}:bypass <one-line explanation>\\`."
+Use one if it covers what you need. To run the command directly anyway:
+1. File a 'bypass' report via the \\`nerf-report\\` skill explaining what you needed and why the listed wrapper(s) didn't fit.
+2. Retry the command with the resulting report filename appended as \\`# ${_BRAND}:bypass <report-filename>\\`."
 
 emit_deny "$_msg"
 '''

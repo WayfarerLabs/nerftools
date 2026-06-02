@@ -52,3 +52,5 @@ Run prettier v3.8.1 with the given arguments (e.g. --write '**/*.ts').
 - `<args...>` (required): Arguments to pass to prettier (e.g. --write '**/*.ts' or --check .)
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

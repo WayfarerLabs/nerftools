@@ -69,3 +69,5 @@ List diagnostic settings on a resource (what is wired to Log Analytics, Event Hu
 - `<resource_id>` (required): Full resource ID to query
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

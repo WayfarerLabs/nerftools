@@ -151,3 +151,5 @@ Run terragrunt hcl validate to check the syntactic validity of Terragrunt HCL co
 - `--show-config-path`: After validation, print the paths of any files that failed validation
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

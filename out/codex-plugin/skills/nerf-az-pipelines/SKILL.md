@@ -128,3 +128,5 @@ Fetch log content for a specific task in a pipeline run. By default shows ##[err
 - `<log_id>` (required): Log ID (numeric, from az-pipelines-run-timeline output). must match `^[0-9]+$`
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

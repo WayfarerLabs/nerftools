@@ -82,3 +82,5 @@ Clear the Nx cache and reset the Nx daemon.
 No arguments.
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

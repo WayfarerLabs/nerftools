@@ -25,3 +25,5 @@ Set the default Azure DevOps project for subsequent az boards, az pipelines, and
 - `<project>` (required): Project name or ID to set as the default
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

@@ -64,3 +64,5 @@ List firewall rules on a PostgreSQL Flexible Server.
 - `<name>` (required): Server name
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

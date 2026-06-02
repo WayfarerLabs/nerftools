@@ -64,3 +64,5 @@ Run mypy type checker with the given arguments.
 - `<args...>` (optional): Arguments to pass to mypy (e.g. src/ or --strict)
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

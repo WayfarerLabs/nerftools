@@ -39,3 +39,7 @@ Each tool's usage line shows the path to call it relative to this skill's direct
 - **nerf-uv**: Python development tools via uv run
 
 Use the corresponding `nerf-*` skill for full usage details on each package.
+
+## Feedback
+
+Found a problem or want a change? Use the `nerf-report` skill to file a structured report (`bug`, `bypass`, `complaint`, or `request`). The maintainer triages them.

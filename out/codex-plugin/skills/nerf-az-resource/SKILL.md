@@ -76,3 +76,5 @@ Show details for a single resource group.
 - `<name>` (required): Resource group name
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

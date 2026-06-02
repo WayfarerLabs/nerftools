@@ -222,3 +222,5 @@ List area paths configured in a project. Returns the hierarchical area tree as J
 - `-C` (optional): Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

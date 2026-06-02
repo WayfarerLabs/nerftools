@@ -168,6 +168,13 @@ required). The `<brand>` follows the wrapper prefix (default `nerf-` →
 `nerf`, `mytool-` → `mytool`). The hook lets the call through; the user's
 normal permission flow still applies.
 
+The conventional `<reason>` is the filename of a `nerf-report bypass` entry
+filed beforehand -- that keeps the bypass annotation grep-able from the
+agent's transcript while putting the full justification, tool context, and
+session metadata in a structured report under `~/.nerftools/reports/` for
+the maintainer to triage. Any non-whitespace string is accepted, so this is
+a convention rather than a hard requirement.
+
 ## Tool definition
 
 ```yaml

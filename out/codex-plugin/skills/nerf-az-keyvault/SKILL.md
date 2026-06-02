@@ -99,3 +99,5 @@ Show metadata for a secret value (length, content type, last modified) without r
 - `<name>` (required): Secret name
 
 ---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._
