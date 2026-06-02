@@ -32,20 +32,19 @@ uses that as the squash commit message, which is what `release-please` reads.
 - **Markdown**: markdownlint, prettier, cspell
 - Custom dictionaries are maintained in `.cspell.json`
 
-## Rebuilding the Claude Code Plugin Locally
+## Rebuilding the Plugins Locally
 
-After changing manifests or plugin generation code, you can rebuild the pre-built plugin locally
-to preview the output:
+The pre-built Claude Code and Codex plugin outputs under `out/` are committed. After changing
+`nerf.yaml`, anything under `nerftools/default_manifests/`, or the plugin generation code, run:
 
 ```bash
-uv run nerf generate --target claude-plugin -c nerf.yaml --outdir ./out/claude-plugin
+./scripts/generate-plugins.sh
 ```
 
-You can also omit `--outdir`; it defaults to `./out/<target>/` and each target writes to its own
-subdirectory.
-
-You don't need to commit the regenerated `out/` -- CI regenerates it as part of the release PR.
-But committing it can be useful so reviewers can see the exact generated output in your PR diff.
+and commit the resulting changes under `out/`. CI's `plugins-drift` job runs the same script with
+`--check` and fails the PR if committed outputs don't match the sources -- so a forgotten regeneration
+surfaces as a CI failure with a clear "run `./scripts/generate-plugins.sh` and commit" message,
+not as silent drift.
 
 `nerf generate` cleans the output directory before writing, but refuses to clean any directory it
 did not produce itself (detected via a `.nerf-build-manifest` marker file written at the end of
@@ -70,7 +69,7 @@ Personal-target outputs (`.cursor/`, `.aider*`, etc.) are gitignored.
 After editing anything under `.rulesync/`:
 
 ```bash
-./scripts/rulesync-upgen.bash
+./scripts/rulesync-upgen.sh
 ```
 
 CI verifies that committed outputs match the sources and that no stray generated files leak in.
@@ -89,7 +88,11 @@ and conventional commits. No one manually bumps versions or creates tags.
    - Computes the next version from the conventional commits since the last release.
    - Updates the version in `pyproject.toml`, `nerf.yaml`, and `.release-please-manifest.json`.
    - Updates `CHANGELOG.md`.
-   - Regenerates `out/claude-plugin/` with the new version baked into `plugin.json`.
+   - Runs a `sync-version-artifacts` follow-up job on the release PR branch that re-locks
+     `uv.lock` and regenerates `out/` plugin outputs so the version baked into
+     `plugin.json` matches the bumped `nerf.yaml`. These are mechanical consequences of the
+     version bump; contributor-driven plugin changes still go through the regular
+     verify-in-CI path (see [Rebuilding the Plugins Locally](#rebuilding-the-plugins-locally)).
 3. When you're ready to release, merge the release PR.
 4. On merge, `release-please` creates the git tag (`vX.Y.Z`) and a GitHub Release.
 5. The tag push triggers the `release` workflow, which verifies the tag is on `main`, runs the
@@ -106,8 +109,8 @@ and conventional commits. No one manually bumps versions or creates tags.
 - Don't edit version numbers by hand in any file. `release-please` owns them.
 - Don't create tags by hand. `release-please` creates tags on merge of the release PR.
 - Don't edit `CHANGELOG.md` by hand. It's regenerated from commit messages.
-- Don't edit `out/claude-plugin/` by hand. Edit the source (`nerftools/`, manifests, or
-  `nerf.yaml`) and the release PR will regenerate it.
+- Don't edit anything under `out/` by hand. Edit the source (`nerftools/`, manifests, or
+  `nerf.yaml`) and run `./scripts/generate-plugins.sh` to regenerate.
 
 ### Breaking changes
 

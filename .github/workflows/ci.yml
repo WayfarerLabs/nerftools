@@ -73,13 +73,13 @@ jobs:
           node-version: "22"
 
       - name: Regenerate rulesync outputs
-        run: ./scripts/rulesync-upgen.bash
+        run: ./scripts/rulesync-upgen.sh
 
       - name: Verify generated outputs match committed
         run: |
           if ! git diff --quiet; then
             echo "::error::Rulesync output is out of sync with sources."
-            echo "Run ./scripts/rulesync-upgen.bash locally and commit the result."
+            echo "Run ./scripts/rulesync-upgen.sh locally and commit the result."
             git diff --stat
             exit 1
           fi
@@ -89,3 +89,38 @@ jobs:
             git ls-files --others --exclude-standard
             exit 1
           fi
+
+  # The plugin drift check runs the same script contributors use locally
+  # (./scripts/generate-plugins.sh --check). That keeps CI and local behavior
+  # in lockstep; the generate-and-diff semantics are defined exactly once.
+  plugins-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: ./scripts/generate-plugins.sh --check
+        run: ./scripts/generate-plugins.sh --check
+
+  # Umbrella job: require this single check in branch protection on main.
+  # Adding a new job to CI means adding it to `needs:` below, so the
+  # required-checks list lives in the workflow file (alongside the jobs)
+  # rather than in GitHub settings that can drift silently.
+  ci-success:
+    if: always()
+    needs: [lint, test, markdown, spelling, rulesync, plugins-drift]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all required jobs passed
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "::error::One or more required CI jobs failed or were cancelled."
+            exit 1
+          fi
+          echo "All required CI jobs passed."
