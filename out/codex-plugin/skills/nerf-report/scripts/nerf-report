@@ -5,7 +5,7 @@
 set -euo pipefail
 
 # Stamped at plugin build time.
-NERFTOOLS_VERSION="2.0.0"
+NERFTOOLS_VERSION="2.1.0"
 
 # Reports live under $HOME; fail fast with an actionable message if it's
 # unset rather than relying on `set -u` to crash later with "unbound variable".
