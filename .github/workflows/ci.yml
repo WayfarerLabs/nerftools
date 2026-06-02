@@ -42,35 +42,30 @@ jobs:
       - name: Pytest
         run: uv run pytest tests/ -v
 
-  markdown:
+  # File-quality linters (prettier, markdownlint, cspell) run via the same
+  # script contributors use locally (./scripts/lint-files.sh). That keeps CI
+  # and local behavior in lockstep; the version pins, ignore lists, and
+  # exit semantics are defined exactly once.
+  lint-files:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
 
-      - name: markdownlint
-        uses: DavidAnson/markdownlint-cli2-action@v23
+      - uses: actions/setup-node@v6
         with:
-          globs: "**/*.md"
+          node-version-file: .node-version
 
-  spelling:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: cspell
-        uses: streetsidesoftware/cspell-action@v8
-        with:
-          files: "**/*.md"
+      - name: ./scripts/lint-files.sh
+        run: ./scripts/lint-files.sh
 
   rulesync:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: "22"
+          node-version-file: .node-version
 
       - name: Regenerate rulesync outputs
         run: ./scripts/rulesync-upgen.sh
@@ -114,7 +109,7 @@ jobs:
   # rather than in GitHub settings that can drift silently.
   ci-success:
     if: always()
-    needs: [lint, test, markdown, spelling, rulesync, plugins-drift]
+    needs: [lint, test, lint-files, rulesync, plugins-drift]
     runs-on: ubuntu-latest
     steps:
       - name: Verify all required jobs passed

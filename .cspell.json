@@ -46,15 +46,6 @@
     "wiql",
     "WIQL"
   ],
-  "ignoreRegExpList": [
-    "`[^`\\r\\n]+`"
-  ],
-  "ignorePaths": [
-    "node_modules",
-    "out/",
-    "CHANGELOG.md",
-    "**/*.yaml",
-    "**/*.yml",
-    "**/*.py"
-  ]
+  "ignoreRegExpList": ["`[^`\\r\\n]+`"],
+  "ignorePaths": ["node_modules", "out/", "CHANGELOG.md", "**/*.yaml", "**/*.yml", "**/*.py", "**/*.toml"]
 }
