@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-gh-run-view -- View details of a workflow run.
+# nerf-gh-run-view -- View details of a workflow run. Defaults to the summary view; pass --log-failed to show logs from just the failed jobs/steps (useful for triaging a CI failure without dumping the entire log stream).
 # Generated from gh manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=none
@@ -16,22 +16,29 @@ _NERF_DRY_RUN=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerf-gh-run-view <run_id>
+Usage: nerf-gh-run-view [--log-failed] <run_id>
+
+Switches:
+  --log-failed
+      Show logs from failed jobs/steps instead of the summary
 
 Arguments:
   <run_id> (required)
       Workflow run ID
       Must match: ^[0-9]+$
 
-Maps to: gh run view <run_id>
+Maps to: gh run view <run_id> <failed>
 
-View details of a workflow run.
+View details of a workflow run. Defaults to the summary view; pass --log-failed to show logs from just the failed jobs/steps (useful for triaging a CI failure without dumping the entire log stream).
 EOF
   exit 1
 }
 
+FAILED=""
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --log-failed) if [[ -n "${FAILED}" ]]; then echo "error: --log-failed can only be specified once" >&2; exit 1; fi; FAILED="true"; shift 1 ;;
     --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
     -h|--help) usage ;;
     --) shift; break ;;
@@ -75,11 +82,11 @@ if [[ -n "${_RUN_ID_SET}" ]] && ! [[ "${RUN_ID}" =~ $_NERF_PATTERN ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  _NERF_DRY_CMD=(gh run view "${RUN_ID}")
+  _NERF_DRY_CMD=(gh run view "${RUN_ID}" ${FAILED:+"--log-failed"})
   printf 'dry-run:'
   for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
   echo
   exit 0
 fi
 
-exec gh run view "${RUN_ID}"
+exec gh run view "${RUN_ID}" ${FAILED:+"--log-failed"}
