@@ -1,473 +1,473 @@
 version: 1
 
 package:
-  name: az-repos
-  description: Azure Repos tools for viewing and creating pull requests
-  skill_group: az-repos
-  skill_intro: |
-    These tools interact with Azure Repos pull requests. The organization
-    and project are auto-detected from the git remote in the current
-    directory. Pass --project to target a different project, or -C
-    <directory> to resolve the project from the git remote of a
-    sub-directory under the workspace (useful when multiple repos live
-    under one workspace root and you don't want to cd around).
-    Use az-repos-pr-list to see open PRs, az-repos-pr-show to inspect a
-    specific PR, and az-repos-pr-create to create a new PR from the
-    current branch. az-repos-pr-edit updates a PR's title, description,
-    and/or draft state (use --draft true|false to toggle draft vs
-    ready-for-review). az-repos-pr-set-status changes a PR's lifecycle
-    state (active / abandoned / completed). az-repos-pr-vote casts or
-    resets a review vote on a PR.
-  bash_hints:
-    - '\baz repos\b'
+    name: az-repos
+    description: Azure Repos tools for viewing and creating pull requests
+    skill_group: az-repos
+    skill_intro: |
+        These tools interact with Azure Repos pull requests. The organization
+        and project are auto-detected from the git remote in the current
+        directory. Pass --project to target a different project, or -C
+        <directory> to resolve the project from the git remote of a
+        sub-directory under the workspace (useful when multiple repos live
+        under one workspace root and you don't want to cd around).
+        Use az-repos-pr-list to see open PRs, az-repos-pr-show to inspect a
+        specific PR, and az-repos-pr-create to create a new PR from the
+        current branch. az-repos-pr-edit updates a PR's title, description,
+        and/or draft state (use --draft true|false to toggle draft vs
+        ready-for-review). az-repos-pr-set-status changes a PR's lifecycle
+        state (active / abandoned / completed). az-repos-pr-vote casts or
+        resets a review vote on a PR.
+    bash_hints:
+        - '\baz repos\b'
 
 tools:
-  az-repos-pr-list:
-    description: List pull requests in the project as JSON.
-    threat:
-      read: remote
-      write: none
-    template:
-      command:
-        - az
-        - repos
-        - pr
-        - list
-        - "{{options.status}}"
-        - "{{options.top}}"
-        - "{{options.creator}}"
-        - "{{options.reviewer}}"
-        - "{{options.project}}"
-        - --output
-        - json
-    options:
-      status:
-        description: "Filter by status (default: active)"
-        flag: --status
-        allow: [active, abandoned, completed, all]
-      top:
-        description: Maximum number of PRs to return (default 10)
-        flag: --top
-        pattern: "^[0-9]+$"
-      creator:
-        description: Filter by PR creator
-        flag: --creator
-      reviewer:
-        description: Filter by reviewer
-        flag: --reviewer
-      project:
-        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
-        flag: --project
-        short: -p
-      directory:
-        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
-    pre: |
-      if [[ -n "${_DIRECTORY_SET}" ]]; then
-        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
-          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
-        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        _PROJ="${_PROJ//%20/ }"
-        if [[ -z "${_PROJ}" ]]; then
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
-          return 1
-        fi
-        if [[ -z "${_PROJECT_SET}" ]]; then
-          PROJECT="${_PROJ}"
-          _PROJECT_SET=true
-        fi
-      fi
+    az-repos-pr-list:
+        description: List pull requests in the project as JSON.
+        threat:
+            read: remote
+            write: none
+        template:
+            command:
+                - az
+                - repos
+                - pr
+                - list
+                - "{{options.status}}"
+                - "{{options.top}}"
+                - "{{options.creator}}"
+                - "{{options.reviewer}}"
+                - "{{options.project}}"
+                - --output
+                - json
+        options:
+            status:
+                description: "Filter by status (default: active)"
+                flag: --status
+                allow: [active, abandoned, completed, all]
+            top:
+                description: Maximum number of PRs to return (default 10)
+                flag: --top
+                pattern: "^[0-9]+$"
+            creator:
+                description: Filter by PR creator
+                flag: --creator
+            reviewer:
+                description: Filter by reviewer
+                flag: --reviewer
+            project:
+                description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+                flag: --project
+                short: -p
+            directory:
+                description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+                flag: -C
+                path_tests: [under_cwd]
+        pre: |
+            if [[ -n "${_DIRECTORY_SET}" ]]; then
+              _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+                || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+              _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+              _PROJ="${_PROJ//%20/ }"
+              if [[ -z "${_PROJ}" ]]; then
+                echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+                return 1
+              fi
+              if [[ -z "${_PROJECT_SET}" ]]; then
+                PROJECT="${_PROJ}"
+                _PROJECT_SET=true
+              fi
+            fi
 
-  az-repos-pr-show:
-    description: Show full details for a pull request as JSON.
-    threat:
-      read: remote
-      write: none
-    template:
-      command:
-        - az
-        - repos
-        - pr
-        - show
-        - --id
-        - "{{arguments.pr_id}}"
-        - "{{options.project}}"
-        - --output
-        - json
-    arguments:
-      pr_id:
-        description: Pull request ID (numeric)
-        required: true
-        pattern: "^[0-9]+$"
-    options:
-      project:
-        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
-        flag: --project
-        short: -p
-      directory:
-        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
-    pre: |
-      if [[ -n "${_DIRECTORY_SET}" ]]; then
-        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
-          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
-        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        _PROJ="${_PROJ//%20/ }"
-        if [[ -z "${_PROJ}" ]]; then
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
-          return 1
-        fi
-        if [[ -z "${_PROJECT_SET}" ]]; then
-          PROJECT="${_PROJ}"
-          _PROJECT_SET=true
-        fi
-      fi
+    az-repos-pr-show:
+        description: Show full details for a pull request as JSON.
+        threat:
+            read: remote
+            write: none
+        template:
+            command:
+                - az
+                - repos
+                - pr
+                - show
+                - --id
+                - "{{arguments.pr_id}}"
+                - "{{options.project}}"
+                - --output
+                - json
+        arguments:
+            pr_id:
+                description: Pull request ID (numeric)
+                required: true
+                pattern: "^[0-9]+$"
+        options:
+            project:
+                description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+                flag: --project
+                short: -p
+            directory:
+                description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+                flag: -C
+                path_tests: [under_cwd]
+        pre: |
+            if [[ -n "${_DIRECTORY_SET}" ]]; then
+              _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+                || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+              _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+              _PROJ="${_PROJ//%20/ }"
+              if [[ -z "${_PROJ}" ]]; then
+                echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+                return 1
+              fi
+              if [[ -z "${_PROJECT_SET}" ]]; then
+                PROJECT="${_PROJ}"
+                _PROJECT_SET=true
+              fi
+            fi
 
-  az-repos-pr-comments:
-    description: >-
-      List all comment threads on a pull request as JSON. Project and
-      repository are auto-detected from the git remote (origin) in the
-      current directory; pass -C <directory> to read the remote from a
-      different repo under the workspace, or --project to override just
-      the project (the repository is always taken from the remote URL).
-    threat:
-      read: remote
-      write: none
-    pre: |
-      if [[ -n "${_DIRECTORY_SET}" ]]; then _GIT_DIR="{{options.directory}}"; else _GIT_DIR="."; fi
-      REMOTE_URL=$(git -C "${_GIT_DIR}" remote get-url origin 2>/dev/null || true)
-      if [ -z "$REMOTE_URL" ]; then
-        echo "error: could not detect git remote 'origin' in '${_GIT_DIR}'" >&2
-        return 1
-      fi
-      # Extract project and repo from Azure DevOps remote URL. Three shapes are supported:
-      #   HTTPS (modern):  https://dev.azure.com/{org}/{project}/_git/{repo}
-      #   HTTPS (legacy):  https://{org}.visualstudio.com/[DefaultCollection/]{project}/_git/{repo}
-      #   SSH:             git@ssh.dev.azure.com:v3/{org}/{project}/{repo}
-      DETECTED_PROJECT=$(echo "$REMOTE_URL" | sed -nE '
-        s|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p
-        s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p
-        s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-      DETECTED_PROJECT="${DETECTED_PROJECT//%20/ }"
-      if echo "$REMOTE_URL" | grep -q '/_git/'; then
-        REPO_NAME=$(echo "$REMOTE_URL" | sed -E 's|.*/_git/([^?/]+).*|\1|; s|\.git$||')
-      elif echo "$REMOTE_URL" | grep -q ':v3/'; then
-        REPO_NAME=$(echo "$REMOTE_URL" | sed -E 's|.*:v3/[^/]+/[^/]+/([^/]+).*|\1|; s|\.git$||')
-      else
-        echo "error: unrecognized Azure DevOps remote URL format: '$REMOTE_URL'" >&2
-        return 1
-      fi
-      REPO_NAME="${REPO_NAME//%20/ }"
-      # User-supplied --project overrides the auto-detected project (use the
-      # _PROJECT_SET sentinel so '--project ""' is respected as-set, not
-      # silently overwritten); repo is always taken from origin.
-      if [[ -z "${_PROJECT_SET}" ]]; then
-        PROJECT="$DETECTED_PROJECT"
-        _PROJECT_SET=true
-      fi
-      if [ -z "$PROJECT" ] || [ -z "$REPO_NAME" ]; then
-        echo "error: could not extract project/repo from remote URL '$REMOTE_URL'" >&2
-        return 1
-      fi
-    script: |
-      exec az devops invoke \
-        --area git \
-        --resource pullRequestThreads \
-        --route-parameters "project=$PROJECT" "repositoryId=$REPO_NAME" "pullRequestId=$PR_ID" \
-        --output json
-    arguments:
-      pr_id:
-        description: Pull request ID (numeric)
-        required: true
-        pattern: "^[0-9]+$"
-    options:
-      project:
-        description: Azure DevOps project name or ID (overrides auto-detection from the origin remote)
-        flag: --project
-        short: -p
-      directory:
-        description: Read the origin remote from this directory instead of cwd (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
+    az-repos-pr-comments:
+        description: >-
+            List all comment threads on a pull request as JSON. Project and
+            repository are auto-detected from the git remote (origin) in the
+            current directory; pass -C <directory> to read the remote from a
+            different repo under the workspace, or --project to override just
+            the project (the repository is always taken from the remote URL).
+        threat:
+            read: remote
+            write: none
+        pre: |
+            if [[ -n "${_DIRECTORY_SET}" ]]; then _GIT_DIR="{{options.directory}}"; else _GIT_DIR="."; fi
+            REMOTE_URL=$(git -C "${_GIT_DIR}" remote get-url origin 2>/dev/null || true)
+            if [ -z "$REMOTE_URL" ]; then
+              echo "error: could not detect git remote 'origin' in '${_GIT_DIR}'" >&2
+              return 1
+            fi
+            # Extract project and repo from Azure DevOps remote URL. Three shapes are supported:
+            #   HTTPS (modern):  https://dev.azure.com/{org}/{project}/_git/{repo}
+            #   HTTPS (legacy):  https://{org}.visualstudio.com/[DefaultCollection/]{project}/_git/{repo}
+            #   SSH:             git@ssh.dev.azure.com:v3/{org}/{project}/{repo}
+            DETECTED_PROJECT=$(echo "$REMOTE_URL" | sed -nE '
+              s|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p
+              s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p
+              s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+            DETECTED_PROJECT="${DETECTED_PROJECT//%20/ }"
+            if echo "$REMOTE_URL" | grep -q '/_git/'; then
+              REPO_NAME=$(echo "$REMOTE_URL" | sed -E 's|.*/_git/([^?/]+).*|\1|; s|\.git$||')
+            elif echo "$REMOTE_URL" | grep -q ':v3/'; then
+              REPO_NAME=$(echo "$REMOTE_URL" | sed -E 's|.*:v3/[^/]+/[^/]+/([^/]+).*|\1|; s|\.git$||')
+            else
+              echo "error: unrecognized Azure DevOps remote URL format: '$REMOTE_URL'" >&2
+              return 1
+            fi
+            REPO_NAME="${REPO_NAME//%20/ }"
+            # User-supplied --project overrides the auto-detected project (use the
+            # _PROJECT_SET sentinel so '--project ""' is respected as-set, not
+            # silently overwritten); repo is always taken from origin.
+            if [[ -z "${_PROJECT_SET}" ]]; then
+              PROJECT="$DETECTED_PROJECT"
+              _PROJECT_SET=true
+            fi
+            if [ -z "$PROJECT" ] || [ -z "$REPO_NAME" ]; then
+              echo "error: could not extract project/repo from remote URL '$REMOTE_URL'" >&2
+              return 1
+            fi
+        script: |
+            exec az devops invoke \
+              --area git \
+              --resource pullRequestThreads \
+              --route-parameters "project=$PROJECT" "repositoryId=$REPO_NAME" "pullRequestId=$PR_ID" \
+              --output json
+        arguments:
+            pr_id:
+                description: Pull request ID (numeric)
+                required: true
+                pattern: "^[0-9]+$"
+        options:
+            project:
+                description: Azure DevOps project name or ID (overrides auto-detection from the origin remote)
+                flag: --project
+                short: -p
+            directory:
+                description: Read the origin remote from this directory instead of cwd (must be under cwd)
+                flag: -C
+                path_tests: [under_cwd]
 
-  az-repos-pr-create:
-    description: >-
-      Create a pull request from the current branch (or from the branch in
-      the -C directory). Source branch is auto-detected from HEAD. The
-      target branch defaults to the repo's default branch unless
-      --target-branch is given. Cannot be run from detached HEAD or from
-      main. When -C is passed, the project, repository, and source branch
-      are all resolved from the given directory's git remote and HEAD.
-    threat:
-      read: remote
-      write: remote
-    template:
-      command:
-        - az
-        - repos
-        - pr
-        - create
-        - --title
-        - "{{arguments.title}}"
-        - --description
-        - "{{arguments.description}}"
-        - "{{switches.draft}}"
-        - "{{options.target_branch}}"
-        - "{{options.project}}"
-        - "{{options.repository}}"
-        - "{{options.source_branch}}"
-        - --output
-        - json
-    arguments:
-      title:
-        description: PR title
-        required: true
-      description:
-        description: PR description (body text; supports markdown)
-        required: true
-    switches:
-      draft:
-        description: Create the PR as a draft
-    options:
-      target_branch:
-        description: Target branch for the PR (defaults to the repo's default branch)
-        flag: --target-branch
-        short: -t
-        pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$"
-      project:
-        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
-        flag: --project
-        short: -p
-      repository:
-        description: Azure DevOps repository name or ID (auto-detected from the git remote if omitted)
-        flag: --repository
-        short: -r
-      source_branch:
-        description: Source branch of the PR (auto-detected from HEAD if omitted; required when -C is passed since az reads HEAD from cwd, not from -C)
-        flag: --source-branch
-        short: -s
-        pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$"
-      directory:
-        description: Resolve project, repository, and source branch from the git remote/HEAD of this directory instead of cwd (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
-    pre: |
-      if [[ -n "${_DIRECTORY_SET}" ]]; then _GIT_DIR="{{options.directory}}"; else _GIT_DIR="."; fi
-      # Source branch + branch guards: always run against the resolved repo so
-      # that -C correctly checks the directory the agent is creating the PR from.
-      _BRANCH=$(git -C "${_GIT_DIR}" symbolic-ref --quiet --short HEAD 2>/dev/null) || {
-        echo "error: cannot create a PR from detached HEAD state in '${_GIT_DIR}'" >&2
-        return 1
-      }
-      if [[ "${_BRANCH}" == "main" ]]; then
-        echo "error: cannot create a PR from main. Check out a feature branch first." >&2
-        return 1
-      fi
-      # az reads HEAD from cwd; when -C is passed, pass --source-branch explicitly
-      # so az creates the PR for the right branch.
-      if [[ -n "${_DIRECTORY_SET}" && -z "${_SOURCE_BRANCH_SET}" ]]; then
-        SOURCE_BRANCH="${_BRANCH}"
-        _SOURCE_BRANCH_SET=true
-      fi
-      if [[ -n "${_DIRECTORY_SET}" ]]; then
-        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
-          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
-        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        _PROJ="${_PROJ//%20/ }"
-        _REPO=$(echo "${_URL}" | sed -nE 's|.*/_git/([^?/]+).*|\1|p; s|.*:v3/[^/]+/[^/]+/([^/]+).*|\1|p' | sed 's|\.git$||')
-        _REPO="${_REPO//%20/ }"
-        if [[ -z "${_PROJ}" || -z "${_REPO}" ]]; then
-          echo "error: -C: could not parse Azure DevOps project/repo from remote URL '${_URL}'" >&2
-          return 1
-        fi
-        if [[ -z "${_PROJECT_SET}" ]]; then
-          PROJECT="${_PROJ}"
-          _PROJECT_SET=true
-        fi
-        if [[ -z "${_REPOSITORY_SET}" ]]; then
-          REPOSITORY="${_REPO}"
-          _REPOSITORY_SET=true
-        fi
-      fi
+    az-repos-pr-create:
+        description: >-
+            Create a pull request from the current branch (or from the branch in
+            the -C directory). Source branch is auto-detected from HEAD. The
+            target branch defaults to the repo's default branch unless
+            --target-branch is given. Cannot be run from detached HEAD or from
+            main. When -C is passed, the project, repository, and source branch
+            are all resolved from the given directory's git remote and HEAD.
+        threat:
+            read: remote
+            write: remote
+        template:
+            command:
+                - az
+                - repos
+                - pr
+                - create
+                - --title
+                - "{{arguments.title}}"
+                - --description
+                - "{{arguments.description}}"
+                - "{{switches.draft}}"
+                - "{{options.target_branch}}"
+                - "{{options.project}}"
+                - "{{options.repository}}"
+                - "{{options.source_branch}}"
+                - --output
+                - json
+        arguments:
+            title:
+                description: PR title
+                required: true
+            description:
+                description: PR description (body text; supports markdown)
+                required: true
+        switches:
+            draft:
+                description: Create the PR as a draft
+        options:
+            target_branch:
+                description: Target branch for the PR (defaults to the repo's default branch)
+                flag: --target-branch
+                short: -t
+                pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$"
+            project:
+                description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+                flag: --project
+                short: -p
+            repository:
+                description: Azure DevOps repository name or ID (auto-detected from the git remote if omitted)
+                flag: --repository
+                short: -r
+            source_branch:
+                description: Source branch of the PR (auto-detected from HEAD if omitted; required when -C is passed since az reads HEAD from cwd, not from -C)
+                flag: --source-branch
+                short: -s
+                pattern: "^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$"
+            directory:
+                description: Resolve project, repository, and source branch from the git remote/HEAD of this directory instead of cwd (must be under cwd)
+                flag: -C
+                path_tests: [under_cwd]
+        pre: |
+            if [[ -n "${_DIRECTORY_SET}" ]]; then _GIT_DIR="{{options.directory}}"; else _GIT_DIR="."; fi
+            # Source branch + branch guards: always run against the resolved repo so
+            # that -C correctly checks the directory the agent is creating the PR from.
+            _BRANCH=$(git -C "${_GIT_DIR}" symbolic-ref --quiet --short HEAD 2>/dev/null) || {
+              echo "error: cannot create a PR from detached HEAD state in '${_GIT_DIR}'" >&2
+              return 1
+            }
+            if [[ "${_BRANCH}" == "main" ]]; then
+              echo "error: cannot create a PR from main. Check out a feature branch first." >&2
+              return 1
+            fi
+            # az reads HEAD from cwd; when -C is passed, pass --source-branch explicitly
+            # so az creates the PR for the right branch.
+            if [[ -n "${_DIRECTORY_SET}" && -z "${_SOURCE_BRANCH_SET}" ]]; then
+              SOURCE_BRANCH="${_BRANCH}"
+              _SOURCE_BRANCH_SET=true
+            fi
+            if [[ -n "${_DIRECTORY_SET}" ]]; then
+              _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+                || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+              _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+              _PROJ="${_PROJ//%20/ }"
+              _REPO=$(echo "${_URL}" | sed -nE 's|.*/_git/([^?/]+).*|\1|p; s|.*:v3/[^/]+/[^/]+/([^/]+).*|\1|p' | sed 's|\.git$||')
+              _REPO="${_REPO//%20/ }"
+              if [[ -z "${_PROJ}" || -z "${_REPO}" ]]; then
+                echo "error: -C: could not parse Azure DevOps project/repo from remote URL '${_URL}'" >&2
+                return 1
+              fi
+              if [[ -z "${_PROJECT_SET}" ]]; then
+                PROJECT="${_PROJ}"
+                _PROJECT_SET=true
+              fi
+              if [[ -z "${_REPOSITORY_SET}" ]]; then
+                REPOSITORY="${_REPO}"
+                _REPOSITORY_SET=true
+              fi
+            fi
 
-  az-repos-pr-set-status:
-    description: >-
-      Update a pull request's lifecycle status. Use "abandoned" to close
-      a PR without merging, "active" to reactivate an abandoned PR, or
-      "completed" to merge it (Azure DevOps will reject "completed" if
-      required approvals or policies are not satisfied).
-    threat:
-      read: remote
-      write: remote
-    template:
-      command:
-        - az
-        - repos
-        - pr
-        - update
-        - --id
-        - "{{arguments.pr_id}}"
-        - --status
-        - "{{arguments.status}}"
-        - "{{options.project}}"
-        - --output
-        - json
-    arguments:
-      pr_id:
-        description: Pull request ID (numeric)
-        required: true
-        pattern: "^[0-9]+$"
-      status:
-        description: New status
-        required: true
-        allow: [active, abandoned, completed]
-    options:
-      project:
-        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
-        flag: --project
-        short: -p
-      directory:
-        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
-    pre: |
-      if [[ -n "${_DIRECTORY_SET}" ]]; then
-        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
-          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
-        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        _PROJ="${_PROJ//%20/ }"
-        if [[ -z "${_PROJ}" ]]; then
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
-          return 1
-        fi
-        if [[ -z "${_PROJECT_SET}" ]]; then
-          PROJECT="${_PROJ}"
-          _PROJECT_SET=true
-        fi
-      fi
+    az-repos-pr-set-status:
+        description: >-
+            Update a pull request's lifecycle status. Use "abandoned" to close
+            a PR without merging, "active" to reactivate an abandoned PR, or
+            "completed" to merge it (Azure DevOps will reject "completed" if
+            required approvals or policies are not satisfied).
+        threat:
+            read: remote
+            write: remote
+        template:
+            command:
+                - az
+                - repos
+                - pr
+                - update
+                - --id
+                - "{{arguments.pr_id}}"
+                - --status
+                - "{{arguments.status}}"
+                - "{{options.project}}"
+                - --output
+                - json
+        arguments:
+            pr_id:
+                description: Pull request ID (numeric)
+                required: true
+                pattern: "^[0-9]+$"
+            status:
+                description: New status
+                required: true
+                allow: [active, abandoned, completed]
+        options:
+            project:
+                description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+                flag: --project
+                short: -p
+            directory:
+                description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+                flag: -C
+                path_tests: [under_cwd]
+        pre: |
+            if [[ -n "${_DIRECTORY_SET}" ]]; then
+              _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+                || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+              _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+              _PROJ="${_PROJ//%20/ }"
+              if [[ -z "${_PROJ}" ]]; then
+                echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+                return 1
+              fi
+              if [[ -z "${_PROJECT_SET}" ]]; then
+                PROJECT="${_PROJ}"
+                _PROJECT_SET=true
+              fi
+            fi
 
-  az-repos-pr-edit:
-    description: >-
-      Edit a pull request's title, description, and/or draft state. At
-      least one of --title, --description, or --draft must be provided.
-      Pass --draft true to convert the PR back to a draft or --draft
-      false to mark a draft PR as ready for review. Does not change the
-      PR's status (active/abandoned/completed), target branch, or
-      reviewers.
-    threat:
-      read: remote
-      write: remote
-    template:
-      command:
-        - az
-        - repos
-        - pr
-        - update
-        - --id
-        - "{{arguments.pr_id}}"
-        - "{{options.title}}"
-        - "{{options.description}}"
-        - "{{options.draft}}"
-        - "{{options.project}}"
-        - --output
-        - json
-    arguments:
-      pr_id:
-        description: Pull request ID (numeric)
-        required: true
-        pattern: "^[0-9]+$"
-    options:
-      title:
-        description: New PR title
-        flag: --title
-      description:
-        description: New PR description (body text; supports markdown)
-        flag: --description
-      draft:
-        description: Set draft state -- "true" to convert to draft, "false" to mark ready for review
-        flag: --draft
-        allow: ["true", "false"]
-      project:
-        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
-        flag: --project
-        short: -p
-      directory:
-        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
-    guards:
-      - script: |
-          [[ -n "${_TITLE_SET}" ]] || [[ -n "${_DESCRIPTION_SET}" ]] || [[ -n "${_DRAFT_SET}" ]]
-        fail_message: At least one of --title, --description, or --draft must be provided.
-    pre: |
-      if [[ -n "${_DIRECTORY_SET}" ]]; then
-        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
-          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
-        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        _PROJ="${_PROJ//%20/ }"
-        if [[ -z "${_PROJ}" ]]; then
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
-          return 1
-        fi
-        if [[ -z "${_PROJECT_SET}" ]]; then
-          PROJECT="${_PROJ}"
-          _PROJECT_SET=true
-        fi
-      fi
+    az-repos-pr-edit:
+        description: >-
+            Edit a pull request's title, description, and/or draft state. At
+            least one of --title, --description, or --draft must be provided.
+            Pass --draft true to convert the PR back to a draft or --draft
+            false to mark a draft PR as ready for review. Does not change the
+            PR's status (active/abandoned/completed), target branch, or
+            reviewers.
+        threat:
+            read: remote
+            write: remote
+        template:
+            command:
+                - az
+                - repos
+                - pr
+                - update
+                - --id
+                - "{{arguments.pr_id}}"
+                - "{{options.title}}"
+                - "{{options.description}}"
+                - "{{options.draft}}"
+                - "{{options.project}}"
+                - --output
+                - json
+        arguments:
+            pr_id:
+                description: Pull request ID (numeric)
+                required: true
+                pattern: "^[0-9]+$"
+        options:
+            title:
+                description: New PR title
+                flag: --title
+            description:
+                description: New PR description (body text; supports markdown)
+                flag: --description
+            draft:
+                description: Set draft state -- "true" to convert to draft, "false" to mark ready for review
+                flag: --draft
+                allow: ["true", "false"]
+            project:
+                description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+                flag: --project
+                short: -p
+            directory:
+                description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+                flag: -C
+                path_tests: [under_cwd]
+        guards:
+            - script: |
+                  [[ -n "${_TITLE_SET}" ]] || [[ -n "${_DESCRIPTION_SET}" ]] || [[ -n "${_DRAFT_SET}" ]]
+              fail_message: At least one of --title, --description, or --draft must be provided.
+        pre: |
+            if [[ -n "${_DIRECTORY_SET}" ]]; then
+              _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+                || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+              _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+              _PROJ="${_PROJ//%20/ }"
+              if [[ -z "${_PROJ}" ]]; then
+                echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+                return 1
+              fi
+              if [[ -z "${_PROJECT_SET}" ]]; then
+                PROJECT="${_PROJ}"
+                _PROJECT_SET=true
+              fi
+            fi
 
-  az-repos-pr-vote:
-    description: >-
-      Cast or reset a review vote on a pull request. The signed-in identity
-      must be a reviewer (or able to add itself) on the PR. Use "reset" to
-      clear an existing vote.
-    threat:
-      read: remote
-      write: remote
-    template:
-      command:
-        - az
-        - repos
-        - pr
-        - set-vote
-        - --id
-        - "{{arguments.pr_id}}"
-        - --vote
-        - "{{arguments.vote}}"
-        - "{{options.project}}"
-        - --output
-        - json
-    arguments:
-      pr_id:
-        description: Pull request ID (numeric)
-        required: true
-        pattern: "^[0-9]+$"
-      vote:
-        description: Vote to cast
-        required: true
-        allow: [approve, approve-with-suggestions, reject, reset, wait-for-author]
-    options:
-      project:
-        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
-        flag: --project
-        short: -p
-      directory:
-        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
-    pre: |
-      if [[ -n "${_DIRECTORY_SET}" ]]; then
-        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
-          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
-        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        _PROJ="${_PROJ//%20/ }"
-        if [[ -z "${_PROJ}" ]]; then
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
-          return 1
-        fi
-        if [[ -z "${_PROJECT_SET}" ]]; then
-          PROJECT="${_PROJ}"
-          _PROJECT_SET=true
-        fi
-      fi
+    az-repos-pr-vote:
+        description: >-
+            Cast or reset a review vote on a pull request. The signed-in identity
+            must be a reviewer (or able to add itself) on the PR. Use "reset" to
+            clear an existing vote.
+        threat:
+            read: remote
+            write: remote
+        template:
+            command:
+                - az
+                - repos
+                - pr
+                - set-vote
+                - --id
+                - "{{arguments.pr_id}}"
+                - --vote
+                - "{{arguments.vote}}"
+                - "{{options.project}}"
+                - --output
+                - json
+        arguments:
+            pr_id:
+                description: Pull request ID (numeric)
+                required: true
+                pattern: "^[0-9]+$"
+            vote:
+                description: Vote to cast
+                required: true
+                allow: [approve, approve-with-suggestions, reject, reset, wait-for-author]
+        options:
+            project:
+                description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+                flag: --project
+                short: -p
+            directory:
+                description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+                flag: -C
+                path_tests: [under_cwd]
+        pre: |
+            if [[ -n "${_DIRECTORY_SET}" ]]; then
+              _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+                || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+              _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+              _PROJ="${_PROJ//%20/ }"
+              if [[ -z "${_PROJ}" ]]; then
+                echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+                return 1
+              fi
+              if [[ -z "${_PROJECT_SET}" ]]; then
+                PROJECT="${_PROJ}"
+                _PROJECT_SET=true
+              fi
+            fi

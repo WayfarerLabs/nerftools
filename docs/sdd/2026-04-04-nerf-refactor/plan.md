@@ -6,8 +6,8 @@
 - `nerf generate --target bin` produces self-contained bash scripts for all three execution modes
   (template, passthrough, script)
 - `nerf generate --target skills` produces rulesync SKILL.md files with updated documentation format
-- `nerf generate --target claude-plugin` produces a complete Claude Code plugin with scripts, skills,
-  and nerfctl grant tools
+- `nerf generate --target claude-plugin` produces a complete Claude Code plugin with scripts,
+  skills, and nerfctl grant tools
 - All generated scripts include `# nerf:threat:read=<scope>` and `# nerf:threat:write=<scope>`
   metadata headers
 - `nerfctl-grant-by-threat` allows/denies tools based on a 2D threat ceiling
@@ -24,20 +24,21 @@ Replace the v0 data model with v1 dataclasses. No CLI or generation changes yet 
 establishes the foundation that everything else builds on.
 
 - [x] Add `ThreatLevel` enum (`none`, `workspace`, `machine`, `remote`, `admin`) with `__le__`
-  comparison
+      comparison
 - [x] Add `ThreatSpec` dataclass (`read: ThreatLevel`, `write: ThreatLevel`)
 - [x] Add `SwitchSpec` dataclass (`description`, `flag`, `short`)
 - [x] Add `OptionSpec` dataclass (`description`, `flag`, `short`, `required`, `pattern`, `allow`,
-  `deny`)
+      `deny`)
 - [x] Replace `FlagSpec` with `SwitchSpec` and `OptionSpec` throughout
 - [x] Update `ArgSpec`: remove `flag`/`positional` fields, keep `description`, `required`,
-  `variadic`, `pattern`, `allow`, `deny`
+      `variadic`, `pattern`, `allow`, `deny`
 - [x] Add `TemplateSpec` dataclass (`command: list[str]`, `npm_pkgrun: bool`)
 - [x] Add `PassthroughSpec` dataclass (`command: str`, `deny: list[str]`, `prefix: list[str]`,
-  `suffix: list[str]`)
+      `suffix: list[str]`)
 - [x] Update `ToolSpec`: add `threat: ThreatSpec`, `template: TemplateSpec | None`,
-  `passthrough: PassthroughSpec | None`, `script: str | None`, `pre: str | None`,
-  `switches: dict`, `options: dict`, `arguments: dict`; remove old `command`/`flags`/`args` fields
+      `passthrough: PassthroughSpec | None`, `script: str | None`, `pre: str | None`,
+      `switches: dict`, `options: dict`, `arguments: dict`; remove old `command`/`flags`/`args`
+      fields
 - [x] Add `version: int` to `NerfManifest`
 - [x] Update `load_manifest()` to parse v1 format
   - Require `version: 1`
@@ -62,7 +63,7 @@ Update the builder for the v1 data model, starting with template mode (the exist
 adapted to the new types).
 
 - [x] Update `_emit_header()` to include `# nerf:threat:read=<scope>` and
-  `# nerf:threat:write=<scope>` comment lines
+      `# nerf:threat:write=<scope>` comment lines
 - [x] Refactor argument parsing generation for switches/options/arguments (replacing unified flags)
   - Switches: `case` branch with `shift 1`, set `VAR="true"`
   - Options: `case` branch with `shift 2`, set `VAR="$2"`
@@ -70,9 +71,9 @@ adapted to the new types).
 - [x] Update placeholder substitution for the new parameter types (substitution table from HLA)
 - [x] Update `_emit_usage()` for separate Switches/Options/Arguments sections and "Maps to" line
 - [x] Implement `_emit_pre()`: wrap pre script in `_nerf_pre()` function, call with
-  `_nerf_pre || _nerf_pre_rc=$?`, abort on non-zero
+      `_nerf_pre || _nerf_pre_rc=$?`, abort on non-zero
 - [x] Update error messages to structured format:
-  `error: <tool-name>: <what>\n  <details>\n  hint: <action>`
+      `error: <tool-name>: <what>\n  <details>\n  hint: <action>`
 - [x] Update tests in `test_builder.py`
   - Template mode with switches, options, arguments
   - Pre-hook generation and abort behavior
@@ -93,7 +94,7 @@ Add the two new execution mode code paths to the builder.
   - Inline script body after parameter parsing and guards
   - No `exec` -- script controls its own flow
 - [x] Update `build_script()` to dispatch: exactly one of `_emit_template`, `_emit_passthrough`,
-  `_emit_script`
+      `_emit_script`
 - [x] Passthrough-specific usage generation (lists denied patterns, shows "Maps to" with `"$@"`)
 - [x] Script-specific usage generation (no "Maps to" line)
 - [x] Tests
@@ -162,8 +163,8 @@ Implement the new `grant-by-threat` command and enhance `grant-list`.
   - Compare each tool's read/write against ceiling using `<=` on threat level ordering
   - Output classification (inside/outside) per tool
 - [x] Write `nerftools/nerftools/nerfctl/claude/grant-by-threat.sh`
-  - Arguments: `<plugin-root> --read <level> --write <level> [--filter <glob>]
-    [--outside deny|reset] [--settings-scope user|local]`
+  - Arguments: `<plugin-root> --read <level> --write <level> [--filter <glob>]`
+    `[--outside deny|reset] [--settings-scope user|local]`
   - Run find-tools + classify-by-threat
   - Inside tools: add to allow, remove from deny
   - Outside tools: add to deny (default) or remove from both (`--outside reset`)
@@ -187,9 +188,9 @@ tool uses passthrough or script). Add threat profiles to every tool.
 
 - [x] Migrate `manifests/git/manifest.yaml`
   - Add `version: 1`
-  - Add threat profiles: git-log (read:workspace, write:none), git-add/commit/pull
-    (read:workspace, write:workspace), git-fetch (read:remote, write:workspace),
-    git-push-main/branch (read:workspace, write:remote), git-tag (read:workspace, write:workspace)
+  - Add threat profiles: git-log (read:workspace, write:none), git-add/commit/pull (read:workspace,
+    write:workspace), git-fetch (read:remote, write:workspace), git-push-main/branch
+    (read:workspace, write:remote), git-tag (read:workspace, write:workspace)
   - Convert `flags` to `switches`/`options`, `args` to `arguments`
   - Convert `command` to `template.command`
   - Convert git-push-branch guard script to `pre` hook
@@ -218,7 +219,7 @@ tool uses passthrough or script). Add threat profiles to every tool.
 End-to-end validation and cleanup.
 
 - [x] End-to-end test: `nerf validate` + `nerf generate --target bin --target skills` on all
-  built-in manifests
+      built-in manifests
 - [x] End-to-end test: `nerf generate --target claude-plugin` produces a valid plugin structure
 - [x] Verify grant-by-threat works against generated plugin scripts (threat metadata discovery)
 - [x] Run full test suite with mypy strict and ruff clean

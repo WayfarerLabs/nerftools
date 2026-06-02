@@ -11,8 +11,8 @@ major features.
 ## Conventional Commits
 
 All commit messages follow the [Conventional Commits](https://www.conventionalcommits.org/)
-specification. This is not just a style preference -- commit types drive automated versioning
-(see [Releases](#releases) below).
+specification. This is not just a style preference -- commit types drive automated versioning (see
+[Releases](#releases) below).
 
 Commit types that trigger version bumps:
 
@@ -23,14 +23,23 @@ Commit types that trigger version bumps:
 Other types (`docs:`, `chore:`, `refactor:`, `test:`, `ci:`, `build:`, `style:`, `revert:`) do not
 trigger a release on their own but still appear in the changelog.
 
-When squash-merging a PR, set the PR title to the desired conventional commit message -- GitHub
-uses that as the squash commit message, which is what `release-please` reads.
+When squash-merging a PR, set the PR title to the desired conventional commit message -- GitHub uses
+that as the squash commit message, which is what `release-please` reads.
 
 ## Code Quality
 
 - **Python**: ruff (linting + formatting), mypy (type checking), pytest
-- **Markdown**: markdownlint, prettier, cspell
-- Custom dictionaries are maintained in `.cspell.json`
+- **File-quality linters** (markdown, JSON, YAML, etc.): cspell, markdownlint-cli2, prettier --
+  bundled into one local-runnable script that CI also invokes:
+
+  ```bash
+  ./scripts/lint-files.sh          # check (mirrors CI)
+  ./scripts/lint-files.sh --fix    # auto-fix what each tool can; cspell findings must be
+                                   # corrected by hand or added to .cspell.json
+  ```
+
+  Tool versions are pinned in `.cspell-version`, `.markdownlint-cli2-version`, and
+  `.prettier-version`. The cspell custom dictionary lives in `.cspell.json`.
 
 ## Rebuilding the Plugins Locally
 
@@ -42,28 +51,28 @@ The pre-built Claude Code and Codex plugin outputs under `out/` are committed. A
 ```
 
 and commit the resulting changes under `out/`. CI's `plugins-drift` job runs the same script with
-`--check` and fails the PR if committed outputs don't match the sources -- so a forgotten regeneration
-surfaces as a CI failure with a clear "run `./scripts/generate-plugins.sh` and commit" message,
-not as silent drift.
+`--check` and fails the PR if committed outputs don't match the sources -- so a forgotten
+regeneration surfaces as a CI failure with a clear "run `./scripts/generate-plugins.sh` and commit"
+message, not as silent drift.
 
 `nerf generate` cleans the output directory before writing, but refuses to clean any directory it
-did not produce itself (detected via a `.nerf-build-manifest` marker file written at the end of
-each successful build). If you ever see "refusing to clean output directory", pass `--outdir` to a
-fresh location, `--keep-existing` to preserve the existing files, or `--force` to clean the
-directory anyway.
+did not produce itself (detected via a `.nerf-build-manifest` marker file written at the end of each
+successful build). If you ever see "refusing to clean output directory", pass `--outdir` to a fresh
+location, `--keep-existing` to preserve the existing files, or `--force` to clean the directory
+anyway.
 
 ## AI Tooling (Rulesync)
 
-This repo uses [Rulesync](https://rulesync.dyoshikawa.com/) to maintain a single source of truth
-for AI coding assistant configuration (subagents, etc.).
+This repo uses [Rulesync](https://rulesync.dyoshikawa.com/) to maintain a single source of truth for
+AI coding assistant configuration (subagents, etc.).
 
 - `.rulesync/` -- source files (subagents in `.rulesync/subagents/`)
 - `rulesync.jsonc` -- shared config; standard targets are `claudecode` and `copilot`
 - `rulesync.local.jsonc` -- personal target overrides (gitignored; see `.example`)
 - `.rulesync-version` -- pinned rulesync version
 
-Standard-target outputs (`.claude/agents/`, `.github/agents/`) are committed so anyone cloning
-the repo -- including the GitHub Copilot PR review bot -- gets the AI context out of the box.
+Standard-target outputs (`.claude/agents/`, `.github/agents/`) are committed so anyone cloning the
+repo -- including the GitHub Copilot PR review bot -- gets the AI context out of the box.
 Personal-target outputs (`.cursor/`, `.aider*`, etc.) are gitignored.
 
 After editing anything under `.rulesync/`:
@@ -72,8 +81,8 @@ After editing anything under `.rulesync/`:
 ./scripts/rulesync-upgen.sh
 ```
 
-CI verifies that committed outputs match the sources and that no stray generated files leak in.
-If the CI rulesync job fails, run the script locally and commit the result.
+CI verifies that committed outputs match the sources and that no stray generated files leak in. If
+the CI rulesync job fails, run the script locally and commit the result.
 
 ## Releases
 
@@ -88,15 +97,15 @@ and conventional commits. No one manually bumps versions or creates tags.
    - Computes the next version from the conventional commits since the last release.
    - Updates the version in `pyproject.toml`, `nerf.yaml`, and `.release-please-manifest.json`.
    - Updates `CHANGELOG.md`.
-   - Runs a `sync-version-artifacts` follow-up job on the release PR branch that re-locks
-     `uv.lock` and regenerates `out/` plugin outputs so the version baked into
-     `plugin.json` matches the bumped `nerf.yaml`. These are mechanical consequences of the
-     version bump; contributor-driven plugin changes still go through the regular
-     verify-in-CI path (see [Rebuilding the Plugins Locally](#rebuilding-the-plugins-locally)).
+   - Runs a `sync-version-artifacts` follow-up job on the release PR branch that re-locks `uv.lock`
+     and regenerates `out/` plugin outputs so the version baked into `plugin.json` matches the
+     bumped `nerf.yaml`. These are mechanical consequences of the version bump; contributor-driven
+     plugin changes still go through the regular verify-in-CI path (see
+     [Rebuilding the Plugins Locally](#rebuilding-the-plugins-locally)).
 3. When you're ready to release, merge the release PR.
 4. On merge, `release-please` creates the git tag (`vX.Y.Z`) and a GitHub Release.
-5. The tag push triggers the `release` workflow, which verifies the tag is on `main`, runs the
-   test suite, and publishes to PyPI via trusted publishing.
+5. The tag push triggers the `release` workflow, which verifies the tag is on `main`, runs the test
+   suite, and publishes to PyPI via trusted publishing.
 
 ### What you do as a maintainer
 
@@ -104,7 +113,7 @@ and conventional commits. No one manually bumps versions or creates tags.
 - When you want to cut a release, review the release PR (check the version bump and the changelog)
   and merge it. That's it.
 
-### What you *don't* do
+### What you _don't_ do
 
 - Don't edit version numbers by hand in any file. `release-please` owns them.
 - Don't create tags by hand. `release-please` creates tags on merge of the release PR.

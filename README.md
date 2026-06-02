@@ -164,8 +164,8 @@ nerfctl-grant-by-threat --read workspace --write workspace
 nerfctl-grant-by-threat --read remote --write workspace
 ```
 
-Any tool whose declared profile falls within the ceiling is allowed; tools with broader profiles
-are denied (or reset, depending on flags).
+Any tool whose declared profile falls within the ceiling is allowed; tools with broader profiles are
+denied (or reset, depending on flags).
 
 ## Development
 
