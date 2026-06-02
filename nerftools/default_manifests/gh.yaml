@@ -159,6 +159,48 @@ tools:
         short: -L
         pattern: "^[1-9][0-9]*$"
 
+  gh-pr-copilot-review-status:
+    description: >-
+      Report the status of Copilot's review on a PR. Returns JSON with
+      `requested` (true if Copilot is currently in the pending-reviewers
+      list, i.e. a review is in flight) and `latest_review` (the most
+      recent submitted Copilot review with id/state/submitted_at/body, or
+      null if Copilot has never submitted one). The combinations are:
+      requested=true + latest_review=null -> freshly requested, waiting;
+      requested=true + latest_review=<old> -> re-requested after a prior
+      review; requested=false + latest_review=<recent> -> the latest
+      review has landed; requested=false + latest_review=null -> Copilot
+      was never requested. Use gh-pr-request-copilot-review to request,
+      and `gh-pr-review-comments <pr> <review_id>` with the returned id
+      to fetch inline comments.
+    threat:
+      read: remote
+      write: none
+    guards:
+      - command: [which, jq]
+        fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
+    script: |
+      # Copilot's login varies by API surface: "Copilot" in the
+      # requested_reviewers display vs "copilot-pull-request-reviewer[bot]"
+      # in reviews. Match case-insensitively on the substring "copilot" to
+      # cover both (and any future renames).
+      _REQUESTED=$(gh api "repos/{owner}/{repo}/pulls/${PR}/requested_reviewers" \
+        | jq '[.users[]?.login // empty] | any(. | ascii_downcase | contains("copilot"))')
+      # --paginate + --slurp to catch the latest review on long-running PRs;
+      # gh's --slurp is mutually exclusive with --jq so the projection runs
+      # in a separate jq invocation.
+      _LATEST=$(gh api --paginate --slurp "repos/{owner}/{repo}/pulls/${PR}/reviews" \
+        | jq '[.[] | .[] | select((.user.login // "") | ascii_downcase | contains("copilot"))]
+              | sort_by(.submitted_at) | last
+              | if . == null then null else {id, state, submitted_at, body} end')
+      jq -n --argjson req "$_REQUESTED" --argjson latest "$_LATEST" \
+        '{requested: $req, latest_review: $latest}'
+    arguments:
+      pr:
+        description: PR number
+        required: true
+        pattern: "^[0-9]+$"
+
   gh-pr-review-comments:
     description: >-
       List inline review comments for a single review (by numeric review
@@ -452,12 +494,19 @@ tools:
         pattern: "^[0-9]+$"
 
   gh-run-view:
-    description: View details of a workflow run.
+    description: >-
+      View details of a workflow run. Defaults to the summary view; pass
+      --log-failed to show logs from just the failed jobs/steps (useful
+      for triaging a CI failure without dumping the entire log stream).
     threat:
       read: remote
       write: none
     template:
-      command: [gh, run, view, "{{arguments.run_id}}"]
+      command: [gh, run, view, "{{arguments.run_id}}", "{{switches.failed}}"]
+    switches:
+      failed:
+        description: Show logs from failed jobs/steps instead of the summary
+        flag: --log-failed
     arguments:
       run_id:
         description: Workflow run ID
