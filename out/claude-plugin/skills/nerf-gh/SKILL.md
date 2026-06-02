@@ -105,6 +105,18 @@ List reviews on a pull request, latest first. Each entry includes id (numeric), 
 
 ---
 
+## nerf-gh-pr-copilot-review-status
+
+Report the status of Copilot's review on a PR. Returns JSON with `requested` (true if Copilot is currently in the pending-reviewers list, i.e. a review is in flight) and `latest_review` (the most recent submitted Copilot review with id/state/submitted_at/body, or null if Copilot has never submitted one). The combinations are: requested=true + latest_review=null -> freshly requested, waiting; requested=true + latest_review=<old> -> re-requested after a prior review; requested=false + latest_review=<recent> -> the latest review has landed; requested=false + latest_review=null -> Copilot was never requested. Use gh-pr-request-copilot-review to request, and `gh-pr-review-comments <pr> <review_id>` with the returned id to fetch inline comments.
+
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-gh/scripts/nerf-gh-pr-copilot-review-status <pr>`
+
+**Arguments:**
+
+- `<pr>` (required): PR number. must match `^[0-9]+$`
+
+---
+
 ## nerf-gh-pr-review-comments
 
 List inline review comments for a single review (by numeric review ID). Use gh-pr-reviews to find review IDs. Returns the raw GitHub API response; pipe through jq to project the fields you want.
@@ -165,6 +177,19 @@ Mark a draft pull request as ready for review. Pass --undo to convert a non-draf
 **Switches:**
 
 - `--undo`: Convert the PR back to a draft instead of marking it ready
+
+**Arguments:**
+
+- `<pr>` (required): PR number, URL, or branch name
+
+---
+
+## nerf-gh-pr-request-copilot-review
+
+Request a Copilot review on a pull request. Requires the Copilot code review feature to be enabled on the repo or org (otherwise gh returns an "unprocessable entity" error). The review request appears in the PR's requested reviewers list until Copilot submits, at which point the review shows up via gh-pr-reviews.
+
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-gh/scripts/nerf-gh-pr-request-copilot-review <pr>`
+**Maps to:** `gh pr edit <pr> --add-reviewer copilot-pull-request-reviewer`
 
 **Arguments:**
 
@@ -266,10 +291,14 @@ List recent workflow runs.
 
 ## nerf-gh-run-view
 
-View details of a workflow run.
+View details of a workflow run. Defaults to the summary view; pass --log-failed to show logs from just the failed jobs/steps (useful for triaging a CI failure without dumping the entire log stream).
 
-**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-gh/scripts/nerf-gh-run-view <run_id>`
-**Maps to:** `gh run view <run_id>`
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-gh/scripts/nerf-gh-run-view [--log-failed] <run_id>`
+**Maps to:** `gh run view <run_id> <failed>`
+
+**Switches:**
+
+- `--log-failed`: Show logs from failed jobs/steps instead of the summary
 
 **Arguments:**
 

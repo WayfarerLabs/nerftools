@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# nerf-gh-pr-request-copilot-review -- Request a Copilot review on a pull request. Requires the Copilot code review feature to be enabled on the repo or org (otherwise gh returns an "unprocessable entity" error). The review request appears in the PR's requested reviewers list until Copilot submits, at which point the review shows up via gh-pr-reviews.
+# Generated from gh manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=remote
+
+if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
+  echo "error: nerf-gh-pr-request-copilot-review requires bash 4+. Found bash ${BASH_VERSION:-unknown}" >&2
+  echo "  hint: on macOS, install a newer bash via 'brew install bash'" >&2
+  exit 1
+fi
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-gh-pr-request-copilot-review <pr>
+
+Arguments:
+  <pr> (required)
+      PR number, URL, or branch name
+
+Maps to: gh pr edit <pr> --add-reviewer copilot-pull-request-reviewer
+
+Request a Copilot review on a pull request. Requires the Copilot code review feature to be enabled on the repo or org (otherwise gh returns an "unprocessable entity" error). The review request appears in the PR's requested reviewers list until Copilot submits, at which point the review shows up via gh-pr-reviews.
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+_PR_SET=""
+if [[ $# -gt 0 ]]; then
+  PR="$1"
+  _PR_SET=true
+  shift
+else
+  PR=""
+fi
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-gh-pr-request-copilot-review: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+if [[ -n "${_PR_SET}" ]] && [[ "${PR}" == -* ]]; then
+  echo "error: nerf-gh-pr-request-copilot-review: <pr> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${PR}" ]]; then
+  echo "error: nerf-gh-pr-request-copilot-review: missing required argument <pr>" >&2
+  echo "  hint: provide a value for <pr>" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(gh pr edit "${PR}" --add-reviewer copilot-pull-request-reviewer)
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec gh pr edit "${PR}" --add-reviewer copilot-pull-request-reviewer

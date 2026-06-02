@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# nerf-gh-pr-copilot-review-status -- Report the status of Copilot's review on a PR. Returns JSON with `requested` (true if Copilot is currently in the pending-reviewers list, i.e. a review is in flight) and `latest_review` (the most recent submitted Copilot review with id/state/submitted_at/body, or null if Copilot has never submitted one). The combinations are: requested=true + latest_review=null -> freshly requested, waiting; requested=true + latest_review=<old> -> re-requested after a prior review; requested=false + latest_review=<recent> -> the latest review has landed; requested=false + latest_review=null -> Copilot was never requested. Use gh-pr-request-copilot-review to request, and `gh-pr-review-comments <pr> <review_id>` with the returned id to fetch inline comments.
+# Generated from gh manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=none
+
+if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
+  echo "error: nerf-gh-pr-copilot-review-status requires bash 4+. Found bash ${BASH_VERSION:-unknown}" >&2
+  echo "  hint: on macOS, install a newer bash via 'brew install bash'" >&2
+  exit 1
+fi
+
+set -euo pipefail
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-gh-pr-copilot-review-status <pr>
+
+Arguments:
+  <pr> (required)
+      PR number
+      Must match: ^[0-9]+$
+
+Report the status of Copilot's review on a PR. Returns JSON with `requested` (true if Copilot is currently in the pending-reviewers list, i.e. a review is in flight) and `latest_review` (the most recent submitted Copilot review with id/state/submitted_at/body, or null if Copilot has never submitted one). The combinations are: requested=true + latest_review=null -> freshly requested, waiting; requested=true + latest_review=<old> -> re-requested after a prior review; requested=false + latest_review=<recent> -> the latest review has landed; requested=false + latest_review=null -> Copilot was never requested. Use gh-pr-request-copilot-review to request, and `gh-pr-review-comments <pr> <review_id>` with the returned id to fetch inline comments.
+EOF
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+_PR_SET=""
+if [[ $# -gt 0 ]]; then
+  PR="$1"
+  _PR_SET=true
+  shift
+else
+  PR=""
+fi
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-gh-pr-copilot-review-status: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+if [[ -n "${_PR_SET}" ]] && [[ "${PR}" == -* ]]; then
+  echo "error: nerf-gh-pr-copilot-review-status: <pr> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${PR}" ]]; then
+  echo "error: nerf-gh-pr-copilot-review-status: missing required argument <pr>" >&2
+  echo "  hint: provide a value for <pr>" >&2
+  usage
+fi
+
+_NERF_PATTERN='^[0-9]+$'
+if [[ -n "${_PR_SET}" ]] && ! [[ "${PR}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-gh-pr-copilot-review-status: argument <pr> does not match required pattern" >&2
+  echo "  value:   \"${PR}\"" >&2
+  echo "  pattern: ^[0-9]+$" >&2
+  echo "  hint: value must match ^[0-9]+$" >&2
+  exit 1
+fi
+
+which jq > /dev/null 2>&1 || { echo 'error: nerf-gh-pr-copilot-review-status: jq is required but not installed (e.g. apt-get install jq, brew install jq).' >&2; exit 1; }
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: nerf-gh-pr-copilot-review-status would run inline script"
+  exit 0
+fi
+
+# Copilot's login varies by API surface: "Copilot" in the
+# requested_reviewers display vs "copilot-pull-request-reviewer[bot]"
+# in reviews. Match on both the substring "copilot" (case-insensitive,
+# covers any future renames) AND user.type == "Bot" so a human with
+# "copilot" in their login is never misidentified.
+_REQUESTED=$(gh api "repos/{owner}/{repo}/pulls/${PR}/requested_reviewers" \
+  | jq '(.users // []) | any(.type == "Bot" and ((.login // "") | ascii_downcase | contains("copilot")))')
+# --paginate + --slurp to catch the latest review on long-running PRs;
+# gh's --slurp is mutually exclusive with --jq so the projection runs
+# in a separate jq invocation. Skip PENDING/null-submitted_at entries
+# so an in-progress draft review never poses as "the latest submitted".
+_LATEST=$(gh api --paginate --slurp "repos/{owner}/{repo}/pulls/${PR}/reviews" \
+  | jq '[.[] | .[]
+         | select((.user.type // "") == "Bot")
+         | select((.user.login // "") | ascii_downcase | contains("copilot"))
+         | select(.submitted_at != null and .state != "PENDING")]
+        | sort_by(.submitted_at) | last
+        | if . == null then null else {id, state, submitted_at, body} end')
+jq -n --argjson req "$_REQUESTED" --argjson latest "$_LATEST" \
+  '{requested: $req, latest_review: $latest}'
