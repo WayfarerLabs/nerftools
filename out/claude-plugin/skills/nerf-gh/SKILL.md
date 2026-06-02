@@ -172,6 +172,19 @@ Mark a draft pull request as ready for review. Pass --undo to convert a non-draf
 
 ---
 
+## nerf-gh-pr-request-copilot-review
+
+Request a Copilot review on a pull request. Requires the Copilot code review feature to be enabled on the repo or org (otherwise gh returns an "unprocessable entity" error). The review request appears in the PR's requested reviewers list until Copilot submits, at which point the review shows up via gh-pr-reviews.
+
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-gh/scripts/nerf-gh-pr-request-copilot-review <pr>`
+**Maps to:** `gh pr edit <pr> --add-reviewer copilot-pull-request-reviewer`
+
+**Arguments:**
+
+- `<pr>` (required): PR number, URL, or branch name
+
+---
+
 ## nerf-gh-pr-thread-comment
 
 Add a top-level conversation comment to a pull request (the issue-style comments shown in the main PR thread). For inline review comments, see gh-pr-review-comments (one review) or gh-pr-inline-comments (across all reviews).
