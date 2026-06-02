@@ -1,5 +1,46 @@
 # Changelog
 
+## [2.1.0](https://github.com/WayfarerLabs/nerftools/compare/v2.0.0...v2.1.0) (2026-06-02)
+
+
+### Features
+
+* add gh-pr-ready and az-repos-pr-edit --draft ([8175732](https://github.com/WayfarerLabs/nerftools/commit/817573274f6032f2605792c00f91d79aad43bdda))
+* add gh-pr-ready and az-repos-pr-edit --draft for draft&lt;-&gt;ready transitions ([b70c334](https://github.com/WayfarerLabs/nerftools/commit/b70c334e51132dff5041997b927311a99c0e398f))
+* add nerf-report skill for structured agent feedback ([3dd9b68](https://github.com/WayfarerLabs/nerftools/commit/3dd9b682d7fa0978b324940d43136d976af5d722))
+* add nerf-report skill for structured agent feedback to maintainer ([da00790](https://github.com/WayfarerLabs/nerftools/commit/da00790da206935f585121dc6b0038122030e449))
+* **az:** add -C &lt;directory&gt; for project resolution across 24 azdo tools ([9bc5885](https://github.com/WayfarerLabs/nerftools/commit/9bc5885883c824183edb0caee923beb4a4847393))
+* **az:** add -C &lt;directory&gt; for project resolution across azdo tools ([b99d12f](https://github.com/WayfarerLabs/nerftools/commit/b99d12f0f506b4ca38c71719b4321f7f9a402a93))
+* **gh:** add gh-pr-copilot-review-status; add --log-failed switch to gh-run-view ([e23ecf3](https://github.com/WayfarerLabs/nerftools/commit/e23ecf36dd93aa1c3e2ca3c1828aa30ed7f96277))
+* **gh:** add gh-pr-request-copilot-review for requesting Copilot reviews via gh CLI ([31534c1](https://github.com/WayfarerLabs/nerftools/commit/31534c11367f1292f91b8ef88b5a7342e8155931))
+* **gh:** Copilot review tooling + --log-failed for gh-run-view ([67b1b6c](https://github.com/WayfarerLabs/nerftools/commit/67b1b6c35a294a4a16d1b77f041052212ab21655))
+* surface nerf-report in skill footers/overview and bypass hook ([4513904](https://github.com/WayfarerLabs/nerftools/commit/45139041fe49ca736dabd1df0c640e8377be93df))
+* **tf,tg:** add validate tools, --diff for hcl fmt, fix -all flag parsing ([86b56b4](https://github.com/WayfarerLabs/nerftools/commit/86b56b45a7dbc6f8108d583aac122e3494140e4f))
+* **tg:** add tf-validate, tg-hcl-validate, --diff for tg-fmt ([fe1dc99](https://github.com/WayfarerLabs/nerftools/commit/fe1dc993d49ac9c0322adc72e7bd74926af009d9))
+
+
+### Bug Fixes
+
+* **az:** apply sentinel-gate contract to script-mode argv forwarders ([6700150](https://github.com/WayfarerLabs/nerftools/commit/6700150d314471b3bba1234194bd80814e88b99c))
+* **az:** gate -C pre-hooks on presence sentinels, not value strings ([f9315e2](https://github.com/WayfarerLabs/nerftools/commit/f9315e21c1f3eeb5b3c8b51fdc6244e42ddedd1f))
+* **az:** move -C resolution from script body into pre so dry-run validates it ([5f0ecdd](https://github.com/WayfarerLabs/nerftools/commit/5f0ecddc3599f871a42e5244176b3c964cc6a3d3))
+* **az:** set _PROJECT_SET after -C detection in script-mode tools ([378e43d](https://github.com/WayfarerLabs/nerftools/commit/378e43dd16c35cdea632bc06668305df7a14d8b7))
+* **generate:** gate marker write on managed-ness; reject marker symlinks; drop .git check ([bdee657](https://github.com/WayfarerLabs/nerftools/commit/bdee6576e07e53ed417376c49ca0156084947a25))
+* **generate:** per-target outdir default + refuse-to-clobber guard ([33d71d4](https://github.com/WayfarerLabs/nerftools/commit/33d71d45482dd8fe4a7d9d71768f0f84c584b127))
+* **generate:** per-target outdir default, refuse-to-clobber guard, --force escape hatch ([f49b483](https://github.com/WayfarerLabs/nerftools/commit/f49b483a2471d3cf11f5650974a77326994dd50e))
+* **generate:** restore .git guard, propagate --keep-existing to plugins, two-pass symlink check ([ae5442e](https://github.com/WayfarerLabs/nerftools/commit/ae5442ecd4842f11a7c9f92a50a8b7a1b392999e))
+* **gh:** narrow copilot-review-status filters to bot + submitted-only ([3a32998](https://github.com/WayfarerLabs/nerftools/commit/3a3299805f43bea149ec31c9c6ca35d6653f349b))
+* **nerf-report:** drop random suffix and append on filename collision; fail fast on chmod ([f86ecc7](https://github.com/WayfarerLabs/nerftools/commit/f86ecc70aae5934043f91c906f10190850640499))
+* **nerf-report:** validate version against safe charset, restrict report perms to user-only ([b887e4d](https://github.com/WayfarerLabs/nerftools/commit/b887e4d44ea957b852c090bae578a9e3c5b7772f))
+* **nerf-report:** validate version placeholder, guard unset HOME, escape control chars ([a5b9f61](https://github.com/WayfarerLabs/nerftools/commit/a5b9f6146c18d4273701a05d5e9aa6d1163b562f))
+
+
+### Documentation
+
+* **az-repos:** mention draft-state edit in skill_intro ([95116e8](https://github.com/WayfarerLabs/nerftools/commit/95116e8e23902c260b7d787cf7f5f10a51c30862))
+* fix cspell error (regen -&gt; regeneration) ([ba5ed57](https://github.com/WayfarerLabs/nerftools/commit/ba5ed579579809d47160d9411474a8e97ccced02))
+* **nerf-report:** broaden bypass wording -- not only guards trigger bypass ([ee2c942](https://github.com/WayfarerLabs/nerftools/commit/ee2c94259b3d5209dc00070ad9f8eb7ce357c416))
+
 ## [2.0.0](https://github.com/WayfarerLabs/nerftools/compare/v1.4.0...v2.0.0) (2026-05-23)
 
 
