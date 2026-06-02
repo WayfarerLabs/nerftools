@@ -1,519 +1,535 @@
 version: 1
 
 package:
-  name: gh
-  description: GitHub CLI tools for pull requests, issues, and workflow runs
-  skill_group: gh
-  skill_intro: |
-    These tools wrap the GitHub CLI (gh) for safe interaction with pull
-    requests, issues, and workflow runs. The repository is auto-detected
-    from the current git remote.
+    name: gh
+    description: GitHub CLI tools for pull requests, issues, and workflow runs
+    skill_group: gh
+    skill_intro: |
+        These tools wrap the GitHub CLI (gh) for safe interaction with pull
+        requests, issues, and workflow runs. The repository is auto-detected
+        from the current git remote.
 
-    A pull request has four distinct comment surfaces, each with its own
-    tool:
-    - "thread comments" -- top-level conversation in the main PR view.
-      Read via gh-pr-thread-comments, written via gh-pr-thread-comment.
-    - "reviews" -- the high-level Approved / Changes requested /
-      Commented wrappers, each with a body summary. List the latest
-      via gh-pr-reviews.
-    - "review comments" -- inline comments scoped to one review. Fetch
-      with gh-pr-review-comments using a review id from gh-pr-reviews.
-    - "inline comments" -- all inline review comments across every
-      review on the PR. Use gh-pr-inline-comments when you want a
-      flat list of all line-level comments without iterating reviews.
+        A pull request has four distinct comment surfaces, each with its own
+        tool:
+        - "thread comments" -- top-level conversation in the main PR view.
+          Read via gh-pr-thread-comments, written via gh-pr-thread-comment.
+        - "reviews" -- the high-level Approved / Changes requested /
+          Commented wrappers, each with a body summary. List the latest
+          via gh-pr-reviews.
+        - "review comments" -- inline comments scoped to one review. Fetch
+          with gh-pr-review-comments using a review id from gh-pr-reviews.
+        - "inline comments" -- all inline review comments across every
+          review on the PR. Use gh-pr-inline-comments when you want a
+          flat list of all line-level comments without iterating reviews.
 
-    Note: inline-comment thread resolution state (resolved /
-    unresolved, set via the "Resolve conversation" button in the UI)
-    is a GraphQL-only field on the GitHub API and is not exposed by
-    this manifest. Use the GitHub UI to verify resolution state.
-  bash_hints:
-    - '\bgh\b'
+        Note: inline-comment thread resolution state (resolved /
+        unresolved, set via the "Resolve conversation" button in the UI)
+        is a GraphQL-only field on the GitHub API and is not exposed by
+        this manifest. Use the GitHub UI to verify resolution state.
+    bash_hints:
+        - '\bgh\b'
 
 tools:
-  gh-pr-list:
-    description: List open pull requests in the current repository.
-    threat:
-      read: remote
-      write: none
-    template:
-      command:
-        - gh
-        - pr
-        - list
-        - "{{switches.web}}"
-        - "{{options.state}}"
-        - "{{options.author}}"
-        - "{{options.base}}"
-        - "{{options.limit}}"
-    switches:
-      web:
-        description: Open the list in the browser
-        flag: --web
-        short: -w
-    options:
-      state:
-        description: "Filter by state (default: open)"
-        flag: --state
-        short: -s
-        allow: [open, closed, merged, all]
-      author:
-        description: Filter by author (GitHub username or @me)
-        flag: --author
-      base:
-        description: Filter by base branch
-        flag: --base
-        short: -B
-      limit:
-        description: Maximum number of PRs to list (default 30)
-        flag: --limit
-        short: -L
-        pattern: "^[0-9]+$"
+    gh-pr-list:
+        description: List open pull requests in the current repository.
+        threat:
+            read: remote
+            write: none
+        template:
+            command:
+                - gh
+                - pr
+                - list
+                - "{{switches.web}}"
+                - "{{options.state}}"
+                - "{{options.author}}"
+                - "{{options.base}}"
+                - "{{options.limit}}"
+        switches:
+            web:
+                description: Open the list in the browser
+                flag: --web
+                short: -w
+        options:
+            state:
+                description: "Filter by state (default: open)"
+                flag: --state
+                short: -s
+                allow: [open, closed, merged, all]
+            author:
+                description: Filter by author (GitHub username or @me)
+                flag: --author
+            base:
+                description: Filter by base branch
+                flag: --base
+                short: -B
+            limit:
+                description: Maximum number of PRs to list (default 30)
+                flag: --limit
+                short: -L
+                pattern: "^[0-9]+$"
 
-  gh-pr-view:
-    description: >-
-      View full details of a pull request as JSON, including metadata,
-      comments, reviews, and file list.
-    threat:
-      read: remote
-      write: none
-    template:
-      command:
-        - gh
-        - pr
-        - view
-        - "{{arguments.pr}}"
-        - --json
-        - title,body,state,author,baseRefName,headRefName,comments,reviews,reviewDecision,labels,isDraft,additions,deletions,files,mergedAt,mergedBy
-    arguments:
-      pr:
-        description: PR number, URL, or branch name
-        required: true
+    gh-pr-view:
+        description: >-
+            View full details of a pull request as JSON, including metadata,
+            comments, reviews, and file list.
+        threat:
+            read: remote
+            write: none
+        template:
+            command:
+                - gh
+                - pr
+                - view
+                - "{{arguments.pr}}"
+                - --json
+                - title,body,state,author,baseRefName,headRefName,comments,reviews,reviewDecision,labels,isDraft,additions,deletions,files,mergedAt,mergedBy
+        arguments:
+            pr:
+                description: PR number, URL, or branch name
+                required: true
 
-  gh-pr-diff:
-    description: Show the diff for a pull request.
-    threat:
-      read: remote
-      write: none
-    template:
-      command: [gh, pr, diff, "{{arguments.pr}}"]
-    arguments:
-      pr:
-        description: PR number, URL, or branch name
-        required: true
+    gh-pr-diff:
+        description: Show the diff for a pull request.
+        threat:
+            read: remote
+            write: none
+        template:
+            command: [gh, pr, diff, "{{arguments.pr}}"]
+        arguments:
+            pr:
+                description: PR number, URL, or branch name
+                required: true
 
-  gh-pr-thread-comments:
-    description: >-
-      List top-level conversation comments on a pull request (the
-      issue-style comments shown in the main PR thread, NOT inline
-      review comments). Returns the raw GitHub API response; pipe
-      through jq to project the fields you want.
-    threat:
-      read: remote
-      write: none
-    template:
-      command:
-        - gh
-        - api
-        - --paginate
-        - --slurp
-        - "repos/{owner}/{repo}/issues/{{arguments.pr}}/comments"
-    arguments:
-      pr:
-        description: PR number
-        required: true
-        pattern: "^[0-9]+$"
+    gh-pr-thread-comments:
+        description: >-
+            List top-level conversation comments on a pull request (the
+            issue-style comments shown in the main PR thread, NOT inline
+            review comments). Returns the raw GitHub API response; pipe
+            through jq to project the fields you want.
+        threat:
+            read: remote
+            write: none
+        template:
+            command:
+                - gh
+                - api
+                - --paginate
+                - --slurp
+                - "repos/{owner}/{repo}/issues/{{arguments.pr}}/comments"
+        arguments:
+            pr:
+                description: PR number
+                required: true
+                pattern: "^[0-9]+$"
 
-  gh-pr-reviews:
-    description: >-
-      List reviews on a pull request, latest first. Each entry includes
-      id (numeric), author, state, commit (short SHA), submitted_at,
-      and body (the reviewer's summary text). Pass an entry's id to
-      gh-pr-review-comments to fetch the inline comments for that
-      specific review.
-    threat:
-      read: remote
-      write: none
-    guards:
-      - command: [which, jq]
-        fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
-    script: |
-      LIMIT=${LIMIT:-10}
-      # --paginate fetches all pages; --slurp collapses them into an array
-      # of per-page arrays so a single jq pass operates over the whole result
-      # set rather than per page (which would only sort within each page).
-      # Without these, the latest reviews would be silently missing on PRs
-      # with >30 reviews because the GitHub API returns them oldest first.
-      # gh's --slurp is mutually exclusive with --jq, so we pipe to a
-      # separate jq invocation and flatten the per-page arrays.
-      gh api --paginate --slurp "repos/{owner}/{repo}/pulls/${PR}/reviews" \
-        | jq "flatten | sort_by(.submitted_at) | reverse | .[:${LIMIT}] | map({id, author: .user.login, state, commit: .commit_id[0:7], submitted_at, body})"
-    arguments:
-      pr:
-        description: PR number
-        required: true
-        pattern: "^[0-9]+$"
-    options:
-      limit:
-        description: Maximum number of reviews to return (default 10, latest first)
-        flag: --limit
-        short: -L
-        pattern: "^[1-9][0-9]*$"
+    gh-pr-reviews:
+        description: >-
+            List reviews on a pull request, latest first. Each entry includes
+            id (numeric), author, state, commit (short SHA), submitted_at,
+            and body (the reviewer's summary text). Pass an entry's id to
+            gh-pr-review-comments to fetch the inline comments for that
+            specific review.
+        threat:
+            read: remote
+            write: none
+        guards:
+            - command: [which, jq]
+              fail_message: "jq is required but not installed (e.g. apt-get install jq, brew install jq)."
+        script: |
+            LIMIT=${LIMIT:-10}
+            # --paginate fetches all pages; --slurp collapses them into an array
+            # of per-page arrays so a single jq pass operates over the whole result
+            # set rather than per page (which would only sort within each page).
+            # Without these, the latest reviews would be silently missing on PRs
+            # with >30 reviews because the GitHub API returns them oldest first.
+            # gh's --slurp is mutually exclusive with --jq, so we pipe to a
+            # separate jq invocation and flatten the per-page arrays.
+            gh api --paginate --slurp "repos/{owner}/{repo}/pulls/${PR}/reviews" \
+              | jq "flatten | sort_by(.submitted_at) | reverse | .[:${LIMIT}] | map({id, author: .user.login, state, commit: .commit_id[0:7], submitted_at, body})"
+        arguments:
+            pr:
+                description: PR number
+                required: true
+                pattern: "^[0-9]+$"
+        options:
+            limit:
+                description: Maximum number of reviews to return (default 10, latest first)
+                flag: --limit
+                short: -L
+                pattern: "^[1-9][0-9]*$"
 
-  gh-pr-copilot-review-status:
-    description: >-
-      Report the status of Copilot's review on a PR. Returns JSON with
-      `requested` (true if Copilot is currently in the pending-reviewers
-      list, i.e. a review is in flight) and `latest_review` (the most
-      recent submitted Copilot review with id/state/submitted_at/body, or
-      null if Copilot has never submitted one). The combinations are:
-      requested=true + latest_review=null -> freshly requested, waiting;
-      requested=true + latest_review=<old> -> re-requested after a prior
-      review; requested=false + latest_review=<recent> -> the latest
-      review has landed; requested=false + latest_review=null -> Copilot
-      was never requested. Use gh-pr-request-copilot-review to request,
-      and `gh-pr-review-comments <pr> <review_id>` with the returned id
-      to fetch inline comments.
-    threat:
-      read: remote
-      write: none
-    guards:
-      - command: [which, jq]
-        fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
-    script: |
-      # Copilot's login varies by API surface: "Copilot" in the
-      # requested_reviewers display vs "copilot-pull-request-reviewer[bot]"
-      # in reviews. Match on both the substring "copilot" (case-insensitive,
-      # covers any future renames) AND user.type == "Bot" so a human with
-      # "copilot" in their login is never misidentified.
-      _REQUESTED=$(gh api "repos/{owner}/{repo}/pulls/${PR}/requested_reviewers" \
-        | jq '(.users // []) | any(.type == "Bot" and ((.login // "") | ascii_downcase | contains("copilot")))')
-      # --paginate + --slurp to catch the latest review on long-running PRs;
-      # gh's --slurp is mutually exclusive with --jq so the projection runs
-      # in a separate jq invocation. Skip PENDING/null-submitted_at entries
-      # so an in-progress draft review never poses as "the latest submitted".
-      _LATEST=$(gh api --paginate --slurp "repos/{owner}/{repo}/pulls/${PR}/reviews" \
-        | jq '[.[] | .[]
-               | select((.user.type // "") == "Bot")
-               | select((.user.login // "") | ascii_downcase | contains("copilot"))
-               | select(.submitted_at != null and .state != "PENDING")]
-              | sort_by(.submitted_at) | last
-              | if . == null then null else {id, state, submitted_at, body} end')
-      jq -n --argjson req "$_REQUESTED" --argjson latest "$_LATEST" \
-        '{requested: $req, latest_review: $latest}'
-    arguments:
-      pr:
-        description: PR number
-        required: true
-        pattern: "^[0-9]+$"
+    gh-pr-copilot-review-status:
+        description: >-
+            Report the status of Copilot's review on a PR. Returns JSON with
+            `requested` (true if Copilot is currently in the pending-reviewers
+            list, i.e. a review is in flight) and `latest_review` (the most
+            recent submitted Copilot review with id/state/submitted_at/body, or
+            null if Copilot has never submitted one). The combinations are:
+            requested=true + latest_review=null -> freshly requested, waiting;
+            requested=true + latest_review=<old> -> re-requested after a prior
+            review; requested=false + latest_review=<recent> -> the latest
+            review has landed; requested=false + latest_review=null -> Copilot
+            was never requested. Use gh-pr-request-copilot-review to request,
+            and `gh-pr-review-comments <pr> <review_id>` with the returned id
+            to fetch inline comments.
+        threat:
+            read: remote
+            write: none
+        guards:
+            - command: [which, jq]
+              fail_message: "jq is required but not installed (e.g. apt-get install jq, brew install jq)."
+        script: |
+            # Copilot's login varies by API surface: "Copilot" in the
+            # requested_reviewers display vs "copilot-pull-request-reviewer[bot]"
+            # in reviews. Match on both the substring "copilot" (case-insensitive,
+            # covers any future renames) AND user.type == "Bot" so a human with
+            # "copilot" in their login is never misidentified.
+            _REQUESTED=$(gh api "repos/{owner}/{repo}/pulls/${PR}/requested_reviewers" \
+              | jq '(.users // []) | any(.type == "Bot" and ((.login // "") | ascii_downcase | contains("copilot")))')
+            # --paginate + --slurp to catch the latest review on long-running PRs;
+            # gh's --slurp is mutually exclusive with --jq so the projection runs
+            # in a separate jq invocation. Skip PENDING/null-submitted_at entries
+            # so an in-progress draft review never poses as "the latest submitted".
+            _LATEST=$(gh api --paginate --slurp "repos/{owner}/{repo}/pulls/${PR}/reviews" \
+              | jq '[.[] | .[]
+                     | select((.user.type // "") == "Bot")
+                     | select((.user.login // "") | ascii_downcase | contains("copilot"))
+                     | select(.submitted_at != null and .state != "PENDING")]
+                    | sort_by(.submitted_at) | last
+                    | if . == null then null else {id, state, submitted_at, body} end')
+            jq -n --argjson req "$_REQUESTED" --argjson latest "$_LATEST" \
+              '{requested: $req, latest_review: $latest}'
+        arguments:
+            pr:
+                description: PR number
+                required: true
+                pattern: "^[0-9]+$"
 
-  gh-pr-review-comments:
-    description: >-
-      List inline review comments for a single review (by numeric review
-      ID). Use gh-pr-reviews to find review IDs. Returns the raw GitHub
-      API response; pipe through jq to project the fields you want.
-    threat:
-      read: remote
-      write: none
-    template:
-      command:
-        - gh
-        - api
-        - --paginate
-        - --slurp
-        - "repos/{owner}/{repo}/pulls/{{arguments.pr}}/reviews/{{arguments.review_id}}/comments"
-    arguments:
-      pr:
-        description: PR number
-        required: true
-        pattern: "^[0-9]+$"
-      review_id:
-        description: Numeric review ID (from gh-pr-reviews)
-        required: true
-        pattern: "^[0-9]+$"
+    gh-pr-review-comments:
+        description: >-
+            List inline review comments for a single review (by numeric review
+            ID). Use gh-pr-reviews to find review IDs. Returns the raw GitHub
+            API response; pipe through jq to project the fields you want.
+        threat:
+            read: remote
+            write: none
+        template:
+            command:
+                - gh
+                - api
+                - --paginate
+                - --slurp
+                - "repos/{owner}/{repo}/pulls/{{arguments.pr}}/reviews/{{arguments.review_id}}/comments"
+        arguments:
+            pr:
+                description: PR number
+                required: true
+                pattern: "^[0-9]+$"
+            review_id:
+                description: Numeric review ID (from gh-pr-reviews)
+                required: true
+                pattern: "^[0-9]+$"
 
-  gh-pr-inline-comments:
-    description: >-
-      List ALL inline review comments on a pull request, across all
-      reviews. Each comment is tied to a specific line of code. Use
-      gh-pr-review-comments instead when you have a specific review ID
-      and only want that review's comments. Returns the raw GitHub API
-      response; pipe through jq to project the fields you want.
-    threat:
-      read: remote
-      write: none
-    template:
-      command:
-        - gh
-        - api
-        - --paginate
-        - --slurp
-        - "repos/{owner}/{repo}/pulls/{{arguments.pr}}/comments"
-    arguments:
-      pr:
-        description: PR number
-        required: true
-        pattern: "^[0-9]+$"
+    gh-pr-inline-comments:
+        description: >-
+            List ALL inline review comments on a pull request, across all
+            reviews. Each comment is tied to a specific line of code. Use
+            gh-pr-review-comments instead when you have a specific review ID
+            and only want that review's comments. Returns the raw GitHub API
+            response; pipe through jq to project the fields you want.
+        threat:
+            read: remote
+            write: none
+        template:
+            command:
+                - gh
+                - api
+                - --paginate
+                - --slurp
+                - "repos/{owner}/{repo}/pulls/{{arguments.pr}}/comments"
+        arguments:
+            pr:
+                description: PR number
+                required: true
+                pattern: "^[0-9]+$"
 
-  gh-pr-create:
-    description: >-
-      Create a pull request from the current branch. Pushes the branch if
-      needed.
-    threat:
-      read: remote
-      write: remote
-    template:
-      command:
-        - gh
-        - pr
-        - create
-        - "{{switches.draft}}"
-        - --title
-        - "{{arguments.title}}"
-        - "{{options.body}}"
-        - "{{options.base}}"
-        - "{{options.reviewer}}"
-    switches:
-      draft:
-        description: Create as a draft PR
-        flag: --draft
-        short: -d
-    arguments:
-      title:
-        description: PR title
-        required: true
-    options:
-      body:
-        description: PR body/description
-        flag: --body
-        short: -b
-      base:
-        description: Base branch (default is the repo default branch)
-        flag: --base
-        short: -B
-      reviewer:
-        description: Request review from this user
-        flag: --reviewer
-        short: -r
+    gh-pr-create:
+        description: >-
+            Create a pull request from the current branch. Pushes the branch if
+            needed.
+        threat:
+            read: remote
+            write: remote
+        template:
+            command:
+                - gh
+                - pr
+                - create
+                - "{{switches.draft}}"
+                - --title
+                - "{{arguments.title}}"
+                - "{{options.body}}"
+                - "{{options.base}}"
+                - "{{options.reviewer}}"
+        switches:
+            draft:
+                description: Create as a draft PR
+                flag: --draft
+                short: -d
+        arguments:
+            title:
+                description: PR title
+                required: true
+        options:
+            body:
+                description: PR body/description
+                flag: --body
+                short: -b
+            base:
+                description: Base branch (default is the repo default branch)
+                flag: --base
+                short: -B
+            reviewer:
+                description: Request review from this user
+                flag: --reviewer
+                short: -r
 
-  gh-pr-ready:
-    description: >-
-      Mark a draft pull request as ready for review. Pass --undo to
-      convert a non-draft PR back to a draft. Does nothing (and reports
-      success) if the PR is already in the requested state.
-    threat:
-      read: remote
-      write: remote
-    template:
-      command:
-        - gh
-        - pr
-        - ready
-        - "{{arguments.pr}}"
-        - "{{switches.undo}}"
-    switches:
-      undo:
-        description: Convert the PR back to a draft instead of marking it ready
-        flag: --undo
-    arguments:
-      pr:
-        description: PR number, URL, or branch name
-        required: true
+    gh-pr-ready:
+        description: >-
+            Mark a draft pull request as ready for review. Pass --undo to
+            convert a non-draft PR back to a draft. Does nothing (and reports
+            success) if the PR is already in the requested state.
+        threat:
+            read: remote
+            write: remote
+        template:
+            command:
+                - gh
+                - pr
+                - ready
+                - "{{arguments.pr}}"
+                - "{{switches.undo}}"
+        switches:
+            undo:
+                description: Convert the PR back to a draft instead of marking it ready
+                flag: --undo
+        arguments:
+            pr:
+                description: PR number, URL, or branch name
+                required: true
 
-  gh-pr-request-copilot-review:
-    description: >-
-      Request a Copilot review on a pull request. Requires the
-      Copilot code review feature to be enabled on the repo or org
-      (otherwise gh returns an "unprocessable entity" error). The
-      review request appears in the PR's requested reviewers list
-      until Copilot submits, at which point the review shows up via
-      gh-pr-reviews.
-    threat:
-      read: remote
-      write: remote
-    template:
-      command:
-        - gh
-        - pr
-        - edit
-        - "{{arguments.pr}}"
-        - --add-reviewer
-        - copilot-pull-request-reviewer
-    arguments:
-      pr:
-        description: PR number, URL, or branch name
-        required: true
+    gh-pr-request-copilot-review:
+        description: >-
+            Request a Copilot review on a pull request. Requires the
+            Copilot code review feature to be enabled on the repo or org
+            (otherwise gh returns an "unprocessable entity" error). The
+            review request appears in the PR's requested reviewers list
+            until Copilot submits, at which point the review shows up via
+            gh-pr-reviews.
+        threat:
+            read: remote
+            write: remote
+        template:
+            command:
+                - gh
+                - pr
+                - edit
+                - "{{arguments.pr}}"
+                - --add-reviewer
+                - copilot-pull-request-reviewer
+        arguments:
+            pr:
+                description: PR number, URL, or branch name
+                required: true
 
-  gh-pr-thread-comment:
-    description: >-
-      Add a top-level conversation comment to a pull request (the
-      issue-style comments shown in the main PR thread). For inline
-      review comments, see gh-pr-review-comments (one review) or
-      gh-pr-inline-comments (across all reviews).
-    threat:
-      read: remote
-      write: remote
-    template:
-      command: [gh, pr, comment, "{{arguments.pr}}", --body, "{{arguments.body}}"]
-    arguments:
-      pr:
-        description: PR number, URL, or branch name
-        required: true
-      body:
-        description: Comment text
-        required: true
+    gh-pr-thread-comment:
+        description: >-
+            Add a top-level conversation comment to a pull request (the
+            issue-style comments shown in the main PR thread). For inline
+            review comments, see gh-pr-review-comments (one review) or
+            gh-pr-inline-comments (across all reviews).
+        threat:
+            read: remote
+            write: remote
+        template:
+            command: [gh, pr, comment, "{{arguments.pr}}", --body, "{{arguments.body}}"]
+        arguments:
+            pr:
+                description: PR number, URL, or branch name
+                required: true
+            body:
+                description: Comment text
+                required: true
 
-  gh-issue-list:
-    description: List open issues in the current repository.
-    threat:
-      read: remote
-      write: none
-    template:
-      command:
-        - gh
-        - issue
-        - list
-        - "{{options.state}}"
-        - "{{options.assignee}}"
-        - "{{options.label}}"
-        - "{{options.limit}}"
-    options:
-      state:
-        description: "Filter by state (default: open)"
-        flag: --state
-        short: -s
-        allow: [open, closed, all]
-      assignee:
-        description: Filter by assignee (GitHub username or @me)
-        flag: --assignee
-        short: -a
-      label:
-        description: Filter by label
-        flag: --label
-        short: -l
-      limit:
-        description: Maximum number of issues to list (default 30)
-        flag: --limit
-        short: -L
-        pattern: "^[0-9]+$"
+    gh-issue-list:
+        description: List open issues in the current repository.
+        threat:
+            read: remote
+            write: none
+        template:
+            command:
+                - gh
+                - issue
+                - list
+                - "{{options.state}}"
+                - "{{options.assignee}}"
+                - "{{options.label}}"
+                - "{{options.limit}}"
+        options:
+            state:
+                description: "Filter by state (default: open)"
+                flag: --state
+                short: -s
+                allow: [open, closed, all]
+            assignee:
+                description: Filter by assignee (GitHub username or @me)
+                flag: --assignee
+                short: -a
+            label:
+                description: Filter by label
+                flag: --label
+                short: -l
+            limit:
+                description: Maximum number of issues to list (default 30)
+                flag: --limit
+                short: -L
+                pattern: "^[0-9]+$"
 
-  gh-issue-view:
-    description: >-
-      View full details of an issue as JSON, including metadata, comments,
-      and labels.
-    threat:
-      read: remote
-      write: none
-    template:
-      command:
-        - gh
-        - issue
-        - view
-        - "{{arguments.issue}}"
-        - --json
-        - title,body,state,author,comments,labels,assignees,milestone,createdAt,updatedAt,closedAt
-    arguments:
-      issue:
-        description: Issue number or URL
-        required: true
+    gh-issue-view:
+        description: >-
+            View full details of an issue as JSON, including metadata, comments,
+            and labels.
+        threat:
+            read: remote
+            write: none
+        template:
+            command:
+                - gh
+                - issue
+                - view
+                - "{{arguments.issue}}"
+                - --json
+                - title,body,state,author,comments,labels,assignees,milestone,createdAt,updatedAt,closedAt
+        arguments:
+            issue:
+                description: Issue number or URL
+                required: true
 
-  gh-issue-create:
-    description: Create a new issue.
-    threat:
-      read: remote
-      write: remote
-    template:
-      command:
-        - gh
-        - issue
-        - create
-        - --title
-        - "{{arguments.title}}"
-        - "{{options.body}}"
-        - "{{options.label}}"
-        - "{{options.assignee}}"
-    arguments:
-      title:
-        description: Issue title
-        required: true
-    options:
-      body:
-        description: Issue body/description
-        flag: --body
-        short: -b
-      label:
-        description: Label to add
-        flag: --label
-        short: -l
-      assignee:
-        description: User to assign
-        flag: --assignee
-        short: -a
+    gh-issue-create:
+        description: Create a new issue.
+        threat:
+            read: remote
+            write: remote
+        template:
+            command:
+                - gh
+                - issue
+                - create
+                - --title
+                - "{{arguments.title}}"
+                - "{{options.body}}"
+                - "{{options.label}}"
+                - "{{options.assignee}}"
+        arguments:
+            title:
+                description: Issue title
+                required: true
+        options:
+            body:
+                description: Issue body/description
+                flag: --body
+                short: -b
+            label:
+                description: Label to add
+                flag: --label
+                short: -l
+            assignee:
+                description: User to assign
+                flag: --assignee
+                short: -a
 
-  gh-issue-comment:
-    description: Add a comment to an issue.
-    threat:
-      read: remote
-      write: remote
-    template:
-      command: [gh, issue, comment, "{{arguments.issue}}", --body, "{{arguments.body}}"]
-    arguments:
-      issue:
-        description: Issue number or URL
-        required: true
-      body:
-        description: Comment text
-        required: true
+    gh-issue-comment:
+        description: Add a comment to an issue.
+        threat:
+            read: remote
+            write: remote
+        template:
+            command: [gh, issue, comment, "{{arguments.issue}}", --body, "{{arguments.body}}"]
+        arguments:
+            issue:
+                description: Issue number or URL
+                required: true
+            body:
+                description: Comment text
+                required: true
 
-  gh-run-list:
-    description: List recent workflow runs.
-    threat:
-      read: remote
-      write: none
-    template:
-      command:
-        - gh
-        - run
-        - list
-        - "{{options.workflow}}"
-        - "{{options.branch}}"
-        - "{{options.status}}"
-        - "{{options.limit}}"
-    options:
-      workflow:
-        description: Filter by workflow name or filename
-        flag: --workflow
-        short: -w
-      branch:
-        description: Filter by branch
-        flag: --branch
-        short: -b
-      status:
-        description: Filter by status
-        flag: --status
-        short: -s
-        allow: [queued, in_progress, completed, waiting, requested, action_required, cancelled, failure, neutral, skipped, stale, startup_failure, success, timed_out]
-      limit:
-        description: Maximum number of runs to list (default 20)
-        flag: --limit
-        short: -L
-        pattern: "^[0-9]+$"
+    gh-run-list:
+        description: List recent workflow runs.
+        threat:
+            read: remote
+            write: none
+        template:
+            command:
+                - gh
+                - run
+                - list
+                - "{{options.workflow}}"
+                - "{{options.branch}}"
+                - "{{options.status}}"
+                - "{{options.limit}}"
+        options:
+            workflow:
+                description: Filter by workflow name or filename
+                flag: --workflow
+                short: -w
+            branch:
+                description: Filter by branch
+                flag: --branch
+                short: -b
+            status:
+                description: Filter by status
+                flag: --status
+                short: -s
+                allow:
+                    [
+                        queued,
+                        in_progress,
+                        completed,
+                        waiting,
+                        requested,
+                        action_required,
+                        cancelled,
+                        failure,
+                        neutral,
+                        skipped,
+                        stale,
+                        startup_failure,
+                        success,
+                        timed_out,
+                    ]
+            limit:
+                description: Maximum number of runs to list (default 20)
+                flag: --limit
+                short: -L
+                pattern: "^[0-9]+$"
 
-  gh-run-view:
-    description: >-
-      View details of a workflow run. Defaults to the summary view; pass
-      --log-failed to show logs from just the failed jobs/steps (useful
-      for triaging a CI failure without dumping the entire log stream).
-    threat:
-      read: remote
-      write: none
-    template:
-      command: [gh, run, view, "{{arguments.run_id}}", "{{switches.failed}}"]
-    switches:
-      failed:
-        description: Show logs from failed jobs/steps instead of the summary
-        flag: --log-failed
-    arguments:
-      run_id:
-        description: Workflow run ID
-        required: true
-        pattern: "^[0-9]+$"
+    gh-run-view:
+        description: >-
+            View details of a workflow run. Defaults to the summary view; pass
+            --log-failed to show logs from just the failed jobs/steps (useful
+            for triaging a CI failure without dumping the entire log stream).
+        threat:
+            read: remote
+            write: none
+        template:
+            command: [gh, run, view, "{{arguments.run_id}}", "{{switches.failed}}"]
+        switches:
+            failed:
+                description: Show logs from failed jobs/steps instead of the summary
+                flag: --log-failed
+        arguments:
+            run_id:
+                description: Workflow run ID
+                required: true
+                pattern: "^[0-9]+$"

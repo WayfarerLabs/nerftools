@@ -233,10 +233,10 @@ the caller's scope.
 
 The substitution table from the manifest spec is implemented in the builder:
 
-| Context | Required scalar | Optional scalar | Required variadic | Optional variadic | Switch |
-|---|---|---|---|---|---|
-| template command | `"$VAR"` | `${VAR:+"$VAR"}` | `"${VAR[@]}"` | `${VAR[@]+"${VAR[@]}"}` | `${VAR:+"--flag"}` |
-| guard/pre script | `${VAR}` | `${VAR}` | `${VAR}` | `${VAR}` | `${VAR}` |
+| Context          | Required scalar | Optional scalar  | Required variadic | Optional variadic       | Switch             |
+| ---------------- | --------------- | ---------------- | ----------------- | ----------------------- | ------------------ |
+| template command | `"$VAR"`        | `${VAR:+"$VAR"}` | `"${VAR[@]}"`     | `${VAR[@]+"${VAR[@]}"}` | `${VAR:+"--flag"}` |
+| guard/pre script | `${VAR}`        | `${VAR}`         | `${VAR}`          | `${VAR}`                | `${VAR}`           |
 
 The builder selects the substitution strategy based on parameter kind and context.
 
@@ -279,10 +279,10 @@ failure. No output files. Useful in CI and pre-commit hooks.
 Generates output for one or more named targets. Each target type has its own output logic and
 default output directory.
 
-| Target | Output | Default outdir |
-|---|---|---|
-| `bin` | Executable shell scripts | `./bin/` |
-| `skills` | Rulesync SKILL.md files | `./skills/` |
+| Target          | Output                             | Default outdir     |
+| --------------- | ---------------------------------- | ------------------ |
+| `bin`           | Executable shell scripts           | `./bin/`           |
+| `skills`        | Rulesync SKILL.md files            | `./skills/`        |
 | `claude-plugin` | Plugin manifest + skills + scripts | `./claude-plugin/` |
 
 Common options:
@@ -299,8 +299,8 @@ skills as part of its standard output.
 ### CLI module changes
 
 `cli.py` changes from two Typer commands to two new ones. The internal implementation routes through
-the same manifest loading and merging pipeline, then dispatches to the appropriate generator based on
-the target name.
+the same manifest loading and merging pipeline, then dispatches to the appropriate generator based
+on the target name.
 
 ```text
 cli.py
@@ -392,8 +392,8 @@ A tool is "inside" when `tool.read <= ceiling.read AND tool.write <= ceiling.wri
 
 ### New: grant-by-threat
 
-A new nerfctl grant command that uses `find-tools` and `classify-by-threat` to manage permissions
-by threat profile.
+A new nerfctl grant command that uses `find-tools` and `classify-by-threat` to manage permissions by
+threat profile.
 
 ```text
 nerfctl-grant-by-threat <plugin-root> --read <level> --write <level>
@@ -438,17 +438,17 @@ implementation.
 
 ### Migration mapping
 
-| v0 field | v1 equivalent |
-|---|---|
-| `command` | `template.command` |
-| `flags` with `boolean: true` | `switches` |
-| `flags` without `boolean` | `options` |
-| `args` | `arguments` |
-| `guards` | `guards` (unchanged structure) |
-| `env` | `env` (unchanged) |
-| (none) | `threat` (new, must be added to every tool) |
-| (none) | `version: 1` (new, required) |
-| (none) | `pre` (new, optional) |
+| v0 field                     | v1 equivalent                               |
+| ---------------------------- | ------------------------------------------- |
+| `command`                    | `template.command`                          |
+| `flags` with `boolean: true` | `switches`                                  |
+| `flags` without `boolean`    | `options`                                   |
+| `args`                       | `arguments`                                 |
+| `guards`                     | `guards` (unchanged structure)              |
+| `env`                        | `env` (unchanged)                           |
+| (none)                       | `threat` (new, must be added to every tool) |
+| (none)                       | `version: 1` (new, required)                |
+| (none)                       | `pre` (new, optional)                       |
 
 Tools that currently use `command` with flags and args become `template` mode tools. No existing
 tools use passthrough or script mode -- those are new capabilities.

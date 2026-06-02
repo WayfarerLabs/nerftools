@@ -132,48 +132,42 @@ All fields except `skill_intro` and `bash_hints` are required.
 
 ### Bash hint hook
 
-Plugin targets that support a pre-bash hook (Claude Code today; others as
-their APIs land) use `bash_hints` to generate a redirect: when the agent
-calls raw bash with a command that matches any pattern, the hook denies
-the call (silently, without prompting the user) and points the agent at
-the corresponding nerf skill. Multiple matching skills are listed
-together. Targets without a pre-bash hook simply ignore the field.
+Plugin targets that support a pre-bash hook (Claude Code today; others as their APIs land) use
+`bash_hints` to generate a redirect: when the agent calls raw bash with a command that matches any
+pattern, the hook denies the call (silently, without prompting the user) and points the agent at the
+corresponding nerf skill. Multiple matching skills are listed together. Targets without a pre-bash
+hook simply ignore the field.
 
-Patterns are evaluated as POSIX ERE matches that may appear anywhere in
-the command — prefer word-boundary anchors (`\bgit\b`) over start-anchored
-ones (`^git`) so compound commands like `foo && git status` match. The
-generated hook evaluates patterns via bash's `[[ =~ ]]`, which on most
-platforms uses POSIX ERE. Manifest loading compiles each pattern as a
-Python regex (catching uncompilable patterns and control characters) but
-does not enforce ERE compatibility — Python-only constructs (lookaheads,
-named groups, etc.) will pass load-time validation but won't match at
-runtime. Stick to ERE. As a convenience, `\b` boundaries are translated to
-portable POSIX ERE at generation time so manifests can keep using them.
+Patterns are evaluated as POSIX ERE matches that may appear anywhere in the command — prefer
+word-boundary anchors (`\bgit\b`) over start-anchored ones (`^git`) so compound commands like
+`foo && git status` match. The generated hook evaluates patterns via bash's `[[ =~ ]]`, which on
+most platforms uses POSIX ERE. Manifest loading compiles each pattern as a Python regex (catching
+uncompilable patterns and control characters) but does not enforce ERE compatibility — Python-only
+constructs (lookaheads, named groups, etc.) will pass load-time validation but won't match at
+runtime. Stick to ERE. As a convenience, `\b` boundaries are translated to portable POSIX ERE at
+generation time so manifests can keep using them.
 
-The hook automatically skips when it detects an actual wrapper invocation:
-it splits the command on shell separators (`&&`, `||`, `;`, `|`, `&`),
-finds the first non-env-var token of each segment, and checks whether that
-token's basename starts with the wrapper prefix. Compound forms like
-`cd /repo && nerf-git status` and absolute-path invocations like
-`/abs/path/nerf-git-add .` skip cleanly; tokens that contain the prefix at
-arg position (e.g. `git log --grep nerf-X`) do not trigger the skip.
+The hook automatically skips when it detects an actual wrapper invocation: it splits the command on
+shell separators (`&&`, `||`, `;`, `|`, `&`), finds the first non-env-var token of each segment, and
+checks whether that token's basename starts with the wrapper prefix. Compound forms like
+`cd /repo && nerf-git status` and absolute-path invocations like `/abs/path/nerf-git-add .` skip
+cleanly; tokens that contain the prefix at arg position (e.g. `git log --grep nerf-X`) do not
+trigger the skip.
 
-When the same `package.name` is split across multiple manifests (extension
-pattern), `bash_hints` are unioned across them (order-preserved, deduped).
-An extension can add new patterns without restating the base set.
+When the same `package.name` is split across multiple manifests (extension pattern), `bash_hints`
+are unioned across them (order-preserved, deduped). An extension can add new patterns without
+restating the base set.
 
-An agent that genuinely needs to run the underlying command directly can
-include `# <brand>:bypass <reason>` anywhere in the command (reason
-required). The `<brand>` follows the wrapper prefix (default `nerf-` →
-`nerf`, `mytool-` → `mytool`). The hook lets the call through; the user's
-normal permission flow still applies.
+An agent that genuinely needs to run the underlying command directly can include
+`# <brand>:bypass <reason>` anywhere in the command (reason required). The `<brand>` follows the
+wrapper prefix (default `nerf-` → `nerf`, `mytool-` → `mytool`). The hook lets the call through; the
+user's normal permission flow still applies.
 
-The conventional `<reason>` is the filename of a `nerf-report bypass` entry
-filed beforehand -- that keeps the bypass annotation grep-able from the
-agent's transcript while putting the full justification, tool context, and
-session metadata in a structured report under `~/.nerftools/reports/` for
-the maintainer to triage. Any non-whitespace string is accepted, so this is
-a convention rather than a hard requirement.
+The conventional `<reason>` is the filename of a `nerf-report bypass` entry filed beforehand -- that
+keeps the bypass annotation grep-able from the agent's transcript while putting the full
+justification, tool context, and session metadata in a structured report under
+`~/.nerftools/reports/` for the maintainer to triage. Any non-whitespace string is accepted, so this
+is a convention rather than a hard requirement.
 
 ## Tool definition
 
@@ -526,8 +520,8 @@ Rules:
   arg-value role (rejecting one of an exhaustive set of values for a named argument) it becomes a
   per-token **flag firewall** -- strictly weaker than `passthrough` mode's glob-based deny, since
   the match is exact-token only. Use it for an enumerable set of exact flag tokens; reach for a
-  `pre:` loop with `case`-pattern matching when a flag has both bare and `--flag=value` shapes
-  (see "Variadic flag injection" for guidance).
+  `pre:` loop with `case`-pattern matching when a flag has both bare and `--flag=value` shapes (see
+  "Variadic flag injection" for guidance).
 - Arguments do not have a `default` field. Required positional arguments always receive a value;
   optional positionals are exposed to the wrapped tool only when the agent supplies one.
 
@@ -537,12 +531,12 @@ Rules:
 in the variadic. The nerf parser stops consuming nerf-declared flags at the first unrecognized token
 and forwards everything from that point -- including arbitrary `-`-prefixed tokens -- raw to the
 wrapped tool, which fully parses them as flags. The variadic's own `deny` / `allow` / `pattern`
-validations _do_ run per element, but they are exact-token matches: they do not handle stacked
-short flags (`-Aw`), inline value forms (`--flag=value`), or any other syntactic variant the wrapped
-tool may accept. Use them to forbid a small enumerable set of dangerous flags (e.g. the
-gitconfig-driver re-enablers `--ext-diff` / `--textconv`), not as a general flag firewall. For
-broader coverage the only honest defense is a structural property of the wrapped command that
-makes dangerous flags unreachable from the variadic's position.
+validations _do_ run per element, but they are exact-token matches: they do not handle stacked short
+flags (`-Aw`), inline value forms (`--flag=value`), or any other syntactic variant the wrapped tool
+may accept. Use them to forbid a small enumerable set of dangerous flags (e.g. the gitconfig-driver
+re-enablers `--ext-diff` / `--textconv`), not as a general flag firewall. For broader coverage the
+only honest defense is a structural property of the wrapped command that makes dangerous flags
+unreachable from the variadic's position.
 
 The canonical example is the **subcommand parse boundary in multi-level CLIs** (git, kubectl,
 docker, az, etc.). Dangerous flags often live at the top-level parser, not the subcommand's. A
@@ -561,17 +555,17 @@ whose dangerous flags are gated by an outer wrapper). Treat each one as a per-to
 
 Both can reject dangerous tokens from a variadic, but they cover different shapes:
 
-- **`deny:` on the variadic argument** is an exact-token match against each forwarded element.
-  Use it for an enumerable set of dangerous flags whose value-attached form (`--flag=value`) is
-  either nonexistent or equally unsafe -- e.g. `--ext-diff` and `--textconv` on `git diff`, which
-  are toggles with no `=value` shape and unsafely re-enable disabled drivers. Cheap, declarative,
-  and produces the standard "denied:" error.
+- **`deny:` on the variadic argument** is an exact-token match against each forwarded element. Use
+  it for an enumerable set of dangerous flags whose value-attached form (`--flag=value`) is either
+  nonexistent or equally unsafe -- e.g. `--ext-diff` and `--textconv` on `git diff`, which are
+  toggles with no `=value` shape and unsafely re-enable disabled drivers. Cheap, declarative, and
+  produces the standard "denied:" error.
 - **A `pre:` loop with a `case` pattern** is the right tool when a dangerous flag has both bare
   (`--flag <val>`) and inline (`--flag=val`) shapes, or any other syntactic variant exact-match
   misses (short-flag stacking like `-Aw`, BSD-style `-oval`, etc.). The canonical example is
-  `--output[=]<path>` on `git diff` / `git log` (see `nerftools/default_manifests/git.yaml`),
-  which writes a patch to an arbitrary file path and so would violate `write: none`. The `pre:`
-  loop catches both forms with `--output|--output=*`.
+  `--output[=]<path>` on `git diff` / `git log` (see `nerftools/default_manifests/git.yaml`), which
+  writes a patch to an arbitrary file path and so would violate `write: none`. The `pre:` loop
+  catches both forms with `--output|--output=*`.
 
 The two compose naturally: `deny:` for the easy cases, `pre:` for everything exact-match misses.
 
@@ -746,16 +740,16 @@ The pre script is wrapped in a shell function (`_nerf_pre`). Key points:
   ```
 
   This is the documented contract for pre-only / `-C`-style options whose effect is to derive a
-  value the wrapped tool needs as an explicit flag (used pervasively by the `az-*` tools to
-  resolve project from `-C`). The variable name pattern is always `_<UPPERCASE_OPTION>_SET`.
-  The same principle applies whenever you read or forward an option's value from `pre` or a
-  script-mode body: gate on the `_<NAME>_SET` sentinel, **never** on the value string.
-  - For pre-only inputs: `if [[ -n "${_DIRECTORY_SET}" ]]; then ...` distinguishes `-C ""` from
-    `-C` being omitted.
+  value the wrapped tool needs as an explicit flag (used pervasively by the `az-*` tools to resolve
+  project from `-C`). The variable name pattern is always `_<UPPERCASE_OPTION>_SET`. The same
+  principle applies whenever you read or forward an option's value from `pre` or a script-mode body:
+  gate on the `_<NAME>_SET` sentinel, **never** on the value string.
+  - For pre-only inputs: `if [[ -n "${_DIRECTORY_SET}" ]]; then ...` distinguishes `-C ""` from `-C`
+    being omitted.
   - For conditional argv forwarding from `script:` mode: write
     `[[ -n "${_PROJECT_SET}" ]] && ARGS+=(--project "${PROJECT}")`, not
-    `[[ -n "${PROJECT}" ]] && ...`, so the agent's explicit empty value is preserved through to
-    the wrapped tool rather than silently dropped.
+    `[[ -n "${PROJECT}" ]] && ...`, so the agent's explicit empty value is preserved through to the
+    wrapped tool rather than silently dropped.
 
 Example:
 

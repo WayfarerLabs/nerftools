@@ -151,41 +151,34 @@ Beyond outright security: rough edges that bite users.
 
 ### 9. Bash hint coverage (package-level `bash_hints`)
 
-`bash_hints` is a list of regex patterns at the package level that drive a
-pre-bash redirect hook on plugin targets that support one: when an agent
-calls raw bash with a command matching any pattern, the hook denies the
-call and points the agent at the nerf skill instead. Patterns are matched
-anywhere in the command. The hook automatically skips when it detects an
-actual wrapper invocation -- it splits the command on shell separators
-(``&&``, ``||``, ``;``, ``|``, ``&``), finds the first non-env-var token
-in each segment, and checks whether that token's basename starts with the
-wrapper prefix. So ``cd /repo && nerf-git status`` and
-``/abs/path/nerf-git-add .`` skip cleanly; ``git log --grep nerf-X`` does
-not (the prefix appears only at arg position, not at an executable
+`bash_hints` is a list of regex patterns at the package level that drive a pre-bash redirect hook on
+plugin targets that support one: when an agent calls raw bash with a command matching any pattern,
+the hook denies the call and points the agent at the nerf skill instead. Patterns are matched
+anywhere in the command. The hook automatically skips when it detects an actual wrapper invocation
+-- it splits the command on shell separators (`&&`, `||`, `;`, `|`, `&`), finds the first
+non-env-var token in each segment, and checks whether that token's basename starts with the wrapper
+prefix. So `cd /repo && nerf-git status` and `/abs/path/nerf-git-add .` skip cleanly;
+`git log --grep nerf-X` does not (the prefix appears only at arg position, not at an executable
 position).
 
-- **Coverage**: every CLI binary that this package's tools wrap must be
-  covered by at least one pattern. E.g., a package that wraps both `git`
-  and `gh` must declare patterns for both. A tool whose underlying command
-  isn't matched by any hint will silently let the agent reach for raw
-  bash without redirection -- file it as a gap.
-- **Anchoring**: prefer word-boundary anchors (`\bgit\b`) over start-of-line
-  (`^git`). Compound commands like `foo && git status` only match
-  word-boundary patterns. Start-anchored patterns miss those cases.
-- **Specificity vs. breadth**: package-level patterns are coarse on purpose
-  -- they redirect to a skill, not a specific tool. `\baz boards\b` is fine
-  even if the package doesn't yet wrap every `az boards` subcommand; the
-  hint says "the skill may wrap this," and the agent learns which tools
+- **Coverage**: every CLI binary that this package's tools wrap must be covered by at least one
+  pattern. E.g., a package that wraps both `git` and `gh` must declare patterns for both. A tool
+  whose underlying command isn't matched by any hint will silently let the agent reach for raw bash
+  without redirection -- file it as a gap.
+- **Anchoring**: prefer word-boundary anchors (`\bgit\b`) over start-of-line (`^git`). Compound
+  commands like `foo && git status` only match word-boundary patterns. Start-anchored patterns miss
+  those cases.
+- **Specificity vs. breadth**: package-level patterns are coarse on purpose -- they redirect to a
+  skill, not a specific tool. `\baz boards\b` is fine even if the package doesn't yet wrap every
+  `az boards` subcommand; the hint says "the skill may wrap this," and the agent learns which tools
   exist by loading the skill.
-- **No false positives on the wrapper**: do NOT add a pattern that would
-  match the wrapper's own name when called by its absolute path. The
-  executable-position exclusion in the hook covers normal wrapper calls,
-  but an over-eager pattern (e.g. `git` without word boundaries) can still
-  misfire on unrelated substrings in env exports or paths.
-- **Extensions**: if this manifest is an extension of an existing package
-  (same `package.name` in a different file), `bash_hints` is unioned across
-  manifests. An extension may declare additional patterns covering its new
-  surface (e.g. `\bgit lfs\b`) without restating the base patterns.
+- **No false positives on the wrapper**: do NOT add a pattern that would match the wrapper's own
+  name when called by its absolute path. The executable-position exclusion in the hook covers normal
+  wrapper calls, but an over-eager pattern (e.g. `git` without word boundaries) can still misfire on
+  unrelated substrings in env exports or paths.
+- **Extensions**: if this manifest is an extension of an existing package (same `package.name` in a
+  different file), `bash_hints` is unioned across manifests. An extension may declare additional
+  patterns covering its new surface (e.g. `\bgit lfs\b`) without restating the base patterns.
 
 ### 10. Description, intro, and metadata hygiene
 

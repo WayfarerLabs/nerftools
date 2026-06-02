@@ -1,683 +1,683 @@
 version: 1
 
 package:
-  name: az-boards
-  description: Azure Boards work item tools for querying, viewing, creating, and updating work items
-  skill_group: az-boards
-  skill_intro: |
-    These tools interact with Azure Boards work items. The organization and
-    project are auto-detected from the git remote in the current directory.
-    Pass --project to target a different project, or -C <directory> to
-    resolve the project from the git remote of a sub-directory (useful
-    when multiple repos live under one workspace root and you don't want
-    to cd around). The az-boards-wi-* tools operate on any work item. The
-    az-boards-mywi-* tools are scoped to work items assigned to you.
-    az-boards-area-list lists area paths in a project, useful for setting
-    --area on create/update.
-  bash_hints:
-    - '\baz boards\b'
+    name: az-boards
+    description: Azure Boards work item tools for querying, viewing, creating, and updating work items
+    skill_group: az-boards
+    skill_intro: |
+        These tools interact with Azure Boards work items. The organization and
+        project are auto-detected from the git remote in the current directory.
+        Pass --project to target a different project, or -C <directory> to
+        resolve the project from the git remote of a sub-directory (useful
+        when multiple repos live under one workspace root and you don't want
+        to cd around). The az-boards-wi-* tools operate on any work item. The
+        az-boards-mywi-* tools are scoped to work items assigned to you.
+        az-boards-area-list lists area paths in a project, useful for setting
+        --area on create/update.
+    bash_hints:
+        - '\baz boards\b'
 
 tools:
-  az-boards-wi-list:
-    description: >-
-      Query work items using WIQL (Work Item Query Language). Returns matching
-      work items as JSON. The organization and project are auto-detected from
-      the git remote; pass --project to override.
-    threat:
-      read: remote
-      write: none
-    template:
-      command:
-        - az
-        - boards
-        - query
-        - --wiql
-        - "{{arguments.wiql}}"
-        - "{{options.project}}"
-        - --output
-        - json
-    arguments:
-      wiql:
+    az-boards-wi-list:
         description: >-
-          WIQL query string (e.g. "SELECT [System.Id], [System.Title],
-          [System.State] FROM WorkItems WHERE [System.AssignedTo] = @Me
-          AND [System.State] <> 'Closed' ORDER BY [System.ChangedDate] DESC")
-        required: true
-    options:
-      project:
-        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
-        flag: --project
-        short: -p
-      directory:
-        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
-    pre: |
-      if [[ -n "${_DIRECTORY_SET}" ]]; then
-        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
-          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
-        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        _PROJ="${_PROJ//%20/ }"
-        if [[ -z "${_PROJ}" ]]; then
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
-          return 1
-        fi
-        if [[ -z "${_PROJECT_SET}" ]]; then
-          PROJECT="${_PROJ}"
-          _PROJECT_SET=true
-        fi
-      fi
+            Query work items using WIQL (Work Item Query Language). Returns matching
+            work items as JSON. The organization and project are auto-detected from
+            the git remote; pass --project to override.
+        threat:
+            read: remote
+            write: none
+        template:
+            command:
+                - az
+                - boards
+                - query
+                - --wiql
+                - "{{arguments.wiql}}"
+                - "{{options.project}}"
+                - --output
+                - json
+        arguments:
+            wiql:
+                description: >-
+                    WIQL query string (e.g. "SELECT [System.Id], [System.Title],
+                    [System.State] FROM WorkItems WHERE [System.AssignedTo] = @Me
+                    AND [System.State] <> 'Closed' ORDER BY [System.ChangedDate] DESC")
+                required: true
+        options:
+            project:
+                description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+                flag: --project
+                short: -p
+            directory:
+                description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+                flag: -C
+                path_tests: [under_cwd]
+        pre: |
+            if [[ -n "${_DIRECTORY_SET}" ]]; then
+              _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+                || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+              _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+              _PROJ="${_PROJ//%20/ }"
+              if [[ -z "${_PROJ}" ]]; then
+                echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+                return 1
+              fi
+              if [[ -z "${_PROJECT_SET}" ]]; then
+                PROJECT="${_PROJ}"
+                _PROJECT_SET=true
+              fi
+            fi
 
-  az-boards-wi-show:
-    description: Show details and comments for any work item.
-    threat:
-      read: remote
-      write: none
-    template:
-      command:
-        - az
-        - boards
-        - work-item
-        - show
-        - --id
-        - "{{arguments.wi_id}}"
-        - "{{options.project}}"
-        - --output
-        - json
-    arguments:
-      wi_id:
-        description: Work item ID (numeric)
-        required: true
-        pattern: "^[0-9]+$"
-    options:
-      project:
-        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
-        flag: --project
-        short: -p
-      directory:
-        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
-    pre: |
-      if [[ -n "${_DIRECTORY_SET}" ]]; then
-        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
-          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
-        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        _PROJ="${_PROJ//%20/ }"
-        if [[ -z "${_PROJ}" ]]; then
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
-          return 1
-        fi
-        if [[ -z "${_PROJECT_SET}" ]]; then
-          PROJECT="${_PROJ}"
-          _PROJECT_SET=true
-        fi
-      fi
+    az-boards-wi-show:
+        description: Show details and comments for any work item.
+        threat:
+            read: remote
+            write: none
+        template:
+            command:
+                - az
+                - boards
+                - work-item
+                - show
+                - --id
+                - "{{arguments.wi_id}}"
+                - "{{options.project}}"
+                - --output
+                - json
+        arguments:
+            wi_id:
+                description: Work item ID (numeric)
+                required: true
+                pattern: "^[0-9]+$"
+        options:
+            project:
+                description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+                flag: --project
+                short: -p
+            directory:
+                description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+                flag: -C
+                path_tests: [under_cwd]
+        pre: |
+            if [[ -n "${_DIRECTORY_SET}" ]]; then
+              _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+                || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+              _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+              _PROJ="${_PROJ//%20/ }"
+              if [[ -z "${_PROJ}" ]]; then
+                echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+                return 1
+              fi
+              if [[ -z "${_PROJECT_SET}" ]]; then
+                PROJECT="${_PROJ}"
+                _PROJECT_SET=true
+              fi
+            fi
 
-  az-boards-wi-comment:
-    description: Add a comment to any work item.
-    threat:
-      read: remote
-      write: remote
-    template:
-      command:
-        - az
-        - boards
-        - work-item
-        - update
-        - --id
-        - "{{arguments.wi_id}}"
-        - --discussion
-        - "{{arguments.comment}}"
-        - "{{options.project}}"
-        - --output
-        - none
-    arguments:
-      wi_id:
-        description: Work item ID (numeric)
-        required: true
-        pattern: "^[0-9]+$"
-      comment:
+    az-boards-wi-comment:
+        description: Add a comment to any work item.
+        threat:
+            read: remote
+            write: remote
+        template:
+            command:
+                - az
+                - boards
+                - work-item
+                - update
+                - --id
+                - "{{arguments.wi_id}}"
+                - --discussion
+                - "{{arguments.comment}}"
+                - "{{options.project}}"
+                - --output
+                - none
+        arguments:
+            wi_id:
+                description: Work item ID (numeric)
+                required: true
+                pattern: "^[0-9]+$"
+            comment:
+                description: >-
+                    Comment text. Stored as HTML on the work item, so HTML markup
+                    renders (e.g. "<p>See <a href='...'>this</a></p>"). Plain text
+                    is stored verbatim and renders as-is.
+                required: true
+        options:
+            project:
+                description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+                flag: --project
+                short: -p
+            directory:
+                description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+                flag: -C
+                path_tests: [under_cwd]
+        pre: |
+            if [[ -n "${_DIRECTORY_SET}" ]]; then
+              _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+                || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+              _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+              _PROJ="${_PROJ//%20/ }"
+              if [[ -z "${_PROJ}" ]]; then
+                echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+                return 1
+              fi
+              if [[ -z "${_PROJECT_SET}" ]]; then
+                PROJECT="${_PROJ}"
+                _PROJECT_SET=true
+              fi
+            fi
+
+    az-boards-wi-update:
         description: >-
-          Comment text. Stored as HTML on the work item, so HTML markup
-          renders (e.g. "<p>See <a href='...'>this</a></p>"). Plain text
-          is stored verbatim and renders as-is.
-        required: true
-    options:
-      project:
-        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
-        flag: --project
-        short: -p
-      directory:
-        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
-    pre: |
-      if [[ -n "${_DIRECTORY_SET}" ]]; then
-        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
-          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
-        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        _PROJ="${_PROJ//%20/ }"
-        if [[ -z "${_PROJ}" ]]; then
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
-          return 1
-        fi
-        if [[ -z "${_PROJECT_SET}" ]]; then
-          PROJECT="${_PROJ}"
-          _PROJECT_SET=true
-        fi
-      fi
+            Update fields on a work item. Supports state, title, assigned-to, area,
+            iteration, and adding a discussion comment. Returns the updated work item
+            as JSON.
+        threat:
+            read: remote
+            write: remote
+        template:
+            command:
+                - az
+                - boards
+                - work-item
+                - update
+                - --id
+                - "{{arguments.wi_id}}"
+                - "{{options.state}}"
+                - "{{options.title}}"
+                - "{{options.assigned_to}}"
+                - "{{options.area}}"
+                - "{{options.iteration}}"
+                - "{{options.discussion}}"
+                - "{{options.fields}}"
+                - "{{options.project}}"
+                - --output
+                - json
+        arguments:
+            wi_id:
+                description: Work item ID (numeric)
+                required: true
+                pattern: "^[0-9]+$"
+        options:
+            state:
+                description: New state (e.g. Active, Resolved, Closed)
+                flag: --state
+            title:
+                description: New title
+                flag: --title
+            assigned_to:
+                description: Person to assign to (e.g. user@example.com)
+                flag: --assigned-to
+            area:
+                description: Area path (e.g. MyProject\MyArea)
+                flag: --area
+            iteration:
+                description: Iteration path (e.g. MyProject\Sprint 1)
+                flag: --iteration
+            discussion:
+                description: >-
+                    Comment to add to the work item discussion. Stored as HTML, so
+                    HTML markup renders; plain text renders as-is.
+                flag: --discussion
+            fields:
+                description: 'Custom field assignment (e.g. "System.Tags=Rock")'
+                flag: --fields
+                short: -f
+            project:
+                description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+                flag: --project
+                short: -p
+            directory:
+                description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+                flag: -C
+                path_tests: [under_cwd]
+        pre: |
+            if [[ -n "${_DIRECTORY_SET}" ]]; then
+              _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+                || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+              _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+              _PROJ="${_PROJ//%20/ }"
+              if [[ -z "${_PROJ}" ]]; then
+                echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+                return 1
+              fi
+              if [[ -z "${_PROJECT_SET}" ]]; then
+                PROJECT="${_PROJ}"
+                _PROJECT_SET=true
+              fi
+            fi
 
-  az-boards-wi-update:
-    description: >-
-      Update fields on a work item. Supports state, title, assigned-to, area,
-      iteration, and adding a discussion comment. Returns the updated work item
-      as JSON.
-    threat:
-      read: remote
-      write: remote
-    template:
-      command:
-        - az
-        - boards
-        - work-item
-        - update
-        - --id
-        - "{{arguments.wi_id}}"
-        - "{{options.state}}"
-        - "{{options.title}}"
-        - "{{options.assigned_to}}"
-        - "{{options.area}}"
-        - "{{options.iteration}}"
-        - "{{options.discussion}}"
-        - "{{options.fields}}"
-        - "{{options.project}}"
-        - --output
-        - json
-    arguments:
-      wi_id:
-        description: Work item ID (numeric)
-        required: true
-        pattern: "^[0-9]+$"
-    options:
-      state:
-        description: New state (e.g. Active, Resolved, Closed)
-        flag: --state
-      title:
-        description: New title
-        flag: --title
-      assigned_to:
-        description: Person to assign to (e.g. user@example.com)
-        flag: --assigned-to
-      area:
-        description: Area path (e.g. MyProject\MyArea)
-        flag: --area
-      iteration:
-        description: Iteration path (e.g. MyProject\Sprint 1)
-        flag: --iteration
-      discussion:
+    az-boards-wi-create:
         description: >-
-          Comment to add to the work item discussion. Stored as HTML, so
-          HTML markup renders; plain text renders as-is.
-        flag: --discussion
-      fields:
-        description: "Custom field assignment (e.g. \"System.Tags=Rock\")"
-        flag: --fields
-        short: -f
-      project:
-        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
-        flag: --project
-        short: -p
-      directory:
-        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
-    pre: |
-      if [[ -n "${_DIRECTORY_SET}" ]]; then
-        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
-          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
-        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        _PROJ="${_PROJ//%20/ }"
-        if [[ -z "${_PROJ}" ]]; then
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
-          return 1
-        fi
-        if [[ -z "${_PROJECT_SET}" ]]; then
-          PROJECT="${_PROJ}"
-          _PROJECT_SET=true
-        fi
-      fi
+            Create a new work item. Requires a type and title. Optionally set
+            assigned-to, area, iteration, description, and a discussion comment.
+            Returns the created work item as JSON.
+        threat:
+            read: remote
+            write: remote
+        template:
+            command:
+                - az
+                - boards
+                - work-item
+                - create
+                - --type
+                - "{{arguments.type}}"
+                - --title
+                - "{{arguments.title}}"
+                - "{{options.assigned_to}}"
+                - "{{options.area}}"
+                - "{{options.iteration}}"
+                - "{{options.description}}"
+                - "{{options.discussion}}"
+                - "{{options.fields}}"
+                - "{{options.project}}"
+                - --output
+                - json
+        arguments:
+            type:
+                description: Work item type (e.g. Bug, Task, User Story, Feature)
+                required: true
+            title:
+                description: Title of the work item
+                required: true
+        options:
+            assigned_to:
+                description: Person to assign to (e.g. user@example.com)
+                flag: --assigned-to
+            area:
+                description: Area path (e.g. MyProject\MyArea)
+                flag: --area
+            iteration:
+                description: Iteration path (e.g. MyProject\Sprint 1)
+                flag: --iteration
+            description:
+                description: >-
+                    Description of the work item. Stored as HTML, so HTML markup
+                    renders (e.g. "<p>Steps:</p><ol><li>...</li></ol>"). Plain
+                    text is stored verbatim and renders as-is.
+                flag: --description
+                short: -d
+            discussion:
+                description: >-
+                    Comment to add to the work item discussion. Stored as HTML, so
+                    HTML markup renders; plain text renders as-is.
+                flag: --discussion
+            fields:
+                description: 'Custom field assignment (e.g. "System.Tags=Rock")'
+                flag: --fields
+                short: -f
+            project:
+                description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+                flag: --project
+                short: -p
+            directory:
+                description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+                flag: -C
+                path_tests: [under_cwd]
+        pre: |
+            if [[ -n "${_DIRECTORY_SET}" ]]; then
+              _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+                || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+              _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+              _PROJ="${_PROJ//%20/ }"
+              if [[ -z "${_PROJ}" ]]; then
+                echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+                return 1
+              fi
+              if [[ -z "${_PROJECT_SET}" ]]; then
+                PROJECT="${_PROJ}"
+                _PROJECT_SET=true
+              fi
+            fi
 
-  az-boards-wi-create:
-    description: >-
-      Create a new work item. Requires a type and title. Optionally set
-      assigned-to, area, iteration, description, and a discussion comment.
-      Returns the created work item as JSON.
-    threat:
-      read: remote
-      write: remote
-    template:
-      command:
-        - az
-        - boards
-        - work-item
-        - create
-        - --type
-        - "{{arguments.type}}"
-        - --title
-        - "{{arguments.title}}"
-        - "{{options.assigned_to}}"
-        - "{{options.area}}"
-        - "{{options.iteration}}"
-        - "{{options.description}}"
-        - "{{options.discussion}}"
-        - "{{options.fields}}"
-        - "{{options.project}}"
-        - --output
-        - json
-    arguments:
-      type:
-        description: Work item type (e.g. Bug, Task, User Story, Feature)
-        required: true
-      title:
-        description: Title of the work item
-        required: true
-    options:
-      assigned_to:
-        description: Person to assign to (e.g. user@example.com)
-        flag: --assigned-to
-      area:
-        description: Area path (e.g. MyProject\MyArea)
-        flag: --area
-      iteration:
-        description: Iteration path (e.g. MyProject\Sprint 1)
-        flag: --iteration
-      description:
+    az-boards-wi-add-parent:
         description: >-
-          Description of the work item. Stored as HTML, so HTML markup
-          renders (e.g. "<p>Steps:</p><ol><li>...</li></ol>"). Plain
-          text is stored verbatim and renders as-is.
-        flag: --description
-        short: -d
-      discussion:
+            Set the parent of a work item. Takes the child ID and parent ID as
+            positional arguments. Idempotent if the link already exists.
+        threat:
+            read: remote
+            write: remote
+        template:
+            command:
+                - az
+                - boards
+                - work-item
+                - relation
+                - add
+                - --id
+                - "{{arguments.child_id}}"
+                - --relation-type
+                - parent
+                - --target-id
+                - "{{arguments.parent_id}}"
+                - "{{options.project}}"
+                - --output
+                - json
+        arguments:
+            child_id:
+                description: Work item ID of the child (numeric)
+                required: true
+                pattern: "^[0-9]+$"
+            parent_id:
+                description: Work item ID of the parent (numeric)
+                required: true
+                pattern: "^[0-9]+$"
+        options:
+            project:
+                description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+                flag: --project
+                short: -p
+            directory:
+                description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+                flag: -C
+                path_tests: [under_cwd]
+        pre: |
+            if [[ -n "${_DIRECTORY_SET}" ]]; then
+              _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+                || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+              _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+              _PROJ="${_PROJ//%20/ }"
+              if [[ -z "${_PROJ}" ]]; then
+                echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+                return 1
+              fi
+              if [[ -z "${_PROJECT_SET}" ]]; then
+                PROJECT="${_PROJ}"
+                _PROJECT_SET=true
+              fi
+            fi
+
+    az-boards-mywi-list:
         description: >-
-          Comment to add to the work item discussion. Stored as HTML, so
-          HTML markup renders; plain text renders as-is.
-        flag: --discussion
-      fields:
-        description: "Custom field assignment (e.g. \"System.Tags=Rock\")"
-        flag: --fields
-        short: -f
-      project:
-        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
-        flag: --project
-        short: -p
-      directory:
-        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
-    pre: |
-      if [[ -n "${_DIRECTORY_SET}" ]]; then
-        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
-          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
-        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        _PROJ="${_PROJ//%20/ }"
-        if [[ -z "${_PROJ}" ]]; then
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
-          return 1
-        fi
-        if [[ -z "${_PROJECT_SET}" ]]; then
-          PROJECT="${_PROJ}"
-          _PROJECT_SET=true
-        fi
-      fi
+            List work items assigned to you that are not Closed or Removed,
+            ordered by most recently changed. Returns matching work items as
+            JSON.
+        threat:
+            read: remote
+            write: none
+        pre: |
+            if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
+              _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+                || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+              _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+              _PROJ="${_PROJ//%20/ }"
+              if [[ -z "${_PROJ}" ]]; then
+                echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+                return 1
+              fi
+              PROJECT="${_PROJ}"
+              _PROJECT_SET=true
+            fi
+        script: |
+            WIQL="SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType], [System.ChangedDate] FROM WorkItems WHERE [System.AssignedTo] = @Me AND [System.State] <> 'Closed' AND [System.State] <> 'Removed' ORDER BY [System.ChangedDate] DESC"
+            ARGS=(az boards query --wiql "${WIQL}" --output json)
+            [[ -n "${_PROJECT_SET}" ]] && ARGS+=(--project "${PROJECT}")
+            "${ARGS[@]}"
+        options:
+            project:
+                description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+                flag: --project
+                short: -p
+            directory:
+                description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+                flag: -C
+                path_tests: [under_cwd]
 
-  az-boards-wi-add-parent:
-    description: >-
-      Set the parent of a work item. Takes the child ID and parent ID as
-      positional arguments. Idempotent if the link already exists.
-    threat:
-      read: remote
-      write: remote
-    template:
-      command:
-        - az
-        - boards
-        - work-item
-        - relation
-        - add
-        - --id
-        - "{{arguments.child_id}}"
-        - --relation-type
-        - parent
-        - --target-id
-        - "{{arguments.parent_id}}"
-        - "{{options.project}}"
-        - --output
-        - json
-    arguments:
-      child_id:
-        description: Work item ID of the child (numeric)
-        required: true
-        pattern: "^[0-9]+$"
-      parent_id:
-        description: Work item ID of the parent (numeric)
-        required: true
-        pattern: "^[0-9]+$"
-    options:
-      project:
-        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
-        flag: --project
-        short: -p
-      directory:
-        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
-    pre: |
-      if [[ -n "${_DIRECTORY_SET}" ]]; then
-        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
-          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
-        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        _PROJ="${_PROJ//%20/ }"
-        if [[ -z "${_PROJ}" ]]; then
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
-          return 1
-        fi
-        if [[ -z "${_PROJECT_SET}" ]]; then
-          PROJECT="${_PROJ}"
-          _PROJECT_SET=true
-        fi
-      fi
-
-  az-boards-mywi-list:
-    description: >-
-      List work items assigned to you that are not Closed or Removed,
-      ordered by most recently changed. Returns matching work items as
-      JSON.
-    threat:
-      read: remote
-      write: none
-    pre: |
-      if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
-        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
-          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
-        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        _PROJ="${_PROJ//%20/ }"
-        if [[ -z "${_PROJ}" ]]; then
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
-          return 1
-        fi
-        PROJECT="${_PROJ}"
-        _PROJECT_SET=true
-      fi
-    script: |
-      WIQL="SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType], [System.ChangedDate] FROM WorkItems WHERE [System.AssignedTo] = @Me AND [System.State] <> 'Closed' AND [System.State] <> 'Removed' ORDER BY [System.ChangedDate] DESC"
-      ARGS=(az boards query --wiql "${WIQL}" --output json)
-      [[ -n "${_PROJECT_SET}" ]] && ARGS+=(--project "${PROJECT}")
-      "${ARGS[@]}"
-    options:
-      project:
-        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
-        flag: --project
-        short: -p
-      directory:
-        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
-
-  az-boards-mywi-show:
-    description: >-
-      Show details and comments for a work item assigned to you. Verifies
-      that System.AssignedTo matches the current user; refuses items
-      assigned to anyone else (use az-boards-wi-show for those).
-    threat:
-      read: remote
-      write: none
-    guards:
-      - command: [which, jq]
-        fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
-    pre: |
-      if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
-        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
-          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
-        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        _PROJ="${_PROJ//%20/ }"
-        if [[ -z "${_PROJ}" ]]; then
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
-          return 1
-        fi
-        PROJECT="${_PROJ}"
-        _PROJECT_SET=true
-      fi
-    script: |
-      CURRENT_USER=$(az devops invoke --area connectionData --resource connectionData --output json \
-        | jq -r '.authenticatedUser.uniqueName // ""')
-      if [[ -z "${CURRENT_USER}" ]]; then
-        echo "error: az-boards-mywi-show: could not determine current Azure DevOps user (try 'az login')" >&2
-        exit 1
-      fi
-      ARGS=(az boards work-item show --id "${WI_ID}" --output json)
-      [[ -n "${_PROJECT_SET}" ]] && ARGS+=(--project "${PROJECT}")
-      WI_JSON=$("${ARGS[@]}") || {
-        echo "error: az-boards-mywi-show: could not fetch work item ${WI_ID}" >&2
-        exit 1
-      }
-      ASSIGNED=$(printf '%s' "${WI_JSON}" | jq -r '.fields["System.AssignedTo"].uniqueName // ""')
-      if [[ -z "${ASSIGNED}" ]]; then
-        echo "error: az-boards-mywi-show: work item ${WI_ID} is not assigned to anyone" >&2
-        exit 1
-      fi
-      ASSIGNED_LC=$(printf '%s' "${ASSIGNED}" | tr '[:upper:]' '[:lower:]')
-      CURRENT_USER_LC=$(printf '%s' "${CURRENT_USER}" | tr '[:upper:]' '[:lower:]')
-      if [[ "${ASSIGNED_LC}" != "${CURRENT_USER_LC}" ]]; then
-        echo "error: az-boards-mywi-show: work item ${WI_ID} is assigned to ${ASSIGNED}, not you (${CURRENT_USER}). Use az-boards-wi-show for items assigned to others." >&2
-        exit 1
-      fi
-      echo "${WI_JSON}"
-    arguments:
-      wi_id:
-        description: Work item ID (numeric, must be assigned to you)
-        required: true
-        pattern: "^[0-9]+$"
-    options:
-      project:
-        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
-        flag: --project
-        short: -p
-      directory:
-        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
-
-  az-boards-mywi-comment:
-    description: >-
-      Add a comment to a work item assigned to you. Verifies that
-      System.AssignedTo matches the current user; refuses items assigned to
-      anyone else (use az-boards-wi-comment for those).
-    threat:
-      read: remote
-      write: remote
-    guards:
-      - command: [which, jq]
-        fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
-    pre: |
-      if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
-        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
-          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
-        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        _PROJ="${_PROJ//%20/ }"
-        if [[ -z "${_PROJ}" ]]; then
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
-          return 1
-        fi
-        PROJECT="${_PROJ}"
-        _PROJECT_SET=true
-      fi
-    script: |
-      CURRENT_USER=$(az devops invoke --area connectionData --resource connectionData --output json \
-        | jq -r '.authenticatedUser.uniqueName // ""')
-      if [[ -z "${CURRENT_USER}" ]]; then
-        echo "error: az-boards-mywi-comment: could not determine current Azure DevOps user (try 'az login')" >&2
-        exit 1
-      fi
-      SHOW_ARGS=(az boards work-item show --id "${WI_ID}" --output json)
-      [[ -n "${_PROJECT_SET}" ]] && SHOW_ARGS+=(--project "${PROJECT}")
-      WI_JSON=$("${SHOW_ARGS[@]}") || {
-        echo "error: az-boards-mywi-comment: could not fetch work item ${WI_ID}" >&2
-        exit 1
-      }
-      ASSIGNED=$(printf '%s' "${WI_JSON}" | jq -r '.fields["System.AssignedTo"].uniqueName // ""')
-      if [[ -z "${ASSIGNED}" ]]; then
-        echo "error: az-boards-mywi-comment: work item ${WI_ID} is not assigned to anyone" >&2
-        exit 1
-      fi
-      ASSIGNED_LC=$(printf '%s' "${ASSIGNED}" | tr '[:upper:]' '[:lower:]')
-      CURRENT_USER_LC=$(printf '%s' "${CURRENT_USER}" | tr '[:upper:]' '[:lower:]')
-      if [[ "${ASSIGNED_LC}" != "${CURRENT_USER_LC}" ]]; then
-        echo "error: az-boards-mywi-comment: work item ${WI_ID} is assigned to ${ASSIGNED}, not you (${CURRENT_USER}). Use az-boards-wi-comment for items assigned to others." >&2
-        exit 1
-      fi
-      UPDATE_ARGS=(az boards work-item update --id "${WI_ID}" --discussion "${COMMENT}" --output none)
-      [[ -n "${_PROJECT_SET}" ]] && UPDATE_ARGS+=(--project "${PROJECT}")
-      "${UPDATE_ARGS[@]}"
-    arguments:
-      wi_id:
-        description: Work item ID (numeric, must be assigned to you)
-        required: true
-        pattern: "^[0-9]+$"
-      comment:
+    az-boards-mywi-show:
         description: >-
-          Comment text. Stored as HTML on the work item, so HTML markup
-          renders (e.g. "<p>See <a href='...'>this</a></p>"). Plain text
-          is stored verbatim and renders as-is.
-        required: true
-    options:
-      project:
-        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
-        flag: --project
-        short: -p
-      directory:
-        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
+            Show details and comments for a work item assigned to you. Verifies
+            that System.AssignedTo matches the current user; refuses items
+            assigned to anyone else (use az-boards-wi-show for those).
+        threat:
+            read: remote
+            write: none
+        guards:
+            - command: [which, jq]
+              fail_message: "jq is required but not installed (e.g. apt-get install jq, brew install jq)."
+        pre: |
+            if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
+              _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+                || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+              _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+              _PROJ="${_PROJ//%20/ }"
+              if [[ -z "${_PROJ}" ]]; then
+                echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+                return 1
+              fi
+              PROJECT="${_PROJ}"
+              _PROJECT_SET=true
+            fi
+        script: |
+            CURRENT_USER=$(az devops invoke --area connectionData --resource connectionData --output json \
+              | jq -r '.authenticatedUser.uniqueName // ""')
+            if [[ -z "${CURRENT_USER}" ]]; then
+              echo "error: az-boards-mywi-show: could not determine current Azure DevOps user (try 'az login')" >&2
+              exit 1
+            fi
+            ARGS=(az boards work-item show --id "${WI_ID}" --output json)
+            [[ -n "${_PROJECT_SET}" ]] && ARGS+=(--project "${PROJECT}")
+            WI_JSON=$("${ARGS[@]}") || {
+              echo "error: az-boards-mywi-show: could not fetch work item ${WI_ID}" >&2
+              exit 1
+            }
+            ASSIGNED=$(printf '%s' "${WI_JSON}" | jq -r '.fields["System.AssignedTo"].uniqueName // ""')
+            if [[ -z "${ASSIGNED}" ]]; then
+              echo "error: az-boards-mywi-show: work item ${WI_ID} is not assigned to anyone" >&2
+              exit 1
+            fi
+            ASSIGNED_LC=$(printf '%s' "${ASSIGNED}" | tr '[:upper:]' '[:lower:]')
+            CURRENT_USER_LC=$(printf '%s' "${CURRENT_USER}" | tr '[:upper:]' '[:lower:]')
+            if [[ "${ASSIGNED_LC}" != "${CURRENT_USER_LC}" ]]; then
+              echo "error: az-boards-mywi-show: work item ${WI_ID} is assigned to ${ASSIGNED}, not you (${CURRENT_USER}). Use az-boards-wi-show for items assigned to others." >&2
+              exit 1
+            fi
+            echo "${WI_JSON}"
+        arguments:
+            wi_id:
+                description: Work item ID (numeric, must be assigned to you)
+                required: true
+                pattern: "^[0-9]+$"
+        options:
+            project:
+                description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+                flag: --project
+                short: -p
+            directory:
+                description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+                flag: -C
+                path_tests: [under_cwd]
 
-  az-boards-mywi-update:
-    description: >-
-      Update state or title on a work item assigned to you. Verifies that
-      System.AssignedTo matches the current user; refuses items assigned to
-      anyone else (use az-boards-wi-update for those). To reassign, use
-      az-boards-wi-update.
-    threat:
-      read: remote
-      write: remote
-    guards:
-      - command: [which, jq]
-        fail_message: 'jq is required but not installed (e.g. apt-get install jq, brew install jq).'
-      - script: |
-          [[ -n "${STATE}" || -n "${TITLE}" ]]
-        fail_message: 'at least one of --state or --title is required'
-    pre: |
-      if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
-        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
-          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
-        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        _PROJ="${_PROJ//%20/ }"
-        if [[ -z "${_PROJ}" ]]; then
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
-          return 1
-        fi
-        PROJECT="${_PROJ}"
-        _PROJECT_SET=true
-      fi
-    script: |
-      CURRENT_USER=$(az devops invoke --area connectionData --resource connectionData --output json \
-        | jq -r '.authenticatedUser.uniqueName // ""')
-      if [[ -z "${CURRENT_USER}" ]]; then
-        echo "error: az-boards-mywi-update: could not determine current Azure DevOps user (try 'az login')" >&2
-        exit 1
-      fi
-      SHOW_ARGS=(az boards work-item show --id "${WI_ID}" --output json)
-      [[ -n "${_PROJECT_SET}" ]] && SHOW_ARGS+=(--project "${PROJECT}")
-      WI_JSON=$("${SHOW_ARGS[@]}") || {
-        echo "error: az-boards-mywi-update: could not fetch work item ${WI_ID}" >&2
-        exit 1
-      }
-      ASSIGNED=$(printf '%s' "${WI_JSON}" | jq -r '.fields["System.AssignedTo"].uniqueName // ""')
-      if [[ -z "${ASSIGNED}" ]]; then
-        echo "error: az-boards-mywi-update: work item ${WI_ID} is not assigned to anyone" >&2
-        exit 1
-      fi
-      ASSIGNED_LC=$(printf '%s' "${ASSIGNED}" | tr '[:upper:]' '[:lower:]')
-      CURRENT_USER_LC=$(printf '%s' "${CURRENT_USER}" | tr '[:upper:]' '[:lower:]')
-      if [[ "${ASSIGNED_LC}" != "${CURRENT_USER_LC}" ]]; then
-        echo "error: az-boards-mywi-update: work item ${WI_ID} is assigned to ${ASSIGNED}, not you (${CURRENT_USER}). Use az-boards-wi-update for items assigned to others." >&2
-        exit 1
-      fi
-      UPDATE_ARGS=(az boards work-item update --id "${WI_ID}" --output json)
-      [[ -n "${STATE}" ]] && UPDATE_ARGS+=(--state "${STATE}")
-      [[ -n "${TITLE}" ]] && UPDATE_ARGS+=(--title "${TITLE}")
-      [[ -n "${_PROJECT_SET}" ]] && UPDATE_ARGS+=(--project "${PROJECT}")
-      "${UPDATE_ARGS[@]}"
-    arguments:
-      wi_id:
-        description: Work item ID (numeric, must be assigned to you)
-        required: true
-        pattern: "^[0-9]+$"
-    options:
-      state:
-        description: New work item state (e.g. Active, Resolved, Closed)
-        flag: --state
-      title:
-        description: New work item title
-        flag: --title
-      project:
-        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
-        flag: --project
-        short: -p
-      directory:
-        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
+    az-boards-mywi-comment:
+        description: >-
+            Add a comment to a work item assigned to you. Verifies that
+            System.AssignedTo matches the current user; refuses items assigned to
+            anyone else (use az-boards-wi-comment for those).
+        threat:
+            read: remote
+            write: remote
+        guards:
+            - command: [which, jq]
+              fail_message: "jq is required but not installed (e.g. apt-get install jq, brew install jq)."
+        pre: |
+            if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
+              _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+                || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+              _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+              _PROJ="${_PROJ//%20/ }"
+              if [[ -z "${_PROJ}" ]]; then
+                echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+                return 1
+              fi
+              PROJECT="${_PROJ}"
+              _PROJECT_SET=true
+            fi
+        script: |
+            CURRENT_USER=$(az devops invoke --area connectionData --resource connectionData --output json \
+              | jq -r '.authenticatedUser.uniqueName // ""')
+            if [[ -z "${CURRENT_USER}" ]]; then
+              echo "error: az-boards-mywi-comment: could not determine current Azure DevOps user (try 'az login')" >&2
+              exit 1
+            fi
+            SHOW_ARGS=(az boards work-item show --id "${WI_ID}" --output json)
+            [[ -n "${_PROJECT_SET}" ]] && SHOW_ARGS+=(--project "${PROJECT}")
+            WI_JSON=$("${SHOW_ARGS[@]}") || {
+              echo "error: az-boards-mywi-comment: could not fetch work item ${WI_ID}" >&2
+              exit 1
+            }
+            ASSIGNED=$(printf '%s' "${WI_JSON}" | jq -r '.fields["System.AssignedTo"].uniqueName // ""')
+            if [[ -z "${ASSIGNED}" ]]; then
+              echo "error: az-boards-mywi-comment: work item ${WI_ID} is not assigned to anyone" >&2
+              exit 1
+            fi
+            ASSIGNED_LC=$(printf '%s' "${ASSIGNED}" | tr '[:upper:]' '[:lower:]')
+            CURRENT_USER_LC=$(printf '%s' "${CURRENT_USER}" | tr '[:upper:]' '[:lower:]')
+            if [[ "${ASSIGNED_LC}" != "${CURRENT_USER_LC}" ]]; then
+              echo "error: az-boards-mywi-comment: work item ${WI_ID} is assigned to ${ASSIGNED}, not you (${CURRENT_USER}). Use az-boards-wi-comment for items assigned to others." >&2
+              exit 1
+            fi
+            UPDATE_ARGS=(az boards work-item update --id "${WI_ID}" --discussion "${COMMENT}" --output none)
+            [[ -n "${_PROJECT_SET}" ]] && UPDATE_ARGS+=(--project "${PROJECT}")
+            "${UPDATE_ARGS[@]}"
+        arguments:
+            wi_id:
+                description: Work item ID (numeric, must be assigned to you)
+                required: true
+                pattern: "^[0-9]+$"
+            comment:
+                description: >-
+                    Comment text. Stored as HTML on the work item, so HTML markup
+                    renders (e.g. "<p>See <a href='...'>this</a></p>"). Plain text
+                    is stored verbatim and renders as-is.
+                required: true
+        options:
+            project:
+                description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+                flag: --project
+                short: -p
+            directory:
+                description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+                flag: -C
+                path_tests: [under_cwd]
 
-  az-boards-area-list:
-    description: >-
-      List area paths configured in a project. Returns the hierarchical area
-      tree as JSON. Useful for setting --area on az-boards-wi-create or
-      az-boards-wi-update.
-    threat:
-      read: remote
-      write: none
-    template:
-      command:
-        - az
-        - boards
-        - area
-        - project
-        - list
-        - "{{options.project}}"
-        - --output
-        - json
-    options:
-      project:
-        description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
-        flag: --project
-        short: -p
-      directory:
-        description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
-        flag: -C
-        path_tests: [under_cwd]
-    pre: |
-      if [[ -n "${_DIRECTORY_SET}" ]]; then
-        _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
-          || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
-        _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
-        _PROJ="${_PROJ//%20/ }"
-        if [[ -z "${_PROJ}" ]]; then
-          echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
-          return 1
-        fi
-        if [[ -z "${_PROJECT_SET}" ]]; then
-          PROJECT="${_PROJ}"
-          _PROJECT_SET=true
-        fi
-      fi
+    az-boards-mywi-update:
+        description: >-
+            Update state or title on a work item assigned to you. Verifies that
+            System.AssignedTo matches the current user; refuses items assigned to
+            anyone else (use az-boards-wi-update for those). To reassign, use
+            az-boards-wi-update.
+        threat:
+            read: remote
+            write: remote
+        guards:
+            - command: [which, jq]
+              fail_message: "jq is required but not installed (e.g. apt-get install jq, brew install jq)."
+            - script: |
+                  [[ -n "${STATE}" || -n "${TITLE}" ]]
+              fail_message: "at least one of --state or --title is required"
+        pre: |
+            if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
+              _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+                || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+              _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+              _PROJ="${_PROJ//%20/ }"
+              if [[ -z "${_PROJ}" ]]; then
+                echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+                return 1
+              fi
+              PROJECT="${_PROJ}"
+              _PROJECT_SET=true
+            fi
+        script: |
+            CURRENT_USER=$(az devops invoke --area connectionData --resource connectionData --output json \
+              | jq -r '.authenticatedUser.uniqueName // ""')
+            if [[ -z "${CURRENT_USER}" ]]; then
+              echo "error: az-boards-mywi-update: could not determine current Azure DevOps user (try 'az login')" >&2
+              exit 1
+            fi
+            SHOW_ARGS=(az boards work-item show --id "${WI_ID}" --output json)
+            [[ -n "${_PROJECT_SET}" ]] && SHOW_ARGS+=(--project "${PROJECT}")
+            WI_JSON=$("${SHOW_ARGS[@]}") || {
+              echo "error: az-boards-mywi-update: could not fetch work item ${WI_ID}" >&2
+              exit 1
+            }
+            ASSIGNED=$(printf '%s' "${WI_JSON}" | jq -r '.fields["System.AssignedTo"].uniqueName // ""')
+            if [[ -z "${ASSIGNED}" ]]; then
+              echo "error: az-boards-mywi-update: work item ${WI_ID} is not assigned to anyone" >&2
+              exit 1
+            fi
+            ASSIGNED_LC=$(printf '%s' "${ASSIGNED}" | tr '[:upper:]' '[:lower:]')
+            CURRENT_USER_LC=$(printf '%s' "${CURRENT_USER}" | tr '[:upper:]' '[:lower:]')
+            if [[ "${ASSIGNED_LC}" != "${CURRENT_USER_LC}" ]]; then
+              echo "error: az-boards-mywi-update: work item ${WI_ID} is assigned to ${ASSIGNED}, not you (${CURRENT_USER}). Use az-boards-wi-update for items assigned to others." >&2
+              exit 1
+            fi
+            UPDATE_ARGS=(az boards work-item update --id "${WI_ID}" --output json)
+            [[ -n "${STATE}" ]] && UPDATE_ARGS+=(--state "${STATE}")
+            [[ -n "${TITLE}" ]] && UPDATE_ARGS+=(--title "${TITLE}")
+            [[ -n "${_PROJECT_SET}" ]] && UPDATE_ARGS+=(--project "${PROJECT}")
+            "${UPDATE_ARGS[@]}"
+        arguments:
+            wi_id:
+                description: Work item ID (numeric, must be assigned to you)
+                required: true
+                pattern: "^[0-9]+$"
+        options:
+            state:
+                description: New work item state (e.g. Active, Resolved, Closed)
+                flag: --state
+            title:
+                description: New work item title
+                flag: --title
+            project:
+                description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+                flag: --project
+                short: -p
+            directory:
+                description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+                flag: -C
+                path_tests: [under_cwd]
+
+    az-boards-area-list:
+        description: >-
+            List area paths configured in a project. Returns the hierarchical area
+            tree as JSON. Useful for setting --area on az-boards-wi-create or
+            az-boards-wi-update.
+        threat:
+            read: remote
+            write: none
+        template:
+            command:
+                - az
+                - boards
+                - area
+                - project
+                - list
+                - "{{options.project}}"
+                - --output
+                - json
+        options:
+            project:
+                description: Azure DevOps project name or ID (auto-detected from the git remote if omitted)
+                flag: --project
+                short: -p
+            directory:
+                description: Resolve the Azure DevOps project from the git remote of this directory instead of cwd (must be under cwd)
+                flag: -C
+                path_tests: [under_cwd]
+        pre: |
+            if [[ -n "${_DIRECTORY_SET}" ]]; then
+              _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
+                || { echo "error: -C: no 'origin' remote in '{{options.directory}}'" >&2; return 1; }
+              _PROJ=$(echo "${_URL}" | sed -nE 's|.*dev\.azure\.com/[^/]+/([^/]+)/_git/.*|\1|p; s|.*://[^/]*visualstudio\.com/(DefaultCollection/)?([^/]+)/_git/.*|\2|p; s|.*:v3/[^/]+/([^/]+)/.*|\1|p')
+              _PROJ="${_PROJ//%20/ }"
+              if [[ -z "${_PROJ}" ]]; then
+                echo "error: -C: could not parse Azure DevOps project from remote URL '${_URL}'" >&2
+                return 1
+              fi
+              if [[ -z "${_PROJECT_SET}" ]]; then
+                PROJECT="${_PROJ}"
+                _PROJECT_SET=true
+              fi
+            fi

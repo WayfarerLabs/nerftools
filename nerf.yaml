@@ -2,24 +2,24 @@
 # Used by `nerf generate --target claude-plugin -c nerf.yaml`.
 
 package:
-  name: nerftools
-  version: 2.0.0 # x-release-please-version
-  description: Scoped, safety-constrained CLI wrappers for AI agents
-  author:
-    name: WayfarerLabs
-  homepage: https://github.com/WayfarerLabs/nerftools
-  repository: https://github.com/WayfarerLabs/nerftools
-  license: MIT
-  keywords:
-    - claude-code
-    - agent-tools
-    - safety
-    - cli-wrappers
+    name: nerftools
+    version: 2.0.0 # x-release-please-version
+    description: Scoped, safety-constrained CLI wrappers for AI agents
+    author:
+        name: WayfarerLabs
+    homepage: https://github.com/WayfarerLabs/nerftools
+    repository: https://github.com/WayfarerLabs/nerftools
+    license: MIT
+    keywords:
+        - claude-code
+        - agent-tools
+        - safety
+        - cli-wrappers
 
 targets:
-  claude-plugin:
-    marketplace:
-      embed: false # distributed via the repo-level marketplace.json
-    # hooks: # both default to true; uncomment to opt out
-    #   session_start: false # one-time intro on session/clear/compact/resume
-    #   pretool_bash_hint: false # PreToolUse redirect for raw bash matching bash_hints
+    claude-plugin:
+        marketplace:
+            embed: false # distributed via the repo-level marketplace.json
+        # hooks: # both default to true; uncomment to opt out
+        #   session_start: false # one-time intro on session/clear/compact/resume
+        #   pretool_bash_hint: false # PreToolUse redirect for raw bash matching bash_hints

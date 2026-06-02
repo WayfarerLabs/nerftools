@@ -334,8 +334,7 @@ user (~/.claude/settings.json):
     nerf-git-push-branch  read:workspace  write:remote
 ```
 
-If a tool's script is not found or has no embedded threat metadata, it is listed without
-annotation.
+If a tool's script is not found or has no embedded threat metadata, it is listed without annotation.
 
 #### Operational model
 
