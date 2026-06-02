@@ -44,6 +44,11 @@ htmlcov/
 # tmuxinator config is personal
 .tmuxinator.yml
 
+# Claude Code session-local state. Note: .claude/agents/ is rulesync-generated
+# and IS committed (see below); only transient/per-session files belong here.
+# settings.local.json is already covered by Claude Code's global ignore.
+.claude/scheduled_tasks.lock
+
 # Rulesync personal target overrides (gitignored; see rulesync.local.jsonc.example).
 rulesync.local.jsonc
 
