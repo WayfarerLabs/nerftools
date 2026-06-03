@@ -3,6 +3,10 @@ name: Release Please
 on:
   push:
     branches: [main]
+  # Manual trigger lets us rebuild the release PR without pushing to main --
+  # useful when the open release PR conflicts with main (e.g. after a reformat
+  # touches the same line release-please bumps) and needs a clean regenerate.
+  workflow_dispatch:
 
 jobs:
   release-please:
