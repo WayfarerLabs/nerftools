@@ -62,9 +62,9 @@ within that package along with the package-level information.
 
 This repo offers several ways to use the nerf tools. Choose the best one for your specific needs:
 
-- The repo exposes a fully-generated Claude Code plugin with the default tools that can be installed
-  into a Claude Code environment directly from this repository. This is super easy but does not
-  allow for customization of the tools or other changes to the plugin.
+- The repo exposes fully-generated plugins for Claude Code and Codex with the default tools, both
+  installable directly from this repository. This is super easy but does not allow for
+  customization of the tools or other changes to the plugins.
 - Alternatively, users can install the Python package and generate their own targets locally using
   the CLI.
 - Additionally, platforms like [Agentworks](https://github.com/WayfarerLabs/agentworks) integrate
@@ -103,7 +103,10 @@ uv run nerf generate --target skills --outdir ./skills
 # Generate a Claude Code plugin (uses built-in defaults if no config)
 uv run nerf generate --target claude-plugin --outdir ./claude-plugin
 
-# Generate a Claude Code plugin with custom identity
+# Generate a Codex plugin
+uv run nerf generate --target codex-plugin --outdir ./codex-plugin
+
+# Generate either plugin with custom identity
 uv run nerf generate --target claude-plugin -c nerf.yaml --outdir ./claude-plugin
 ```
 
@@ -118,20 +121,16 @@ claude plugin marketplace add <plugin-dir>
 claude plugin install <plugin-name>@<marketplace-name>
 ```
 
-## Default Manifests/Packages
+## Default Manifests
 
-| Package      | Tools | Description                                                      |
-| ------------ | ----- | ---------------------------------------------------------------- |
-| git          | 11    | Git workflow with commit, push, fetch, tag, amend, revert, reset |
-| az-repos     | 3     | Azure Repos PR management                                        |
-| az-pipelines | 3     | Azure Pipelines monitoring                                       |
-| az-boards    | 7     | Azure Boards work items (query, view, create, update)            |
-| nx           | 6     | Nx monorepo workspace operations                                 |
-| tg           | 10    | Terragrunt infrastructure management                             |
-| pkgrun       | 3     | npm package runners (cspell, markdownlint, prettier)             |
-| stdutils     | 4     | Unix utilities (find, grep) with safety guardrails               |
-| gh           | 10    | GitHub CLI (PRs, issues, workflow runs)                          |
-| uv           | 4     | Python dev tools via uv run (pytest, ruff, mypy)                 |
+The repo ships a [default set of manifests](nerftools/default_manifests/) covering common CLI
+utilities -- git, gh, much of the `az` surface (Repos, Pipelines, Boards, AKS, network, storage,
+role assignments, and others), kubectl, terraform/terragrunt, nx, uv, and assorted utilities.
+Browse the directory for the current set; each YAML's package description and tool definitions
+explain what's covered and the threat profile of each tool.
+
+Use the defaults as-is, layer your own manifests on top, or skip them entirely with
+`--no-default` when generating.
 
 ## Nerf Control Tools
 
@@ -191,12 +190,15 @@ nerftools/             Python package
   builder.py           Bash script generation (3 execution modes)
   rendering.py         Shared display helpers (maps-to, usage tokens)
   skill.py             Rulesync skill generation
-  formats.py           Claude Code plugin builder
+  formats.py           Claude Code and Codex plugin builders
+  outdir.py            Output directory safety guard (refuses to wipe unmanaged dirs)
   config.py            Config loader, plugin metadata, defaults resolution
   cli.py               CLI (validate + generate)
-  nerfctl/claude/      Grant management shell scripts
+  nerfctl/claude/      Grant management shell scripts (Claude Code)
+  nerf_report/         Bundled agent-feedback tool template
   default_manifests/   Default tool package manifests (YAML)
 tests/                 Test suite
 out/claude-plugin/     Pre-built Claude Code plugin (auto-generated)
-docs/                  Manifest spec and other (future) docs
+out/codex-plugin/      Pre-built Codex plugin (auto-generated)
+docs/                  Manifest spec and design docs
 ```
