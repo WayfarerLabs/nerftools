@@ -42,9 +42,11 @@ For more detail on the manifest format and tool types/capabilities, see the
 [manifest reference](docs/nerf-manifest.md).
 
 This repo includes a set of [default manifests](nerftools/default_manifests/) that define a baseline
-set of nerf tools for common CLI utilities. Users are free to build upon these with their own custom
+set of nerf tools for common CLI utilities. Note that these are biased towards the author's stack
+(Azure, AZDO, Github, Kubectl, etc.). Users are free to build upon these with their own custom
 manifests or exclude them entirely by passing the `--no-default` flag to the CLI when generating
-tools.
+tools. Default manifest contributions that meet our exacting standards are very much encouraged,
+too.
 
 ### Targets
 
@@ -63,8 +65,8 @@ within that package along with the package-level information.
 This repo offers several ways to use the nerf tools. Choose the best one for your specific needs:
 
 - The repo exposes fully-generated plugins for Claude Code and Codex with the default tools, both
-  installable directly from this repository. This is super easy but does not allow for
-  customization of the tools or other changes to the plugins.
+  installable directly from this repository. This is super easy but does not allow for customization
+  of the tools or other changes to the plugins.
 - Alternatively, users can install the Python package and generate their own targets locally using
   the CLI.
 - Additionally, platforms like [Agentworks](https://github.com/WayfarerLabs/agentworks) integrate
@@ -125,12 +127,12 @@ claude plugin install <plugin-name>@<marketplace-name>
 
 The repo ships a [default set of manifests](nerftools/default_manifests/) covering common CLI
 utilities -- git, gh, much of the `az` surface (Repos, Pipelines, Boards, AKS, network, storage,
-role assignments, and others), kubectl, terraform/terragrunt, nx, uv, and assorted utilities.
-Browse the directory for the current set; each YAML's package description and tool definitions
-explain what's covered and the threat profile of each tool.
+role assignments, and others), kubectl, terraform/terragrunt, nx, uv, and assorted utilities. Browse
+the directory for the current set; each YAML's package description and tool definitions explain
+what's covered and the threat profile of each tool.
 
-Use the defaults as-is, layer your own manifests on top, or skip them entirely with
-`--no-default` when generating.
+Use the defaults as-is, layer your own manifests on top, or skip them entirely with `--no-default`
+when generating.
 
 ## Nerf Control Tools
 
