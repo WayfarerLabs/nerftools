@@ -108,7 +108,7 @@ uv run nerf generate --target claude-plugin --outdir ./claude-plugin
 # Generate a Codex plugin
 uv run nerf generate --target codex-plugin --outdir ./codex-plugin
 
-# Generate either plugin with custom identity
+# Generate a Claude Code plugin with custom identity
 uv run nerf generate --target claude-plugin -c nerf.yaml --outdir ./claude-plugin
 ```
 
