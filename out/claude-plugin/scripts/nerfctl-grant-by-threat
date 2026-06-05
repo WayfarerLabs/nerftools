@@ -16,6 +16,8 @@ READ_CEILING=""
 WRITE_CEILING=""
 FILTER="*"
 OUTSIDE="deny"
+CREATE_SCOPE_DIR=0
+PRUNE_OLDER=0
 
 THREAT_ORDER="none workspace machine remote admin"
 
@@ -23,7 +25,7 @@ usage() {
   cat >&2 <<'EOF'
 Usage: nerfctl-grant-by-threat --read <level> --write <level>
        [--filter <glob>] [--outside deny|reset] [--scope user|local]
-       [--plugin-root <path>]
+       [--plugin-root <path>] [--create-scope-dir] [--prune-older]
 
   --read <level>         Read ceiling (none|workspace|machine|remote|admin)
   --write <level>        Write ceiling (none|workspace|machine|remote|admin)
@@ -31,6 +33,15 @@ Usage: nerfctl-grant-by-threat --read <level> --write <level>
   --outside deny|reset   Action for tools outside the box (default: deny)
   --scope user|local     Settings scope (default: user)
   --plugin-root <path>   Override plugin root (for testing; skips auto-detection)
+  --create-scope-dir     Create .claude/ if missing (local scope only; default: error)
+  --prune-older          Remove stale entries referencing older versions of this plugin
+                         from the chosen scope's settings (in addition to the main op)
+
+The version scan runs on every invocation: if newer-version entries are found
+the command refuses to modify settings; if older-version entries are found
+the command warns and proceeds (or removes them with --prune-older). Scope-
+limited; --prune-older removes ALL older-version entries in scope, regardless
+of how narrow the current --filter is.
 
 Allows all tools within the threat box (read <= ceiling AND write <= ceiling).
 Tools outside the box are denied or reset based on --outside.
@@ -55,13 +66,82 @@ _resolve_settings() {
     user)  echo "$HOME/.claude/settings.json" ;;
     local)
       if [[ ! -d ".claude" ]]; then
-        echo "error: .claude/ not found in current directory" >&2
-        exit 1
+        if [[ "$CREATE_SCOPE_DIR" == "1" ]]; then
+          mkdir -p ".claude"
+        else
+          echo "error: .claude/ not found in current directory" >&2
+          echo "  hint: pass --create-scope-dir to create it" >&2
+          exit 1
+        fi
       fi
       echo ".claude/settings.local.json"
       ;;
     *) echo "error: unknown scope '$SCOPE' (use 'user' or 'local')" >&2; exit 1 ;;
   esac
+}
+
+# See grant-allow.sh for the version-scan helper docstrings. Duplicated
+# inline across the four write scripts to match the project's standalone-
+# script pattern; keep in sync.
+_scan_stale_versions() {
+  local settings_json="$1"
+  local tool_name="$2"
+  local current_version
+  local plugin_prefix
+  current_version=$(basename "$RESOLVED_ROOT")
+  plugin_prefix="$(dirname "$RESOLVED_ROOT")/"
+
+  local entries
+  entries=$(echo "$settings_json" | jq -r --arg prefix "$plugin_prefix" '
+    [
+      (.permissions.allow // [] | map({entry: .})),
+      (.permissions.deny  // [] | map({entry: .}))
+    ]
+    | flatten
+    | map(. as $row
+          | ($row.entry | capture("^Bash\\((?<path>[^)]+?)(?::\\*)?\\)$") // null) as $cap
+          | if $cap != null and ($cap.path | startswith($prefix))
+            then {entry: $row.entry, ver: ($cap.path | ltrimstr($prefix) | split("/")[0])}
+            else null
+            end)
+    | map(select(. != null))
+    | .[] | "\(.ver)\t\(.entry)"
+  ')
+
+  STALE_COUNT=0
+  STALE_JSON="[]"
+  local newer_count=0
+  local stale_entries=()
+  if [[ -n "$entries" ]]; then
+    while IFS=$'\t' read -r ver entry; do
+      [[ -z "$ver" ]] && continue
+      [[ "$ver" == "$current_version" ]] && continue
+      if [[ "$(printf '%s\n%s\n' "$ver" "$current_version" | sort -V | tail -1)" == "$ver" ]]; then
+        newer_count=$((newer_count + 1))
+      else
+        stale_entries+=("$entry")
+      fi
+    done <<< "$entries"
+  fi
+
+  if (( newer_count > 0 )); then
+    echo "error: ${tool_name}: found ${newer_count} permission entr$( ((newer_count == 1)) && echo "y" || echo "ies") referencing a newer version of this plugin; refusing to modify settings" >&2
+    echo "  hint: run the matching newer nerfctl binary, or remove the entries manually" >&2
+    exit 1
+  fi
+
+  STALE_COUNT=${#stale_entries[@]}
+  if (( STALE_COUNT > 0 )); then
+    STALE_JSON=$(printf '%s\n' "${stale_entries[@]}" | jq -R '.' | jq -s '.')
+  fi
+}
+
+_remove_stale_entries() {
+  echo "$1" | jq --argjson stale "$STALE_JSON" '
+    .permissions //= {}
+    | .permissions.allow = ((.permissions.allow // []) - $stale)
+    | .permissions.deny  = ((.permissions.deny  // []) - $stale)
+  '
 }
 
 _ensure_settings_file() {
@@ -148,6 +228,8 @@ while [[ $# -gt 0 ]]; do
     --outside) OUTSIDE="$2"; shift 2 ;;
     --scope) SCOPE="$2"; shift 2 ;;
     --plugin-root) PLUGIN_ROOT="$2"; shift 2 ;;
+    --create-scope-dir) CREATE_SCOPE_DIR=1; shift ;;
+    --prune-older) PRUNE_OLDER=1; shift ;;
     -h|--help) usage ;;
     -*)  echo "error: unknown option: $1" >&2; usage ;;
     *)   echo "error: unexpected argument: $1" >&2; usage ;;
@@ -223,6 +305,16 @@ SETTINGS="$(_resolve_settings)"
 _ensure_settings_file "$SETTINGS"
 
 UPDATED=$(cat "$SETTINGS")
+
+_scan_stale_versions "$UPDATED" "nerfctl-grant-by-threat"
+if (( STALE_COUNT > 0 )); then
+  if [[ "$PRUNE_OLDER" == "1" ]]; then
+    UPDATED=$(_remove_stale_entries "$UPDATED")
+    echo "Pruned $STALE_COUNT stale entr$( ((STALE_COUNT == 1)) && echo "y" || echo "ies") from older plugin versions"
+  else
+    echo "warning: $STALE_COUNT permission entr$( ((STALE_COUNT == 1)) && echo "y" || echo "ies") reference older versions of this plugin (pass --prune-older to remove)" >&2
+  fi
+fi
 
 ALLOWED_COUNT=0
 OUTSIDE_COUNT=0
