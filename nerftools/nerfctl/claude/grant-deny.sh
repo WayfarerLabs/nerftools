@@ -108,6 +108,8 @@ _scan_stale_versions() {
       echo "  hint: or omit --prune-older to skip the version scan" >&2
       exit 1
     fi
+    echo "warning: ${tool_name}: version analysis not possible -- neither 'sort -V' nor 'gsort -V' works on this system" >&2
+    echo "  hint: on macOS, run 'brew install coreutils' (provides gsort); on other platforms, install GNU coreutils" >&2
     return 0
   fi
 

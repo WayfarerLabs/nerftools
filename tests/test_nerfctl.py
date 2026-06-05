@@ -550,9 +550,9 @@ def test_prune_older_errors_clearly_when_no_version_sort_available(tmp_path: Pat
     assert _stale_entry(tmp_path, "1.0.0") in data["permissions"]["allow"]
 
 
-def test_no_version_sort_without_prune_flag_is_silent(tmp_path: Path) -> None:
-    """Without --prune-older, missing version-sort skips the scan silently
-    (loses newer-version detection but doesn't block work)."""
+def test_no_version_sort_without_prune_flag_warns_and_proceeds(tmp_path: Path) -> None:
+    """Without --prune-older, missing version-sort warns the operator (so they
+    know the safety check is degraded) and proceeds with the main op."""
     plugin = _versioned_plugin(tmp_path, "2.0.0")
     _user_settings(tmp_path, {"permissions": {"allow": [_stale_entry(tmp_path, "1.0.0")], "deny": []}})
     fake_bin = tmp_path / "fake-bin"
@@ -579,8 +579,12 @@ def test_no_version_sort_without_prune_flag_is_silent(tmp_path: Path) -> None:
         env_extra={"PATH": str(fake_bin)},
     )
     assert result.returncode == 0, result.stderr
-    # No warning about old versions because the scan was skipped
-    assert "older versions" not in result.stderr
+    # Operator is warned about the degraded scan so they know what's missing.
+    assert "version analysis not possible" in result.stderr
+    assert "brew install coreutils" in result.stderr
+    # The main op still completed (entry granted).
+    data = _read(tmp_path / ".claude" / "settings.json")
+    assert any("nerf-test-tool" in e for e in data["permissions"]["allow"])
 
 
 # -- prune-older / version scan -----------------------------------------------

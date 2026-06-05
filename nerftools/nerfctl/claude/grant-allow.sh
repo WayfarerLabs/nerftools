@@ -119,9 +119,11 @@ _scan_stale_versions() {
       echo "  hint: or omit --prune-older to skip the version scan" >&2
       exit 1
     fi
-    # No prune requested and no sorter: skip the scan. We lose newer-version
-    # detection here, but blocking work for the missing safety check isn't
-    # worth it; users can install coreutils when they want the protection.
+    # No prune requested: warn that the scan can't run, then proceed. We
+    # lose newer-version detection here, but blocking the operator's main
+    # work over a missing optional tool isn't right.
+    echo "warning: ${tool_name}: version analysis not possible -- neither 'sort -V' nor 'gsort -V' works on this system" >&2
+    echo "  hint: on macOS, run 'brew install coreutils' (provides gsort); on other platforms, install GNU coreutils" >&2
     return 0
   fi
 
