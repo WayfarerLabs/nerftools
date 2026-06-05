@@ -511,14 +511,12 @@ def test_prune_older_errors_clearly_when_no_version_sort_available(tmp_path: Pat
     --prune-older errors with an install hint instead of silently miscomparing."""
     plugin = _versioned_plugin(tmp_path, "2.0.0")
     _user_settings(tmp_path, {"permissions": {"allow": [_stale_entry(tmp_path, "1.0.0")], "deny": []}})
-    # Stub a PATH containing only a fake `sort` that ignores -V (mimics BSD sort).
+    # Stub a PATH containing only a fake `sort` whose -V is a no-op
+    # (input passes through unchanged). Mimics BSD sort accepting the flag
+    # but not actually version-sorting -- the probe should reject it.
     fake_bin = tmp_path / "fake-bin"
     fake_bin.mkdir()
-    # Provide a fake `sort` that ignores -V (reverses input order regardless),
-    # so the probe fails its correctness check.
     fake_sort = fake_bin / "sort"
-    # No-op `sort` (just pass input through) -- probe will see the input
-    # unchanged, recognize it as non-version-sorted, and reject.
     fake_sort.write_text("#!/bin/bash\ncat\n")
     fake_sort.chmod(0o755)
     # Also provide jq (the script still needs it).

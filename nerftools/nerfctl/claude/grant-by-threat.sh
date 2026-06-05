@@ -37,11 +37,14 @@ Usage: nerfctl-grant-by-threat --read <level> --write <level>
   --prune-older          Remove stale entries referencing older versions of this plugin
                          from the chosen scope's settings (in addition to the main op)
 
-The version scan runs on every invocation: if newer-version entries are found
-the command refuses to modify settings; if older-version entries are found
-the command warns and proceeds (or removes them with --prune-older). Scope-
-limited; --prune-older removes ALL older-version entries in scope, regardless
-of how narrow the current --filter is.
+The version scan runs on every invocation when a version-aware sort is
+available (GNU `sort -V` or `gsort -V` from brew coreutils). If found: newer-
+version entries cause the command to refuse to modify settings; older-version
+entries are warned about (or removed with --prune-older). If no version-aware
+sort is available, the scan is skipped with a warning -- or, if --prune-older
+was passed, the command errors with an install hint. Scope-limited;
+--prune-older removes ALL older-version entries in scope, regardless of how
+narrow the current --filter is.
 
 Allows all tools within the threat box (read <= ceiling AND write <= ceiling).
 Tools outside the box are denied or reset based on --outside.
