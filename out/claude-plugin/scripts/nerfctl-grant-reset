@@ -74,6 +74,20 @@ _resolve_settings() {
 # See grant-allow.sh for the version-scan helper docstrings. Duplicated
 # inline across the four write scripts to match the project's standalone-
 # script pattern; keep in sync.
+_pick_version_sorter() {
+  local probe_in=$'1.10.0\n1.9.0\n'
+  local probe_out=$'1.9.0\n1.10.0'
+  local cmd
+  for cmd in sort gsort; do
+    command -v "$cmd" > /dev/null 2>&1 || continue
+    if [[ "$(printf '%s' "$probe_in" | "$cmd" -V 2>/dev/null)" == "$probe_out" ]]; then
+      echo "$cmd"
+      return 0
+    fi
+  done
+  return 1
+}
+
 _scan_stale_versions() {
   local settings_json="$1"
   local tool_name="$2"
@@ -81,6 +95,21 @@ _scan_stale_versions() {
   local plugin_prefix
   current_version=$(basename "$RESOLVED_ROOT")
   plugin_prefix="$(dirname "$RESOLVED_ROOT")/"
+
+  STALE_COUNT=0
+  STALE_JSON="[]"
+
+  local vsort
+  vsort=$(_pick_version_sorter) || vsort=""
+  if [[ -z "$vsort" ]]; then
+    if [[ "$PRUNE_OLDER" == "1" ]]; then
+      echo "error: ${tool_name}: --prune-older requires a version-aware sort, but neither 'sort -V' nor 'gsort -V' works on this system" >&2
+      echo "  hint: on macOS, run 'brew install coreutils' (provides gsort); on other platforms, install GNU coreutils" >&2
+      echo "  hint: or omit --prune-older to skip the version scan" >&2
+      exit 1
+    fi
+    return 0
+  fi
 
   local entries
   entries=$(echo "$settings_json" | jq -r --arg prefix "$plugin_prefix" '
@@ -99,15 +128,13 @@ _scan_stale_versions() {
     | .[] | "\(.ver)\t\(.entry)"
   ')
 
-  STALE_COUNT=0
-  STALE_JSON="[]"
   local newer_count=0
   local stale_entries=()
   if [[ -n "$entries" ]]; then
     while IFS=$'\t' read -r ver entry; do
       [[ -z "$ver" ]] && continue
       [[ "$ver" == "$current_version" ]] && continue
-      if [[ "$(printf '%s\n%s\n' "$ver" "$current_version" | sort -V | tail -1)" == "$ver" ]]; then
+      if [[ "$(printf '%s\n%s\n' "$ver" "$current_version" | "$vsort" -V | tail -1)" == "$ver" ]]; then
         newer_count=$((newer_count + 1))
       else
         stale_entries+=("$entry")
