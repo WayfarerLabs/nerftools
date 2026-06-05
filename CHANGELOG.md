@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.2.0](https://github.com/WayfarerLabs/nerftools/compare/v2.1.0...v2.2.0) (2026-06-05)
+
+
+### Features
+
+* bash-hint hook opt-in via brand-namespaced env var ([aa2288e](https://github.com/WayfarerLabs/nerftools/commit/aa2288e5f15c37f3c439698f9457f923786301f5))
+* gate bash-hint hook behind brand-namespaced opt-in env var ([ee2801d](https://github.com/WayfarerLabs/nerftools/commit/ee2801d6bb5b641becdb623785729d029aad4f77))
+
+
+### Documentation
+
+* clarify claude code output ([d2094a9](https://github.com/WayfarerLabs/nerftools/commit/d2094a9b047dcfac56d90bf5cb77725abdf1fd32))
+* further readme updates ([e147e84](https://github.com/WayfarerLabs/nerftools/commit/e147e842d6281e25ed05bd8c8b28ccb830db47dc))
+* refresh README -- add Codex plugin, soften default-manifests section, update structure ([76cc678](https://github.com/WayfarerLabs/nerftools/commit/76cc6781269539463237c9aedacfbd3549aa2b54))
+* refresh README for Codex plugin and softened default-manifests section ([63d2f5b](https://github.com/WayfarerLabs/nerftools/commit/63d2f5ba93806bbbb2fed4e521c17199e1dbced4))
+
 ## [2.1.0](https://github.com/WayfarerLabs/nerftools/compare/v2.0.0...v2.1.0) (2026-06-03)
 
 
