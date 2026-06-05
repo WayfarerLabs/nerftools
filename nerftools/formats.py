@@ -723,6 +723,12 @@ _HINT_HOOK_TEMPLATE = '''\
 # command allows the call through without matching. Empty reason still denies,
 # with an explanation.
 #
+# Opt-in: this hook is a no-op unless __BRAND_ENV__ is set to a truthy
+# value (1, true, yes, on -- case-insensitive). The redirect is aggressive
+# enough that we make agents/users explicitly opt in rather than discover
+# it by surprise. The env var is brand-namespaced so two plugins with
+# different brands installed side-by-side don't share a kill switch.
+#
 # Fail-open behavior: if bash < 4 or jq is missing, the hook exits 0 silently.
 # A SessionStart hook surfaces a warning so the user knows the redirect is
 # disabled.
@@ -731,6 +737,12 @@ _HINT_HOOK_TEMPLATE = '''\
 if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
   exit 0
 fi
+
+# Opt-in gate: silent no-op unless explicitly enabled.
+case "${__BRAND_ENV__:-}" in
+  1 | [tT][rR][uU][eE] | [yY][eE][sS] | [oO][nN]) ;;
+  *) exit 0 ;;
+esac
 
 set -uo pipefail
 
@@ -855,6 +867,21 @@ def _derive_brand(prefix: str) -> str:
     return prefix.rstrip("-_") or "nerf"
 
 
+def _derive_brand_env_var(brand: str) -> str:
+    """Derive the brand-namespaced env var that opts the hook in.
+
+    Two plugins with different brands installed side-by-side need
+    independent kill switches; namespacing the env var by brand makes
+    them non-interfering. ``"nerf"`` -> ``"NERF_ENABLE_BASH_HINT_HOOK"``,
+    ``"my-tool"`` -> ``"MY_TOOL_ENABLE_BASH_HINT_HOOK"``.
+    """
+    sanitized = re_module.sub(r"[^A-Z0-9]", "_", brand.upper())
+    # Env var names can't start with a digit.
+    if sanitized and sanitized[0].isdigit():
+        sanitized = "_" + sanitized
+    return f"{sanitized}_ENABLE_BASH_HINT_HOOK"
+
+
 def _build_bash_hint_hook_script(manifests: list[NerfManifest], *, prefix: str) -> str:
     """Render the PreToolUse hint dispatcher with patterns baked in."""
     brand = _derive_brand(prefix)
@@ -871,6 +898,7 @@ def _build_bash_hint_hook_script(manifests: list[NerfManifest], *, prefix: str) 
         .replace("__PREFIX__", _bash_double_quote_escape(prefix))
         .replace("__BRAND__", _bash_double_quote_escape(brand))
         .replace("__BRAND_RE__", _bash_double_quote_escape(_ere_escape(brand)))
+        .replace("__BRAND_ENV__", _derive_brand_env_var(brand))
     )
 
 
