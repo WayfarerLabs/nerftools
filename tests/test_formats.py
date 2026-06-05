@@ -278,14 +278,34 @@ def _manifest_with_hints(
     )
 
 
-def _run_hook(script: Path, payload: dict) -> tuple[str, int]:
+def _run_hook(
+    script: Path,
+    payload: dict,
+    *,
+    env: dict[str, str] | None = None,
+    brand: str = "nerf",
+) -> tuple[str, int]:
+    import os
     import subprocess
 
+    from nerftools.formats import _derive_brand_env_var
+
+    # The hook is opt-in via <BRAND>_ENABLE_BASH_HINT_HOOK -- default the
+    # brand to "nerf" (matches all existing tests' prefix="nerf-") and
+    # default the gate to truthy so the tests exercise the hook's logic.
+    # Tests of the gate itself pass an explicit env that overrides.
+    # Use the production helper directly so test/hook env-var derivation
+    # can't drift (e.g., on digit-leading brands).
+    enable_var = _derive_brand_env_var(brand)
+    merged_env = {**os.environ, enable_var: "true"}
+    if env is not None:
+        merged_env.update(env)
     result = subprocess.run(
         [str(script)],
         input=json.dumps(payload),
         capture_output=True,
         text=True,
+        env=merged_env,
         check=False,
     )
     return result.stdout, result.returncode
@@ -448,6 +468,70 @@ def test_claude_plugin_hook_script_executable(tmp_path: Path) -> None:
     assert script.stat().st_mode & 0o111  # executable
 
 
+@pytest.mark.parametrize("enable_value", ["true", "TRUE", "True", "1", "yes", "YES", "on", "ON"])
+def test_hook_runs_when_enable_env_is_truthy(tmp_path: Path, enable_value: str) -> None:
+    _build([_manifest_with_hints()], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    stdout, rc = _run_hook(
+        script,
+        {"tool_name": "Bash", "tool_input": {"command": "git status"}},
+        env={"NERF_ENABLE_BASH_HINT_HOOK": enable_value},
+    )
+    assert rc == 0
+    assert json.loads(stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+@pytest.mark.parametrize(
+    "enable_value", ["", "false", "0", "no", "off", "FaLsE", "anything-else"]
+)
+def test_hook_silent_noop_when_enable_env_is_not_truthy(tmp_path: Path, enable_value: str) -> None:
+    _build([_manifest_with_hints()], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    stdout, rc = _run_hook(
+        script,
+        {"tool_name": "Bash", "tool_input": {"command": "git status"}},
+        env={"NERF_ENABLE_BASH_HINT_HOOK": enable_value},
+    )
+    assert rc == 0
+    assert stdout == ""  # nothing printed -> Claude Code lets the command through
+
+
+def test_hook_silent_noop_when_enable_env_is_unset(tmp_path: Path) -> None:
+    """Explicit guard against accidentally clobbering os.environ: pass an env
+    dict that omits NERF_ENABLE_BASH_HINT_HOOK to confirm the unset case."""
+    import os
+    import subprocess
+
+    _build([_manifest_with_hints()], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    env = {k: v for k, v in os.environ.items() if k != "NERF_ENABLE_BASH_HINT_HOOK"}
+    result = subprocess.run(
+        [str(script)],
+        input=json.dumps({"tool_name": "Bash", "tool_input": {"command": "git status"}}),
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+    assert result.returncode == 0
+    assert result.stdout == ""
+
+
+def test_hook_env_var_is_brand_namespaced(tmp_path: Path) -> None:
+    """A non-default brand gets its own env var so multiple plugins coexist."""
+    _build([_manifest_with_hints()], tmp_path, prefix="acme-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    script_text = script.read_text()
+    assert "ACME_ENABLE_BASH_HINT_HOOK" in script_text
+    assert "NERF_ENABLE_BASH_HINT_HOOK" not in script_text
+
+
+def test_hook_with_hyphenated_brand_uppercases_and_underscores(tmp_path: Path) -> None:
+    _build([_manifest_with_hints()], tmp_path, prefix="my-tool-")
+    script = tmp_path / "hooks" / "nerf-bash-hint"
+    assert "MY_TOOL_ENABLE_BASH_HINT_HOOK" in script.read_text()
+
+
 def test_hook_denies_matching_command(tmp_path: Path) -> None:
     _build([_manifest_with_hints()], tmp_path, prefix="nerf-")
     script = tmp_path / "hooks" / "nerf-bash-hint"
@@ -587,6 +671,7 @@ def test_hook_brand_regex_meta_safe(tmp_path: Path) -> None:
     stdout, _ = _run_hook(
         script,
         {"tool_name": "Bash", "tool_input": {"command": "git status  # myXtool:bypass reason"}},
+        brand="my.tool",
     )
     reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
     assert "`my.tool-git`" in reason
@@ -594,6 +679,7 @@ def test_hook_brand_regex_meta_safe(tmp_path: Path) -> None:
     stdout, _ = _run_hook(
         script,
         {"tool_name": "Bash", "tool_input": {"command": "git status  # my.tool:bypass reason"}},
+        brand="my.tool",
     )
     assert stdout == ""
 
@@ -660,12 +746,14 @@ def test_hook_brand_follows_prefix(tmp_path: Path) -> None:
     stdout, _ = _run_hook(
         script,
         {"tool_name": "Bash", "tool_input": {"command": "git status  # mytool:bypass yes"}},
+        brand="mytool",
     )
     assert stdout == ""
     # Bypass with the old "nerf:" brand does NOT match -> still denies
     stdout, _ = _run_hook(
         script,
         {"tool_name": "Bash", "tool_input": {"command": "git status  # nerf:bypass yes"}},
+        brand="mytool",
     )
     reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
     assert "`mytool-git`" in reason

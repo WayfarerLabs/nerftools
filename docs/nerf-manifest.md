@@ -147,6 +147,13 @@ constructs (lookaheads, named groups, etc.) will pass load-time validation but w
 runtime. Stick to ERE. As a convenience, `\b` boundaries are translated to portable POSIX ERE at
 generation time so manifests can keep using them.
 
+The hook is **opt-in at runtime**: even when generated and installed, it is a silent no-op unless
+the brand-namespaced env var `<BRAND>_ENABLE_BASH_HINT_HOOK` (e.g. `NERF_ENABLE_BASH_HINT_HOOK` for
+the default `nerf-` prefix, `MY_TOOL_ENABLE_BASH_HINT_HOOK` for `my-tool-`) is set to a truthy value
+(`1`, `true`, `yes`, or `on` — case-insensitive). The redirect is aggressive enough that we make
+this explicit rather than discover-by-surprise. Brand-namespacing the env var means two plugins with
+different brands installed side-by-side have independent kill switches.
+
 The hook automatically skips when it detects an actual wrapper invocation: it splits the command on
 shell separators (`&&`, `||`, `;`, `|`, `&`), finds the first non-env-var token of each segment, and
 checks whether that token's basename starts with the wrapper prefix. Compound forms like
