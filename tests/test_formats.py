@@ -286,15 +286,17 @@ def _run_hook(
     brand: str = "nerf",
 ) -> tuple[str, int]:
     import os
-    import re
     import subprocess
+
+    from nerftools.formats import _derive_brand_env_var
 
     # The hook is opt-in via <BRAND>_ENABLE_BASH_HINT_HOOK -- default the
     # brand to "nerf" (matches all existing tests' prefix="nerf-") and
     # default the gate to truthy so the tests exercise the hook's logic.
     # Tests of the gate itself pass an explicit env that overrides.
-    sanitized_brand = re.sub(r"[^A-Z0-9]", "_", brand.upper())
-    enable_var = f"{sanitized_brand}_ENABLE_BASH_HINT_HOOK"
+    # Use the production helper directly so test/hook env-var derivation
+    # can't drift (e.g., on digit-leading brands).
+    enable_var = _derive_brand_env_var(brand)
     merged_env = {**os.environ, enable_var: "true"}
     if env is not None:
         merged_env.update(env)
