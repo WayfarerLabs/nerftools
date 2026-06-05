@@ -133,7 +133,7 @@ _scan_stale_versions() {
   # Extract <version>\t<entry> for any allow/deny entry whose Bash(...) path
   # starts with the plugin prefix.
   local entries
-  entries=$(echo "$settings_json" | jq -r --arg prefix "$plugin_prefix" '
+  entries=$(printf '%s' "$settings_json" | jq -r --arg prefix "$plugin_prefix" '
     [
       (.permissions.allow // [] | map({entry: .})),
       (.permissions.deny  // [] | map({entry: .}))
@@ -180,7 +180,7 @@ _scan_stale_versions() {
 # _scan_stale_versions, return new JSON with the stale entries removed from
 # both allow and deny lists.
 _remove_stale_entries() {
-  echo "$1" | jq --argjson stale "$STALE_JSON" '
+  printf '%s' "$1" | jq --argjson stale "$STALE_JSON" '
     .permissions //= {}
     | .permissions.allow = ((.permissions.allow // []) - $stale)
     | .permissions.deny  = ((.permissions.deny  // []) - $stale)
@@ -301,7 +301,7 @@ for SCRIPT_PATH in "${MATCHES[@]}"; do
   ENTRY="Bash($SCRIPT_PATH:*)"
   STALE_ENTRY="Bash($SCRIPT_PATH)"
 
-  UPDATED=$(echo "$UPDATED" | jq \
+  UPDATED=$(printf '%s' "$UPDATED" | jq \
     --arg entry "$ENTRY" \
     --arg stale "$STALE_ENTRY" \
     '

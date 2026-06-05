@@ -126,7 +126,7 @@ _scan_stale_versions() {
   fi
 
   local entries
-  entries=$(echo "$settings_json" | jq -r --arg prefix "$plugin_prefix" '
+  entries=$(printf '%s' "$settings_json" | jq -r --arg prefix "$plugin_prefix" '
     [
       (.permissions.allow // [] | map({entry: .})),
       (.permissions.deny  // [] | map({entry: .}))
@@ -169,7 +169,7 @@ _scan_stale_versions() {
 }
 
 _remove_stale_entries() {
-  echo "$1" | jq --argjson stale "$STALE_JSON" '
+  printf '%s' "$1" | jq --argjson stale "$STALE_JSON" '
     .permissions //= {}
     | .permissions.allow = ((.permissions.allow // []) - $stale)
     | .permissions.deny  = ((.permissions.deny  // []) - $stale)
@@ -361,16 +361,16 @@ for SCRIPT_PATH in "${TOOL_PATHS[@]}"; do
 
   # Check current status for annotations (check both new and stale entry forms)
   was=""
-  if echo "$UPDATED" | jq -e --arg e "$ENTRY" --arg s "$STALE_ENTRY" \
+  if printf '%s' "$UPDATED" | jq -e --arg e "$ENTRY" --arg s "$STALE_ENTRY" \
     '(.permissions.allow // [] | (index($e) != null or index($s) != null))' > /dev/null 2>&1; then
     was="allowed"
-  elif echo "$UPDATED" | jq -e --arg e "$ENTRY" --arg s "$STALE_ENTRY" \
+  elif printf '%s' "$UPDATED" | jq -e --arg e "$ENTRY" --arg s "$STALE_ENTRY" \
     '(.permissions.deny // [] | (index($e) != null or index($s) != null))' > /dev/null 2>&1; then
     was="denied"
   fi
 
   if [[ $tool_read_rank -le $READ_RANK && $tool_write_rank -le $WRITE_RANK ]]; then
-    UPDATED=$(echo "$UPDATED" | jq \
+    UPDATED=$(printf '%s' "$UPDATED" | jq \
       --arg entry "$ENTRY" \
       --arg stale "$STALE_ENTRY" \
       '
@@ -390,7 +390,7 @@ for SCRIPT_PATH in "${TOOL_PATHS[@]}"; do
     ALLOWED_COUNT=$((ALLOWED_COUNT + 1))
   else
     if [[ "$OUTSIDE" == "deny" ]]; then
-      UPDATED=$(echo "$UPDATED" | jq \
+      UPDATED=$(printf '%s' "$UPDATED" | jq \
         --arg entry "$ENTRY" \
         --arg stale "$STALE_ENTRY" \
         '
@@ -408,7 +408,7 @@ for SCRIPT_PATH in "${TOOL_PATHS[@]}"; do
       [[ -n "$was" && "$was" != "denied" ]] && annotation=" (was: $was)"
       echo "  Denied:  $TOOL_NAME  read:${TOOL_READ[$SCRIPT_PATH]}  write:${TOOL_WRITE[$SCRIPT_PATH]}$annotation"
     else
-      UPDATED=$(echo "$UPDATED" | jq \
+      UPDATED=$(printf '%s' "$UPDATED" | jq \
         --arg entry "$ENTRY" \
         --arg stale "$STALE_ENTRY" \
         '
