@@ -71,12 +71,34 @@ _resolve_settings() {
   esac
 }
 
+# Find a sort command that actually does version-aware sorting. GNU sort
+# has -V; BSD sort (default macOS) does not. Try `sort -V` then `gsort -V`
+# (brew coreutils). Probes with a known input/output to confirm correctness
+# (BSD sort may accept -V but fall back to lex). Outputs the command name
+# on stdout, or returns 1 if none works.
+_pick_version_sorter() {
+  # Probe input has a trailing newline; expected has none because $(...)
+  # strips trailing newlines from command substitution output.
+  local probe_in=$'1.10.0\n1.9.0\n'
+  local probe_out=$'1.9.0\n1.10.0'
+  local cmd
+  for cmd in sort gsort; do
+    command -v "$cmd" > /dev/null 2>&1 || continue
+    if [[ "$(printf '%s' "$probe_in" | "$cmd" -V 2>/dev/null)" == "$probe_out" ]]; then
+      echo "$cmd"
+      return 0
+    fi
+  done
+  return 1
+}
+
 # Scan permission entries in $1 (settings JSON) for paths under this plugin's
 # version-cousin tree (same plugin prefix, different version segment). Sets:
 #   STALE_COUNT  -- number of older-version entries found
 #   STALE_JSON   -- JSON array of stale entry strings (for the prune jq filter)
 # Exits 1 if any newer-version entries are found (refuses to mutate settings
-# when the operator may have run the wrong nerfctl binary).
+# when the operator may have run the wrong nerfctl binary). Also exits 1 if
+# the operator asked for --prune-older but no version-aware sort is available.
 _scan_stale_versions() {
   local settings_json="$1"
   local tool_name="$2"
@@ -84,6 +106,24 @@ _scan_stale_versions() {
   local plugin_prefix
   current_version=$(basename "$RESOLVED_ROOT")
   plugin_prefix="$(dirname "$RESOLVED_ROOT")/"
+
+  STALE_COUNT=0
+  STALE_JSON="[]"
+
+  local vsort
+  vsort=$(_pick_version_sorter) || vsort=""
+  if [[ -z "$vsort" ]]; then
+    if [[ "$PRUNE_OLDER" == "1" ]]; then
+      echo "error: ${tool_name}: --prune-older requires a version-aware sort, but neither 'sort -V' nor 'gsort -V' works on this system" >&2
+      echo "  hint: on macOS, run 'brew install coreutils' (provides gsort); on other platforms, install GNU coreutils" >&2
+      echo "  hint: or omit --prune-older to skip the version scan" >&2
+      exit 1
+    fi
+    # No prune requested and no sorter: skip the scan. We lose newer-version
+    # detection here, but blocking work for the missing safety check isn't
+    # worth it; users can install coreutils when they want the protection.
+    return 0
+  fi
 
   # Extract <version>\t<entry> for any allow/deny entry whose Bash(...) path
   # starts with the plugin prefix.
@@ -104,16 +144,14 @@ _scan_stale_versions() {
     | .[] | "\(.ver)\t\(.entry)"
   ')
 
-  STALE_COUNT=0
-  STALE_JSON="[]"
   local newer_count=0
   local stale_entries=()
   if [[ -n "$entries" ]]; then
     while IFS=$'\t' read -r ver entry; do
       [[ -z "$ver" ]] && continue
       [[ "$ver" == "$current_version" ]] && continue
-      # sort -V puts the larger version last; if ver sorts after current, ver is newer.
-      if [[ "$(printf '%s\n%s\n' "$ver" "$current_version" | sort -V | tail -1)" == "$ver" ]]; then
+      # vsort -V puts the larger version last; if ver sorts after current, ver is newer.
+      if [[ "$(printf '%s\n%s\n' "$ver" "$current_version" | "$vsort" -V | tail -1)" == "$ver" ]]; then
         newer_count=$((newer_count + 1))
       else
         stale_entries+=("$entry")

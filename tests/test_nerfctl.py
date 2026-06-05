@@ -476,7 +476,7 @@ def _invoke_for(script: Path, plugin_root: Path, *extra: str) -> list[str]:
 # -- create-scope-dir ---------------------------------------------------------
 
 
-@pytest.mark.parametrize("script", [_GRANT, _DENY, _BY_THREAT])
+@pytest.mark.parametrize("script", [_GRANT, _DENY, _RESET, _BY_THREAT])
 def test_local_scope_errors_when_claude_missing_without_flag(
     tmp_path: Path, script: Path
 ) -> None:
@@ -489,7 +489,7 @@ def test_local_scope_errors_when_claude_missing_without_flag(
     assert not (tmp_path / ".claude").exists()
 
 
-@pytest.mark.parametrize("script", [_GRANT, _DENY, _BY_THREAT])
+@pytest.mark.parametrize("script", [_GRANT, _DENY, _RESET, _BY_THREAT])
 def test_create_scope_dir_creates_missing_claude(tmp_path: Path, script: Path) -> None:
     plugin = _versioned_plugin(tmp_path, "2.0.0")
     result = _run(
@@ -499,7 +499,88 @@ def test_create_scope_dir_creates_missing_claude(tmp_path: Path, script: Path) -
     )
     assert result.returncode == 0, result.stderr
     assert (tmp_path / ".claude").is_dir()
-    assert (tmp_path / ".claude" / "settings.local.json").is_file()
+    # grant-reset noop-exits before _ensure_settings_file when no settings
+    # exist yet, so its run creates the dir but not the file. The other
+    # three explicitly ensure the file.
+    if script != _RESET:
+        assert (tmp_path / ".claude" / "settings.local.json").is_file()
+
+
+def test_prune_older_errors_clearly_when_no_version_sort_available(tmp_path: Path) -> None:
+    """If neither `sort -V` nor `gsort -V` works (e.g. macOS without coreutils),
+    --prune-older errors with an install hint instead of silently miscomparing."""
+    plugin = _versioned_plugin(tmp_path, "2.0.0")
+    _user_settings(tmp_path, {"permissions": {"allow": [_stale_entry(tmp_path, "1.0.0")], "deny": []}})
+    # Stub a PATH containing only a fake `sort` that ignores -V (mimics BSD sort).
+    fake_bin = tmp_path / "fake-bin"
+    fake_bin.mkdir()
+    # Provide a fake `sort` that ignores -V (reverses input order regardless),
+    # so the probe fails its correctness check.
+    fake_sort = fake_bin / "sort"
+    # No-op `sort` (just pass input through) -- probe will see the input
+    # unchanged, recognize it as non-version-sorted, and reject.
+    fake_sort.write_text("#!/bin/bash\ncat\n")
+    fake_sort.chmod(0o755)
+    # Also provide jq (the script still needs it).
+    if _jq_bin_dir:
+        (fake_bin / "jq").symlink_to(Path(_jq_bin_dir) / "jq")
+    (fake_bin / "bash").symlink_to("/bin/bash")
+    # Provide basename/dirname/cat/printf/find/mkdir/realpath etc. by symlinking
+    # everything currently in /usr/bin and /bin minus sort/gsort.
+    import contextlib
+
+    for src_dir in ["/usr/bin", "/bin"]:
+        for f in Path(src_dir).iterdir():
+            if f.name in ("sort", "gsort") or (fake_bin / f.name).exists():
+                continue
+            with contextlib.suppress(OSError, FileExistsError):
+                (fake_bin / f.name).symlink_to(f)
+
+    result = _run(
+        _GRANT,
+        *_invoke_for(_GRANT, plugin, "--prune-older"),
+        home=tmp_path,
+        env_extra={"PATH": str(fake_bin)},
+    )
+    assert result.returncode != 0
+    assert "version-aware sort" in result.stderr
+    assert "brew install coreutils" in result.stderr
+    # Settings untouched
+    data = _read(tmp_path / ".claude" / "settings.json")
+    assert _stale_entry(tmp_path, "1.0.0") in data["permissions"]["allow"]
+
+
+def test_no_version_sort_without_prune_flag_is_silent(tmp_path: Path) -> None:
+    """Without --prune-older, missing version-sort skips the scan silently
+    (loses newer-version detection but doesn't block work)."""
+    plugin = _versioned_plugin(tmp_path, "2.0.0")
+    _user_settings(tmp_path, {"permissions": {"allow": [_stale_entry(tmp_path, "1.0.0")], "deny": []}})
+    fake_bin = tmp_path / "fake-bin"
+    fake_bin.mkdir()
+    fake_sort = fake_bin / "sort"
+    fake_sort.write_text("#!/bin/bash\ncat\n")
+    fake_sort.chmod(0o755)
+    if _jq_bin_dir:
+        (fake_bin / "jq").symlink_to(Path(_jq_bin_dir) / "jq")
+    (fake_bin / "bash").symlink_to("/bin/bash")
+    import contextlib
+
+    for src_dir in ["/usr/bin", "/bin"]:
+        for f in Path(src_dir).iterdir():
+            if f.name in ("sort", "gsort") or (fake_bin / f.name).exists():
+                continue
+            with contextlib.suppress(OSError, FileExistsError):
+                (fake_bin / f.name).symlink_to(f)
+
+    result = _run(
+        _GRANT,
+        *_invoke_for(_GRANT, plugin),  # no --prune-older
+        home=tmp_path,
+        env_extra={"PATH": str(fake_bin)},
+    )
+    assert result.returncode == 0, result.stderr
+    # No warning about old versions because the scan was skipped
+    assert "older versions" not in result.stderr
 
 
 # -- prune-older / version scan -----------------------------------------------
