@@ -673,3 +673,34 @@ def test_scan_ignores_entries_outside_plugin_prefix(tmp_path: Path) -> None:
     # Unrelated entry untouched
     data = _read(tmp_path / ".claude" / "settings.json")
     assert unrelated in data["permissions"]["allow"]
+
+
+def test_scan_handles_non_bash_permission_entries(tmp_path: Path) -> None:
+    """Real settings can contain WebFetch(...), Read(...), mcp__*, etc. The
+    capture("^Bash...") jq filter must not error on those non-matching entries."""
+    plugin = _versioned_plugin(tmp_path, "2.0.0")
+    stale = _stale_entry(tmp_path, "1.0.0")
+    _user_settings(
+        tmp_path,
+        {
+            "permissions": {
+                "allow": [
+                    stale,
+                    "WebFetch(*)",
+                    "Read(*)",
+                    "mcp__server__tool",
+                ],
+                "deny": ["Write(/tmp/*)"],
+            }
+        },
+    )
+    result = _run(_GRANT, *_invoke_for(_GRANT, plugin, "--prune-older"), home=tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert "Pruned 1 stale entry" in result.stdout
+    data = _read(tmp_path / ".claude" / "settings.json")
+    # Stale removed, all non-Bash entries preserved untouched
+    assert stale not in data["permissions"]["allow"]
+    assert "WebFetch(*)" in data["permissions"]["allow"]
+    assert "Read(*)" in data["permissions"]["allow"]
+    assert "mcp__server__tool" in data["permissions"]["allow"]
+    assert "Write(/tmp/*)" in data["permissions"]["deny"]

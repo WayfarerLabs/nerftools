@@ -133,7 +133,7 @@ _scan_stale_versions() {
     ]
     | flatten
     | map(. as $row
-          | ($row.entry | capture("^Bash\\((?<path>[^)]+?)(?::\\*)?\\)$") // null) as $cap
+          | ($row.entry | capture("^Bash\\((?<path>[^)]+?)(?::\\*)?\\)$")? // null) as $cap
           | if $cap != null and ($cap.path | startswith($prefix))
             then {entry: $row.entry, ver: ($cap.path | ltrimstr($prefix) | split("/")[0])}
             else null
