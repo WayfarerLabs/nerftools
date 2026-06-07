@@ -146,7 +146,8 @@ Two checks are currently emitted:
    plugin owner, plugin name, and tool-name brand prefix to avoid false positives on unrelated
    plugins. The deny message tells the agent to use the current version, or to stop and report to
    the user, depending on whether the call is older or newer than the current install. **No bypass
-   sentinel** — this check is intentionally strict.
+   sentinel by design** — agents are not expected to work around a version-mismatch detection;
+   future contributors should not add one "for symmetry" with the bash-hint check.
 2. **Bash-hint check** — env: `<BRAND>_ENABLE_BASH_HINT_HOOK`. Described below.
 
 When the current-version check is enabled, the SessionStart hook also appends a reminder telling the

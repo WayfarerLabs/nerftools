@@ -815,12 +815,19 @@ _ere_escape() {
 # command isn't invoking a tool path under a different version of OUR
 # plugin. Method 1 (preferred): walk up from this hook's own path.
 # Method 2 (fallback): scan ~/.claude/plugins/cache/*/<plugin>/ for the
-# max version directory. Method 3: skip with warning.
+# max version directory; refuses if multiple owners ship the same plugin
+# name (the brand is supposed to disambiguate -- a name collision is a
+# misconfig). Method 3: skip with warning.
 _check_current_version() {
   case "${__BRAND_VERSION_ENV__:-}" in
     1 | [tT][rR][uU][eE] | [yY][eE][sS] | [oO][nN]) ;;
     *) return 0 ;;
   esac
+
+  # Pick the sorter once. Used for both fallback max-version and the
+  # older/newer categorization below.
+  local vsort
+  vsort=$(_pick_version_sorter) || vsort=""
 
   local self_path version_dir plugin_dir current_version=""
   self_path=$(realpath "$0" 2>/dev/null) || {
@@ -833,20 +840,24 @@ _check_current_version() {
     current_version=$(basename "$version_dir")
   else
     # Fallback: scan cache for any owner with our plugin name.
-    local vsort
-    vsort=$(_pick_version_sorter) || {
+    if [[ -z "$vsort" ]]; then
       echo "warning: __HOOK_NAME__: cannot self-derive plugin location and no version-aware sort available; skipping current-version check" >&2
       return 0
-    }
+    fi
     plugin_dir=""
-    local versions="" _p _vd
+    local versions="" _p _vd owners_seen=0
     for _p in "$HOME/.claude/plugins/cache"/*/"$_PLUGIN_NAME"; do
       [[ -d "$_p" ]] || continue
+      owners_seen=$((owners_seen + 1))
       plugin_dir="$_p"
       while IFS= read -r _vd; do
         [[ -d "$_vd" ]] && versions+="$(basename "$_vd")"$'\\n'
       done < <(find "$_p" -maxdepth 1 -mindepth 1 -type d 2>/dev/null)
     done
+    if (( owners_seen > 1 )); then
+      echo "warning: __HOOK_NAME__: found '__PLUGIN_NAME__' installed under multiple owners in $HOME/.claude/plugins/cache; brand should disambiguate -- a name collision is a misconfig; skipping current-version check" >&2
+      return 0
+    fi
     if [[ -z "$plugin_dir" || -z "$versions" ]]; then
       echo "warning: __HOOK_NAME__: cannot determine plugin location; skipping current-version check" >&2
       return 0
@@ -855,30 +866,39 @@ _check_current_version() {
   fi
 
   # Extract called versions from absolute paths in the command that match
-  # OUR plugin tree and a brand-prefixed tool script.
+  # OUR plugin tree and a brand-prefixed tool script. grep/sed/sort are
+  # POSIX-standard; ungated for the same reason as cat/dirname above.
   local escaped_prefix escaped_brand path_re called=""
   escaped_prefix=$(_ere_escape "$plugin_dir/")
   escaped_brand=$(_ere_escape "$_BRAND")
   path_re="${escaped_prefix}[^/[:space:]]+/skills/[^/[:space:]]+/scripts/${escaped_brand}-[^[:space:]]+"
-  if command -v grep >/dev/null 2>&1; then
-    called=$(printf '%s' "$_cmd" | grep -oE "$path_re" 2>/dev/null \\
-      | sed -E "s|^${escaped_prefix}([^/]+)/.*|\\\\1|" | sort -u)
-  fi
+  called=$(printf '%s' "$_cmd" | grep -oE "$path_re" 2>/dev/null \\
+    | sed -E "s|^${escaped_prefix}([^/]+)/.*|\\\\1|" | sort -u)
   [[ -z "$called" ]] && return 0
 
-  local v mismatch=""
+  # Categorize ALL mismatches into older vs newer; prefer reporting newer
+  # since that's the higher-signal condition (real config inconsistency,
+  # not just a stale path).
+  local v older_mismatch="" newer_mismatch=""
   while IFS= read -r v; do
     [[ -z "$v" ]] && continue
-    if [[ "$v" != "$current_version" ]]; then mismatch="$v"; break; fi
+    [[ "$v" == "$current_version" ]] && continue
+    if [[ -n "$vsort" ]] && [[ "$(printf '%s\\n%s\\n' "$v" "$current_version" | "$vsort" -V | tail -1)" == "$v" ]]; then
+      newer_mismatch="$v"
+    else
+      # No sorter, OR vsort says older: treat as older (safer fallback).
+      older_mismatch="$v"
+    fi
   done <<< "$called"
-  [[ -z "$mismatch" ]] && return 0
+  [[ -z "$older_mismatch" && -z "$newer_mismatch" ]] && return 0
 
-  # Direction: older vs newer. Use sort -V if available; otherwise treat
-  # as "older" conservatively (still a deny, just with the safer message).
-  local direction="older" vsort
-  vsort=$(_pick_version_sorter) || vsort=""
-  if [[ -n "$vsort" ]] && [[ "$(printf '%s\\n%s\\n' "$mismatch" "$current_version" | "$vsort" -V | tail -1)" == "$mismatch" ]]; then
+  local direction mismatch
+  if [[ -n "$newer_mismatch" ]]; then
     direction="newer"
+    mismatch="$newer_mismatch"
+  else
+    direction="older"
+    mismatch="$older_mismatch"
   fi
 
   local msg
@@ -1106,7 +1126,8 @@ _msg="$_intro"
 # Reminder for the current-version check, when enabled. The agent gets a
 # heads-up that mismatched-version invocations will be rejected, plus the
 # specific version they should always use (self-derived from this hook's
-# own location).
+# own location). If self-derive fails, still emit a degraded reminder so
+# the agent isn't surprised by a deny later.
 case "${__BRAND_VERSION_ENV__:-}" in
   1 | [tT][rR][uU][eE] | [yY][eE][sS] | [oO][nN])
     _self=$(realpath "$0" 2>/dev/null || echo "")
@@ -1120,6 +1141,8 @@ case "${__BRAND_VERSION_ENV__:-}" in
     fi
     if [[ -n "$_version" ]]; then
       _msg="${_msg}"$'\\n\\n'"Current-version enforcement is enabled for \\`${_PLUGIN_NAME}\\`. Always invoke its tools from this session's plugin path (version ${_version}); the PreToolUse hook will reject calls that point at a different version. If you see paths in your context that reference an older version, ignore them and use the current paths."
+    else
+      _msg="${_msg}"$'\\n\\n'"Current-version enforcement is enabled for \\`${_PLUGIN_NAME}\\`, but the active version could not be determined from this hook's path. Mismatched-version calls will still be rejected by the PreToolUse hook. If you see a deny related to versions, treat it as authoritative and escalate to the user."
     fi
     ;;
 esac

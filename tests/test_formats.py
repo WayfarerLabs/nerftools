@@ -916,6 +916,86 @@ def test_version_check_env_var_is_brand_namespaced(tmp_path: Path) -> None:
     assert "ACME_ENABLE_CURRENT_VERSION_HOOK" in script_text
 
 
+def test_version_check_prefers_newer_over_older_when_both_present(tmp_path: Path) -> None:
+    """If a single command has BOTH an older and a newer path, report the
+    newer one -- it's the higher-signal condition (real config inconsistency
+    rather than a stale-path cache miss)."""
+    out = _versioned_build(tmp_path, "v2.0.0")
+    hook = out / "hooks" / "nerf-pre-tool-use"
+    older = _path_for_version(tmp_path, "v1.0.0")
+    newer = _path_for_version(tmp_path, "v3.0.0")
+    stdout, _ = _run_pre_tool_use(hook, f"{older} && {newer}")
+    reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "NEWER version" in reason
+    assert "v3.0.0" in reason
+    # The older-message wording should NOT win.
+    assert "older version" not in reason
+
+
+def _build_with_broken_self_layout(tmp_path: Path) -> Path:
+    """Build the plugin then delete the markers the self-derive walk looks
+    for. The hook's `realpath`/dirname still resolve, but the
+    `[[ -d skills && -d .claude-plugin ]]` validation fails, forcing the
+    fallback path."""
+    import shutil
+
+    out = tmp_path / "scratch"
+    _build([_manifest_with_hints()], out, prefix="nerf-")
+    shutil.rmtree(out / "skills")
+    shutil.rmtree(out / ".claude-plugin")
+    return out
+
+
+def test_version_check_skips_when_multiple_owners_share_plugin_name(tmp_path: Path) -> None:
+    """If self-derive fails AND the cache contains the plugin under multiple
+    owners (a misconfig the brand should prevent), warn and skip rather than
+    arbitrarily picking one owner's max version."""
+    import os
+    import subprocess
+
+    out = _build_with_broken_self_layout(tmp_path)
+    hook = out / "hooks" / "nerf-pre-tool-use"
+
+    # Stage two installs of the same plugin under different owners.
+    home = tmp_path / "home"
+    for owner in ("orgA", "orgB"):
+        (home / ".claude" / "plugins" / "cache" / owner / "test-plugin" / "1.0.0").mkdir(
+            parents=True
+        )
+    env = {
+        **os.environ,
+        "HOME": str(home),
+        "NERF_ENABLE_CURRENT_VERSION_HOOK": "true",
+    }
+    result = subprocess.run(
+        [str(hook)],
+        input=json.dumps({"tool_name": "Bash", "tool_input": {"command": "echo ok"}}),
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+    assert result.returncode == 0
+    assert result.stdout == ""  # skipped, no deny
+    assert "multiple owners" in result.stderr
+
+
+def test_session_start_degraded_reminder_when_version_undetermined(tmp_path: Path) -> None:
+    """If env is on but self-derive fails (e.g. unusual install layout),
+    SessionStart should still warn the agent that enforcement is on."""
+    import os
+    import subprocess
+
+    out = _build_with_broken_self_layout(tmp_path)
+    hook = out / "hooks" / "nerf-session-start"
+    env = {**os.environ, "NERF_ENABLE_CURRENT_VERSION_HOOK": "true"}
+    result = subprocess.run([str(hook)], capture_output=True, text=True, env=env, check=False)
+    assert result.returncode == 0
+    context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert "Current-version enforcement is enabled" in context
+    assert "active version could not be determined" in context
+
+
 def test_version_check_runs_before_bash_hint(tmp_path: Path) -> None:
     """When both checks would fire (impossible in practice since they're
     disjoint, but: belt-and-suspenders), version check should win."""

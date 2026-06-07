@@ -18,7 +18,8 @@ _msg="$_intro"
 # Reminder for the current-version check, when enabled. The agent gets a
 # heads-up that mismatched-version invocations will be rejected, plus the
 # specific version they should always use (self-derived from this hook's
-# own location).
+# own location). If self-derive fails, still emit a degraded reminder so
+# the agent isn't surprised by a deny later.
 case "${NERF_ENABLE_CURRENT_VERSION_HOOK:-}" in
   1 | [tT][rR][uU][eE] | [yY][eE][sS] | [oO][nN])
     _self=$(realpath "$0" 2>/dev/null || echo "")
@@ -32,6 +33,8 @@ case "${NERF_ENABLE_CURRENT_VERSION_HOOK:-}" in
     fi
     if [[ -n "$_version" ]]; then
       _msg="${_msg}"$'\n\n'"Current-version enforcement is enabled for \`${_PLUGIN_NAME}\`. Always invoke its tools from this session's plugin path (version ${_version}); the PreToolUse hook will reject calls that point at a different version. If you see paths in your context that reference an older version, ignore them and use the current paths."
+    else
+      _msg="${_msg}"$'\n\n'"Current-version enforcement is enabled for \`${_PLUGIN_NAME}\`, but the active version could not be determined from this hook's path. Mismatched-version calls will still be rejected by the PreToolUse hook. If you see a deny related to versions, treat it as authoritative and escalate to the user."
     fi
     ;;
 esac
