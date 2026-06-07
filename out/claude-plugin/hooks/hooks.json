@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/nerf-bash-hint"
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/nerf-pre-tool-use"
           }
         ]
       }
