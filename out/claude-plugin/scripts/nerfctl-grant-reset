@@ -60,6 +60,10 @@ _resolve_settings() {
     user)  echo "$HOME/.claude/settings.json" ;;
     local)
       if [[ ! -d ".claude" ]]; then
+        if [[ -e ".claude" ]]; then
+          echo "error: .claude exists in the current directory but is not a directory; refusing to proceed" >&2
+          exit 1
+        fi
         if [[ "$CREATE_SCOPE_DIR" == "1" ]]; then
           mkdir -p ".claude"
         else

@@ -490,6 +490,26 @@ def test_local_scope_errors_when_claude_missing_without_flag(
 
 
 @pytest.mark.parametrize("script", [_GRANT, _DENY, _RESET, _BY_THREAT])
+def test_local_scope_errors_when_claude_is_not_a_directory(
+    tmp_path: Path, script: Path
+) -> None:
+    """If .claude exists as a file or symlink-to-file, --create-scope-dir
+    shouldn't try to mkdir it (would fail with a generic 'File exists' error)
+    -- the script should surface a clear message instead."""
+    plugin = _versioned_plugin(tmp_path, "2.0.0")
+    (tmp_path / ".claude").write_text("oops, this is a file")
+    result = _run(
+        script,
+        *_invoke_for(script, plugin, "--scope", "local", "--create-scope-dir"),
+        cwd=tmp_path,
+    )
+    assert result.returncode != 0
+    assert "not a directory" in result.stderr
+    # The file is left alone -- no silent clobber.
+    assert (tmp_path / ".claude").read_text() == "oops, this is a file"
+
+
+@pytest.mark.parametrize("script", [_GRANT, _DENY, _RESET, _BY_THREAT])
 def test_create_scope_dir_creates_missing_claude(tmp_path: Path, script: Path) -> None:
     plugin = _versioned_plugin(tmp_path, "2.0.0")
     result = _run(

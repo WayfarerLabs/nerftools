@@ -60,6 +60,12 @@ _resolve_settings() {
     user)  echo "$HOME/.claude/settings.json" ;;
     local)
       if [[ ! -d ".claude" ]]; then
+        if [[ -e ".claude" ]]; then
+          # .claude exists but isn't a directory (file, symlink-to-file, etc.).
+          # mkdir would just fail with a generic error; surface a clearer one.
+          echo "error: .claude exists in the current directory but is not a directory; refusing to proceed" >&2
+          exit 1
+        fi
         if [[ "$CREATE_SCOPE_DIR" == "1" ]]; then
           mkdir -p ".claude"
         else
