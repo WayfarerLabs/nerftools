@@ -1,5 +1,33 @@
 # Changelog
 
+## [3.0.0](https://github.com/WayfarerLabs/nerftools/compare/v2.2.0...v3.0.0) (2026-06-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* **hook:** hook file renamed from hooks/nerf-bash-hint to hooks/nerf-pre-tool-use; bypass sentinel renamed from \`# <brand>:bypass <reason>\` to \`# <brand>:bypass-bash-hint <reason>\`.
+* PreToolUse multi-check dispatcher with new current-version check
+
+### Features
+
+* **nerfctl:** --create-scope-dir and --prune-older for grant scripts ([e5aec37](https://github.com/WayfarerLabs/nerftools/commit/e5aec37a505ac2ef3b3056cbec5d82419875a41c))
+* **nerfctl:** add --create-scope-dir and --prune-older to grant scripts ([f087274](https://github.com/WayfarerLabs/nerftools/commit/f08727464a1fbe4c0ad4805809eb172f11ceed6c))
+* PreToolUse multi-check dispatcher with new current-version check ([4889d66](https://github.com/WayfarerLabs/nerftools/commit/4889d66e85e8e1ebca3f3ad028da633371bff868))
+
+
+### Bug Fixes
+
+* **hook:** address reviewer feedback on version check ([5a65c72](https://github.com/WayfarerLabs/nerftools/commit/5a65c72ea6102bb48eef02b74e871fe0021d2ec4))
+* **nerfctl:** clear error when .claude exists but is not a directory ([58f93e9](https://github.com/WayfarerLabs/nerftools/commit/58f93e97a672ea4bbe045960d618bcf740333005))
+* **nerfctl:** probe for sort -V (try gsort fallback); cover grant-reset in scope-dir tests ([8b11638](https://github.com/WayfarerLabs/nerftools/commit/8b11638034501b365dab62a5e395e50113b9e5db))
+* **nerfctl:** suppress capture() errors on non-Bash permission entries ([51565c5](https://github.com/WayfarerLabs/nerftools/commit/51565c5c92c05dfcc0b0562a307e3e76bb6faf79))
+* **nerfctl:** warn (not silent) when version sort unavailable without --prune-older ([210100d](https://github.com/WayfarerLabs/nerftools/commit/210100ddc642de0afc0480f6c198a0642c8077ad))
+
+
+### Documentation
+
+* **nerfctl:** align help text with no-sort behavior; fix stale stub comment ([c7a52a4](https://github.com/WayfarerLabs/nerftools/commit/c7a52a471e3d47e231e5e43b015fdcd4d97cdfe4))
+
 ## [2.2.0](https://github.com/WayfarerLabs/nerftools/compare/v2.1.0...v2.2.0) (2026-06-05)
 
 
