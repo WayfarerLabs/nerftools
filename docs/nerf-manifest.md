@@ -130,13 +130,35 @@ package:
 
 All fields except `skill_intro` and `bash_hints` are required.
 
-### Bash hint hook
+### PreToolUse hook
 
-Plugin targets that support a pre-bash hook (Claude Code today; others as their APIs land) use
-`bash_hints` to generate a redirect: when the agent calls raw bash with a command that matches any
-pattern, the hook denies the call (silently, without prompting the user) and points the agent at the
-corresponding nerf skill. Multiple matching skills are listed together. Targets without a pre-bash
-hook simply ignore the field.
+Plugin targets that support a PreToolUse hook (Claude Code today; others as their APIs land) get a
+single dispatcher script (`hooks/nerf-pre-tool-use`) that runs zero or more checks against each
+incoming Bash command. Each check is independently env-var gated and brand-namespaced so multiple
+plugins with different brands can coexist. Checks run in declaration order; the first denial
+short-circuits the rest.
+
+Two checks are currently emitted:
+
+1. **Current-version check** — env: `<BRAND>_ENABLE_CURRENT_VERSION_HOOK`. Refuses any tool
+   invocation whose absolute path points at a different version of THIS plugin (catches stale tool
+   paths an agent may have cached from a prior session after a plugin upgrade). The check matches on
+   plugin owner, plugin name, and tool-name brand prefix to avoid false positives on unrelated
+   plugins. The deny message tells the agent to use the current version, or to stop and report to
+   the user, depending on whether the call is older or newer than the current install. **No bypass
+   sentinel by design** — agents are not expected to work around a version-mismatch detection;
+   future contributors should not add one "for symmetry" with the bash-hint check.
+2. **Bash-hint check** — env: `<BRAND>_ENABLE_BASH_HINT_HOOK`. Described below.
+
+When the current-version check is enabled, the SessionStart hook also appends a reminder telling the
+agent which version to use and that mismatched calls will be rejected.
+
+#### Bash hint check
+
+Uses `bash_hints` to generate a redirect: when the agent calls raw bash with a command that matches
+any pattern, the hook denies the call (silently, without prompting the user) and points the agent at
+the corresponding nerf skill. Multiple matching skills are listed together. Targets without a
+PreToolUse hook simply ignore the field.
 
 Patterns are evaluated as POSIX ERE matches that may appear anywhere in the command — prefer
 word-boundary anchors (`\bgit\b`) over start-anchored ones (`^git`) so compound commands like
@@ -147,12 +169,13 @@ constructs (lookaheads, named groups, etc.) will pass load-time validation but w
 runtime. Stick to ERE. As a convenience, `\b` boundaries are translated to portable POSIX ERE at
 generation time so manifests can keep using them.
 
-The hook is **opt-in at runtime**: even when generated and installed, it is a silent no-op unless
-the brand-namespaced env var `<BRAND>_ENABLE_BASH_HINT_HOOK` (e.g. `NERF_ENABLE_BASH_HINT_HOOK` for
-the default `nerf-` prefix, `MY_TOOL_ENABLE_BASH_HINT_HOOK` for `my-tool-`) is set to a truthy value
-(`1`, `true`, `yes`, or `on` — case-insensitive). The redirect is aggressive enough that we make
-this explicit rather than discover-by-surprise. Brand-namespacing the env var means two plugins with
-different brands installed side-by-side have independent kill switches.
+The bash-hint check is **opt-in at runtime**: even when generated and installed, the dispatcher's
+hint check is a silent no-op unless the brand-namespaced env var `<BRAND>_ENABLE_BASH_HINT_HOOK`
+(e.g. `NERF_ENABLE_BASH_HINT_HOOK` for the default `nerf-` prefix, `MY_TOOL_ENABLE_BASH_HINT_HOOK`
+for `my-tool-`) is set to a truthy value (`1`, `true`, `yes`, or `on` — case-insensitive). The
+redirect is aggressive enough that we make this explicit rather than discover-by-surprise.
+Brand-namespacing the env var means two plugins with different brands installed side-by-side have
+independent kill switches.
 
 The hook automatically skips when it detects an actual wrapper invocation: it splits the command on
 shell separators (`&&`, `||`, `;`, `|`, `&`), finds the first non-env-var token of each segment, and
@@ -166,9 +189,11 @@ are unioned across them (order-preserved, deduped). An extension can add new pat
 restating the base set.
 
 An agent that genuinely needs to run the underlying command directly can include
-`# <brand>:bypass <reason>` anywhere in the command (reason required). The `<brand>` follows the
-wrapper prefix (default `nerf-` → `nerf`, `mytool-` → `mytool`). The hook lets the call through; the
-user's normal permission flow still applies.
+`# <brand>:bypass-bash-hint <reason>` anywhere in the command (reason required). The `<brand>`
+follows the wrapper prefix (default `nerf-` → `nerf`, `mytool-` → `mytool`). The hook lets the call
+through; the user's normal permission flow still applies. The sentinel is check-specific by design —
+it bypasses **only** the bash-hint check, never the current-version check or any other future
+checks.
 
 The conventional `<reason>` is the filename of a `nerf-report bypass` entry filed beforehand -- that
 keeps the bypass annotation grep-able from the agent's transcript while putting the full
