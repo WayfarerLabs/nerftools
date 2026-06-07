@@ -425,3 +425,302 @@ def test_help_flag_exits_nonzero_with_usage(script: Path) -> None:
     result = _run(script, "--help")
     assert result.returncode != 0
     assert "Usage:" in result.stderr
+
+
+# -- --create-scope-dir + --prune-older ---------------------------------------
+
+
+def _versioned_plugin(
+    tmp_path: Path, version: str, *, tools: list[str] | None = None
+) -> Path:
+    """Plugin at tmp_path/plugins/myplugin/<version>/. The grandparent
+    (tmp_path/plugins/myplugin/) is the "plugin prefix" for version scans.
+    Threat annotations are included so grant-by-threat finds the tools."""
+    plugin_root = tmp_path / "plugins" / "myplugin" / version
+    scripts_dir = plugin_root / "skills" / "nerf-test" / "scripts"
+    scripts_dir.mkdir(parents=True)
+    for tool in tools or ["nerf-test-tool"]:
+        s = scripts_dir / tool
+        s.write_text(
+            "#!/bin/bash\n"
+            f"# {tool} -- test tool\n"
+            "# nerf:threat:read=workspace\n"
+            "# nerf:threat:write=workspace\n"
+            "echo ok\n"
+        )
+        s.chmod(0o755)
+    return plugin_root
+
+
+def _stale_entry(tmp_path: Path, version: str, tool: str = "nerf-test-tool") -> str:
+    path = tmp_path / "plugins" / "myplugin" / version / "skills" / "nerf-test" / "scripts" / tool
+    return f"Bash({path}:*)"
+
+
+def _invoke_for(script: Path, plugin_root: Path, *extra: str) -> list[str]:
+    """Build the right CLI args for each write script's normal happy-path
+    invocation (so we can exercise the scan in context)."""
+    if script == _BY_THREAT:
+        return [
+            "--read",
+            "remote",
+            "--write",
+            "remote",
+            "--plugin-root",
+            str(plugin_root),
+            *extra,
+        ]
+    return ["nerf-test-tool", "--plugin-root", str(plugin_root), *extra]
+
+
+# -- create-scope-dir ---------------------------------------------------------
+
+
+@pytest.mark.parametrize("script", [_GRANT, _DENY, _RESET, _BY_THREAT])
+def test_local_scope_errors_when_claude_missing_without_flag(
+    tmp_path: Path, script: Path
+) -> None:
+    plugin = _versioned_plugin(tmp_path, "2.0.0")
+    # No .claude/ pre-created
+    result = _run(script, *_invoke_for(script, plugin, "--scope", "local"), cwd=tmp_path)
+    assert result.returncode != 0
+    assert ".claude/ not found" in result.stderr
+    assert "--create-scope-dir" in result.stderr
+    assert not (tmp_path / ".claude").exists()
+
+
+@pytest.mark.parametrize("script", [_GRANT, _DENY, _RESET, _BY_THREAT])
+def test_local_scope_errors_when_claude_is_not_a_directory(
+    tmp_path: Path, script: Path
+) -> None:
+    """If .claude exists as a file or symlink-to-file, --create-scope-dir
+    shouldn't try to mkdir it (would fail with a generic 'File exists' error)
+    -- the script should surface a clear message instead."""
+    plugin = _versioned_plugin(tmp_path, "2.0.0")
+    (tmp_path / ".claude").write_text("oops, this is a file")
+    result = _run(
+        script,
+        *_invoke_for(script, plugin, "--scope", "local", "--create-scope-dir"),
+        cwd=tmp_path,
+    )
+    assert result.returncode != 0
+    assert "not a directory" in result.stderr
+    # The file is left alone -- no silent clobber.
+    assert (tmp_path / ".claude").read_text() == "oops, this is a file"
+
+
+@pytest.mark.parametrize("script", [_GRANT, _DENY, _RESET, _BY_THREAT])
+def test_create_scope_dir_creates_missing_claude(tmp_path: Path, script: Path) -> None:
+    plugin = _versioned_plugin(tmp_path, "2.0.0")
+    result = _run(
+        script,
+        *_invoke_for(script, plugin, "--scope", "local", "--create-scope-dir"),
+        cwd=tmp_path,
+    )
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / ".claude").is_dir()
+    # grant-reset noop-exits before _ensure_settings_file when no settings
+    # exist yet, so its run creates the dir but not the file. The other
+    # three explicitly ensure the file.
+    if script != _RESET:
+        assert (tmp_path / ".claude" / "settings.local.json").is_file()
+
+
+def test_prune_older_errors_clearly_when_no_version_sort_available(tmp_path: Path) -> None:
+    """If neither `sort -V` nor `gsort -V` works (e.g. macOS without coreutils),
+    --prune-older errors with an install hint instead of silently miscomparing."""
+    plugin = _versioned_plugin(tmp_path, "2.0.0")
+    _user_settings(tmp_path, {"permissions": {"allow": [_stale_entry(tmp_path, "1.0.0")], "deny": []}})
+    # Stub a PATH containing only a fake `sort` whose -V is a no-op
+    # (input passes through unchanged). Mimics BSD sort accepting the flag
+    # but not actually version-sorting -- the probe should reject it.
+    fake_bin = tmp_path / "fake-bin"
+    fake_bin.mkdir()
+    fake_sort = fake_bin / "sort"
+    fake_sort.write_text("#!/bin/bash\ncat\n")
+    fake_sort.chmod(0o755)
+    # Also provide jq (the script still needs it).
+    if _jq_bin_dir:
+        (fake_bin / "jq").symlink_to(Path(_jq_bin_dir) / "jq")
+    (fake_bin / "bash").symlink_to("/bin/bash")
+    # Provide basename/dirname/cat/printf/find/mkdir/realpath etc. by symlinking
+    # everything currently in /usr/bin and /bin minus sort/gsort.
+    import contextlib
+
+    for src_dir in ["/usr/bin", "/bin"]:
+        for f in Path(src_dir).iterdir():
+            if f.name in ("sort", "gsort") or (fake_bin / f.name).exists():
+                continue
+            with contextlib.suppress(OSError, FileExistsError):
+                (fake_bin / f.name).symlink_to(f)
+
+    result = _run(
+        _GRANT,
+        *_invoke_for(_GRANT, plugin, "--prune-older"),
+        home=tmp_path,
+        env_extra={"PATH": str(fake_bin)},
+    )
+    assert result.returncode != 0
+    assert "version-aware sort" in result.stderr
+    assert "brew install coreutils" in result.stderr
+    # Settings untouched
+    data = _read(tmp_path / ".claude" / "settings.json")
+    assert _stale_entry(tmp_path, "1.0.0") in data["permissions"]["allow"]
+
+
+def test_no_version_sort_without_prune_flag_warns_and_proceeds(tmp_path: Path) -> None:
+    """Without --prune-older, missing version-sort warns the operator (so they
+    know the safety check is degraded) and proceeds with the main op."""
+    plugin = _versioned_plugin(tmp_path, "2.0.0")
+    _user_settings(tmp_path, {"permissions": {"allow": [_stale_entry(tmp_path, "1.0.0")], "deny": []}})
+    fake_bin = tmp_path / "fake-bin"
+    fake_bin.mkdir()
+    fake_sort = fake_bin / "sort"
+    fake_sort.write_text("#!/bin/bash\ncat\n")
+    fake_sort.chmod(0o755)
+    if _jq_bin_dir:
+        (fake_bin / "jq").symlink_to(Path(_jq_bin_dir) / "jq")
+    (fake_bin / "bash").symlink_to("/bin/bash")
+    import contextlib
+
+    for src_dir in ["/usr/bin", "/bin"]:
+        for f in Path(src_dir).iterdir():
+            if f.name in ("sort", "gsort") or (fake_bin / f.name).exists():
+                continue
+            with contextlib.suppress(OSError, FileExistsError):
+                (fake_bin / f.name).symlink_to(f)
+
+    result = _run(
+        _GRANT,
+        *_invoke_for(_GRANT, plugin),  # no --prune-older
+        home=tmp_path,
+        env_extra={"PATH": str(fake_bin)},
+    )
+    assert result.returncode == 0, result.stderr
+    # Operator is warned about the degraded scan so they know what's missing.
+    assert "version analysis not possible" in result.stderr
+    assert "brew install coreutils" in result.stderr
+    # The main op still completed (entry granted).
+    data = _read(tmp_path / ".claude" / "settings.json")
+    assert any("nerf-test-tool" in e for e in data["permissions"]["allow"])
+
+
+# -- prune-older / version scan -----------------------------------------------
+
+
+@pytest.mark.parametrize("script", [_GRANT, _DENY, _RESET, _BY_THREAT])
+def test_warns_on_older_without_prune_flag(tmp_path: Path, script: Path) -> None:
+    plugin = _versioned_plugin(tmp_path, "2.0.0")
+    stale_1_5 = _stale_entry(tmp_path, "1.5.0")
+    stale_1_9 = _stale_entry(tmp_path, "1.9.0-rc.1")
+    _user_settings(tmp_path, {"permissions": {"allow": [stale_1_5, stale_1_9], "deny": []}})
+
+    result = _run(script, *_invoke_for(script, plugin), home=tmp_path)
+    assert result.returncode == 0, result.stderr
+    # Warning printed, count is right
+    assert "2 permission entries reference older versions" in result.stderr
+    assert "--prune-older" in result.stderr
+    # Stale entries preserved (no prune flag)
+    data = _read(tmp_path / ".claude" / "settings.json")
+    assert stale_1_5 in data["permissions"]["allow"]
+    assert stale_1_9 in data["permissions"]["allow"]
+
+
+@pytest.mark.parametrize("script", [_GRANT, _DENY, _RESET, _BY_THREAT])
+def test_prune_older_removes_stale_entries(tmp_path: Path, script: Path) -> None:
+    plugin = _versioned_plugin(tmp_path, "2.0.0")
+    stale_1_5 = _stale_entry(tmp_path, "1.5.0")
+    stale_1_9 = _stale_entry(tmp_path, "1.9.0-rc.1")
+    _user_settings(tmp_path, {"permissions": {"allow": [stale_1_5], "deny": [stale_1_9]}})
+
+    result = _run(script, *_invoke_for(script, plugin, "--prune-older"), home=tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert "Pruned 2 stale entries from older plugin versions" in result.stdout
+    data = _read(tmp_path / ".claude" / "settings.json")
+    assert stale_1_5 not in data["permissions"].get("allow", [])
+    assert stale_1_9 not in data["permissions"].get("deny", [])
+
+
+@pytest.mark.parametrize("script", [_GRANT, _DENY, _RESET, _BY_THREAT])
+def test_errors_on_newer_versions_without_modifying(tmp_path: Path, script: Path) -> None:
+    plugin = _versioned_plugin(tmp_path, "2.0.0")
+    newer = _stale_entry(tmp_path, "3.0.0")
+    initial = {"permissions": {"allow": [newer], "deny": []}}
+    _user_settings(tmp_path, initial)
+
+    result = _run(script, *_invoke_for(script, plugin, "--prune-older"), home=tmp_path)
+    assert result.returncode != 0
+    assert "newer version" in result.stderr
+    # Settings untouched
+    data = _read(tmp_path / ".claude" / "settings.json")
+    assert data == initial
+
+
+@pytest.mark.parametrize("script", [_GRANT, _DENY])
+def test_prune_older_full_sweep_regardless_of_pattern(tmp_path: Path, script: Path) -> None:
+    """Even when the current grant targets one narrow tool, --prune-older removes
+    ALL older-version entries in scope."""
+    plugin = _versioned_plugin(tmp_path, "2.0.0", tools=["nerf-test-a", "nerf-test-b"])
+    # Stale entries for tools the current invocation isn't even touching
+    stale_a = _stale_entry(tmp_path, "1.0.0", tool="nerf-test-a")
+    stale_b = _stale_entry(tmp_path, "1.0.0", tool="nerf-test-b")
+    _user_settings(tmp_path, {"permissions": {"allow": [stale_a, stale_b], "deny": []}})
+
+    # Grant just one tool, but prune everything stale
+    result = _run(
+        script,
+        "nerf-test-a",
+        "--plugin-root",
+        str(plugin),
+        "--prune-older",
+        home=tmp_path,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "Pruned 2 stale entries" in result.stdout
+    data = _read(tmp_path / ".claude" / "settings.json")
+    assert stale_a not in data["permissions"].get("allow", [])
+    assert stale_b not in data["permissions"].get("allow", [])
+
+
+def test_scan_ignores_entries_outside_plugin_prefix(tmp_path: Path) -> None:
+    """Entries pointing at totally different plugins aren't touched or counted."""
+    plugin = _versioned_plugin(tmp_path, "2.0.0")
+    unrelated = "Bash(/some/other/plugin/scripts/whatever:*)"
+    _user_settings(tmp_path, {"permissions": {"allow": [unrelated], "deny": []}})
+
+    result = _run(_GRANT, *_invoke_for(_GRANT, plugin, "--prune-older"), home=tmp_path)
+    assert result.returncode == 0, result.stderr
+    # Unrelated entry untouched
+    data = _read(tmp_path / ".claude" / "settings.json")
+    assert unrelated in data["permissions"]["allow"]
+
+
+def test_scan_handles_non_bash_permission_entries(tmp_path: Path) -> None:
+    """Real settings can contain WebFetch(...), Read(...), mcp__*, etc. The
+    capture("^Bash...") jq filter must not error on those non-matching entries."""
+    plugin = _versioned_plugin(tmp_path, "2.0.0")
+    stale = _stale_entry(tmp_path, "1.0.0")
+    _user_settings(
+        tmp_path,
+        {
+            "permissions": {
+                "allow": [
+                    stale,
+                    "WebFetch(*)",
+                    "Read(*)",
+                    "mcp__server__tool",
+                ],
+                "deny": ["Write(/tmp/*)"],
+            }
+        },
+    )
+    result = _run(_GRANT, *_invoke_for(_GRANT, plugin, "--prune-older"), home=tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert "Pruned 1 stale entry" in result.stdout
+    data = _read(tmp_path / ".claude" / "settings.json")
+    # Stale removed, all non-Bash entries preserved untouched
+    assert stale not in data["permissions"]["allow"]
+    assert "WebFetch(*)" in data["permissions"]["allow"]
+    assert "Read(*)" in data["permissions"]["allow"]
+    assert "mcp__server__tool" in data["permissions"]["allow"]
+    assert "Write(/tmp/*)" in data["permissions"]["deny"]
