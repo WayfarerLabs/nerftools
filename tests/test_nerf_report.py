@@ -152,21 +152,20 @@ def test_show_rejects_future_before(
 def test_show_expands_bare_date_to_midnight(
     tmp_path: Path, report_tools: dict[str, Path]
 ) -> None:
-    # Pick a past date boundary at midnight; seed one second before and at.
+    """Bare-date `<before>` expands to that date's `T00:00:00Z`."""
     boundary_date = (_NOW - timedelta(days=15)).strftime("%Y-%m-%d")
-    midnight = f"{boundary_date}T00:00:00Z"
     bd_dt = datetime.strptime(boundary_date, "%Y-%m-%d").replace(tzinfo=UTC)
-    just_before = _iso(bd_dt - timedelta(seconds=1))
     _seed_reports(
         tmp_path,
         [
-            (just_before, "bug", "nerf-a", "before midnight"),
-            (midnight, "bug", "nerf-a", "at midnight"),
+            (_iso(bd_dt - timedelta(days=1)), "bug", "nerf-a", "day before"),
+            (f"{boundary_date}T00:00:00Z", "bug", "nerf-a", "at midnight"),
         ],
     )
-    # Bare date -> T00:00:00Z. Strict-less excludes the boundary.
+    # If bare date didn't expand to midnight, "at midnight" would be < cutoff
+    # and would show up. Strict-less semantics + correct expansion exclude it.
     result = _run(report_tools["report-show"], boundary_date, home=tmp_path)
-    assert "before midnight" in result.stdout
+    assert "day before" in result.stdout
     assert "at midnight" not in result.stdout
 
 
