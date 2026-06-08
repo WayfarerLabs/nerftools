@@ -1,0 +1,254 @@
+version: 1
+
+package:
+    name: nerf-report
+    description: Structured feedback loop for nerf tools (file bugs/bypass reasons/complaints/requests)
+    skill_group: report
+    skill_intro: |
+        These tools wrap the operator-facing feedback loop for nerf tools. Reports
+        are durable Markdown files under `~/.nerftools/<brand>/reports/`.
+
+        Three tools:
+        - `<prefix>report` writes a new report. Use when you hit a bug, need to
+          bypass a guard (with reason), find UX friction, or want a feature.
+        - `<prefix>report-show` concatenates matching reports for the operator (or
+          a triage subagent) to read. Requires a `<before>` cutoff timestamp.
+        - `<prefix>report-archive` moves processed reports to a `reviewed/`
+          subdirectory so they don't show up next time. Same `<before>` cutoff.
+
+        The `<before>` cutoff filters strictly: only reports with timestamp <
+        `<before>` match. The cutoff itself must not be in the future. This forces
+        intentional time-window selection and prevents in-flight reports (those
+        just being written) from being accidentally pulled in.
+    bash_hints: []
+
+tools:
+    report:
+        description: >-
+            File a structured report about a nerf tool (bug / bypass reason / complaint /
+            feature request). Writes a Markdown file with auto-captured frontmatter to
+            `~/.nerftools/<brand>/reports/`.
+        threat:
+            # Writes a single Markdown file under ~/.nerftools/<brand>/reports/.
+            # The write is bounded to that dedicated, opt-in location -- the agent
+            # gains essentially no broader machine capability from being granted
+            # this tool. `workspace` is the most honest fit (workspace-like effect
+            # scope, even though the path is in $HOME, not cwd).
+            read: none
+            write: workspace
+        script: |
+            : "${HOME:?nerf-report: HOME is not set; cannot determine reports directory}"
+
+            REPORTS_DIR="${HOME}/.nerftools/${NERFTOOLS_BRAND}/reports"
+            umask 077
+            mkdir -p "$REPORTS_DIR"
+            if ! chmod 0700 "$REPORTS_DIR"; then
+                echo "error: nerf-report: could not restrict permissions on ${REPORTS_DIR}; refusing to write report" >&2
+                exit 1
+            fi
+
+            # Derive the current plugin version from plugin.json (preferred), with a
+            # safe fallback if the file isn't readable.
+            NERFTOOLS_VERSION="unknown"
+            if [[ -n "${CLAUDE_PLUGIN_ROOT:-}" && -f "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json" ]] \
+               && command -v jq > /dev/null 2>&1; then
+                _v=$(jq -r '.version // "unknown"' "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json" 2>/dev/null) || _v="unknown"
+                [[ -n "$_v" ]] && NERFTOOLS_VERSION="$_v"
+            fi
+
+            TIMESTAMP_COMPACT="$(date -u +%Y%m%dT%H%M%SZ)"
+            TIMESTAMP_ISO="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            SESSION="${NERF_REPORT_SESSION:-${CLAUDE_SESSION_ID:-${CODEX_SESSION_ID:-unknown}}}"
+            CWD="$(pwd)"
+
+            SANITIZED_TOOL="${TOOL//[^A-Za-z0-9._-]/_}"
+            if [[ -z "$SANITIZED_TOOL" ]]; then
+                echo "error: nerf-report: <tool> is empty after sanitization" >&2
+                exit 1
+            fi
+
+            FILENAME="${TIMESTAMP_COMPACT}_${KIND}_${SANITIZED_TOOL}_${NERFTOOLS_VERSION}.md"
+            DEST="${REPORTS_DIR}/${FILENAME}"
+
+            _yaml_escape() {
+                local s="$1"
+                s="${s//\\/\\\\}"
+                s="${s//\"/\\\"}"
+                s="${s//$'\n'/\\n}"
+                s="${s//$'\r'/\\r}"
+                s="${s//$'\t'/\\t}"
+                printf '%s' "$s"
+            }
+
+            MARKER="${DEST}"
+            if [[ -e "$MARKER" && -L "$MARKER" ]]; then
+                echo "error: nerf-report: refusing to write through existing symlink at ${MARKER}" >&2
+                exit 1
+            fi
+
+            {
+                printf -- '---\n'
+                printf 'kind: %s\n' "$KIND"
+                printf 'tool: "%s"\n' "$(_yaml_escape "$TOOL")"
+                printf 'nerftools_brand: "%s"\n' "$(_yaml_escape "$NERFTOOLS_BRAND")"
+                printf 'nerftools_version: "%s"\n' "$(_yaml_escape "$NERFTOOLS_VERSION")"
+                printf 'session: "%s"\n' "$(_yaml_escape "$SESSION")"
+                printf 'cwd: "%s"\n' "$(_yaml_escape "$CWD")"
+                printf 'timestamp: "%s"\n' "$TIMESTAMP_ISO"
+                printf -- '---\n\n'
+                printf '%s\n' "$BODY"
+            } >> "$DEST"
+
+            echo "report written: $DEST"
+        arguments:
+            kind:
+                description: Report kind
+                required: true
+                allow: [bug, bypass, complaint, request]
+            tool:
+                description: Tool the report is about (e.g. nerf-az-repos-pr-edit), or "nerftools" for the package itself
+                required: true
+            body:
+                description: Free-form prose describing the issue/request. Quote it so it reaches the script as a single argument.
+                required: true
+
+    report-show:
+        description: >-
+            Concatenate matching reports under `~/.nerftools/<brand>/reports/` for
+            operator/subagent triage. Reports are filtered to those with
+            timestamp strictly less than `<before>`. By default, the `reviewed/`
+            subdirectory is skipped (those have already been triaged).
+        threat:
+            # Reads the reports dir under $HOME. Doesn't write anything.
+            read: workspace
+            write: none
+        script: |
+            : "${HOME:?nerf-report-show: HOME is not set}"
+
+            REPORTS_DIR="${HOME}/.nerftools/${NERFTOOLS_BRAND}/reports"
+
+            # Normalize and validate <before>. Accept ISO 8601 UTC date or datetime;
+            # expand bare date to T00:00:00Z. Reject anything not in the future.
+            _before="$BEFORE"
+            if [[ "$_before" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+                _before="${_before}T00:00:00Z"
+            fi
+            if [[ ! "$_before" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]; then
+                echo "error: nerf-report-show: <before> must be ISO 8601 UTC (e.g. 2026-06-07 or 2026-06-07T12:00:00Z); got: ${BEFORE}" >&2
+                exit 1
+            fi
+            _now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+            if [[ "$_before" > "$_now" ]]; then
+                echo "error: nerf-report-show: <before> ${_before} is in the future (now ${_now}); refusing" >&2
+                exit 1
+            fi
+
+            [[ -d "$REPORTS_DIR" ]] || { echo "(no reports directory at ${REPORTS_DIR})" >&2; exit 0; }
+
+            _matched_any=0
+            while IFS= read -r -d '' f; do
+                # Skip reviewed/ unless --include-reviewed. Switches expose the
+                # bare variable (empty when unset, "true" when set); options have
+                # _<NAME>_SET sentinels, but switches do not.
+                if [[ -z "${INCLUDE_REVIEWED:-}" && "$f" == */reviewed/* ]]; then continue; fi
+                # Extract frontmatter fields.
+                _ts=$(awk -F': ' '/^timestamp: /{gsub(/"/,"",$2); print $2; exit}' "$f")
+                _kind=$(awk -F': ' '/^kind: /{gsub(/"/,"",$2); print $2; exit}' "$f")
+                _tool=$(awk -F': ' '/^tool: /{gsub(/"/,"",$2); print $2; exit}' "$f")
+                [[ -z "$_ts" ]] && continue
+                # Strict less-than on timestamps (ISO 8601 UTC -> lex compare works).
+                [[ "$_ts" < "$_before" ]] || continue
+                # Kind filter.
+                if [[ -n "${_KIND_SET:-}" && "$_kind" != "$KIND" ]]; then continue; fi
+                # Tool filter (substring match, case-sensitive).
+                if [[ -n "${_TOOL_SET:-}" && "$_tool" != *"$TOOL"* ]]; then continue; fi
+                _matched_any=1
+                printf -- '=== %s ===\n' "$f"
+                cat "$f"
+                printf '\n\n'
+            done < <(find "$REPORTS_DIR" -type f -name '*.md' -print0 2>/dev/null | sort -z)
+
+            if (( _matched_any == 0 )); then
+                echo "(no reports matched)" >&2
+            fi
+        arguments:
+            before:
+                description: ISO 8601 UTC cutoff; only reports with timestamp strictly < this match. Must not be in the future. Accepts `YYYY-MM-DD` (expands to `T00:00:00Z`) or `YYYY-MM-DDTHH:MM:SSZ`.
+                required: true
+                pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)?$"
+        switches:
+            include_reviewed:
+                description: Also include reports that have already been moved to the `reviewed/` subdirectory
+                flag: --include-reviewed
+        options:
+            kind:
+                description: Only include reports of this kind
+                flag: --kind
+                allow: [bug, bypass, complaint, request]
+            tool:
+                description: Only include reports whose `tool` frontmatter contains this substring
+                flag: --tool
+
+    report-archive:
+        description: >-
+            Move matching reports to `~/.nerftools/<brand>/reports/reviewed/` so they
+            don't show up in future `report-show` runs by default. Uses the same
+            `<before>` semantics as `report-show` (strict less-than; not in future).
+        threat:
+            # Moves files within ~/.nerftools/<brand>/reports/. Bounded effect; same
+            # rationale as report tool above -- workspace-like scope.
+            read: workspace
+            write: workspace
+        script: |
+            : "${HOME:?nerf-report-archive: HOME is not set}"
+
+            REPORTS_DIR="${HOME}/.nerftools/${NERFTOOLS_BRAND}/reports"
+            ARCHIVE_DIR="${REPORTS_DIR}/reviewed"
+
+            _before="$BEFORE"
+            if [[ "$_before" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+                _before="${_before}T00:00:00Z"
+            fi
+            if [[ ! "$_before" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]; then
+                echo "error: nerf-report-archive: <before> must be ISO 8601 UTC; got: ${BEFORE}" >&2
+                exit 1
+            fi
+            _now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+            if [[ "$_before" > "$_now" ]]; then
+                echo "error: nerf-report-archive: <before> ${_before} is in the future (now ${_now}); refusing" >&2
+                exit 1
+            fi
+
+            [[ -d "$REPORTS_DIR" ]] || { echo "(no reports directory at ${REPORTS_DIR})" >&2; exit 0; }
+
+            mkdir -p "$ARCHIVE_DIR"
+
+            _moved=0
+            while IFS= read -r -d '' f; do
+                # Never re-archive what's already under reviewed/.
+                [[ "$f" == */reviewed/* ]] && continue
+                _ts=$(awk -F': ' '/^timestamp: /{gsub(/"/,"",$2); print $2; exit}' "$f")
+                _kind=$(awk -F': ' '/^kind: /{gsub(/"/,"",$2); print $2; exit}' "$f")
+                _tool=$(awk -F': ' '/^tool: /{gsub(/"/,"",$2); print $2; exit}' "$f")
+                [[ -z "$_ts" ]] && continue
+                [[ "$_ts" < "$_before" ]] || continue
+                if [[ -n "${_KIND_SET:-}" && "$_kind" != "$KIND" ]]; then continue; fi
+                if [[ -n "${_TOOL_SET:-}" && "$_tool" != *"$TOOL"* ]]; then continue; fi
+                mv "$f" "${ARCHIVE_DIR}/$(basename "$f")"
+                _moved=$((_moved + 1))
+            done < <(find "$REPORTS_DIR" -maxdepth 1 -type f -name '*.md' -print0 2>/dev/null)
+
+            echo "archived ${_moved} report(s) to ${ARCHIVE_DIR}"
+        arguments:
+            before:
+                description: ISO 8601 UTC cutoff; only reports with timestamp strictly < this are archived. Must not be in the future.
+                required: true
+                pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)?$"
+        options:
+            kind:
+                description: Only archive reports of this kind
+                flag: --kind
+                allow: [bug, bypass, complaint, request]
+            tool:
+                description: Only archive reports whose `tool` frontmatter contains this substring
+                flag: --tool

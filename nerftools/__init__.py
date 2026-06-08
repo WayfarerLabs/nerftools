@@ -1,6 +1,5 @@
 """nerftools: build and manage nerf tools."""
 
-import re
 from importlib.resources import files
 from pathlib import Path
 
@@ -9,12 +8,6 @@ from pathlib import Path
 BUILTIN_MANIFESTS_DIR = Path(str(files("nerftools.default_manifests")))
 
 _NERFCTL_DIR = Path(__file__).parent / "nerfctl" / "claude"
-_NERF_REPORT_SCRIPT = Path(__file__).parent / "nerf_report" / "script.sh"
-_NERF_REPORT_VERSION_PLACEHOLDER = "__NERFTOOLS_VERSION__"
-# Versions land inside a double-quoted bash string in the generated script
-# and inside report filenames -- restrict to a semver-friendly safe set to
-# preclude shell injection and filesystem weirdness.
-_NERF_REPORT_VERSION_RE = re.compile(r"^[A-Za-z0-9._+-]+$")
 
 NERFCTL_SCRIPTS: dict[str, Path] = {
     "nerfctl-grant-allow": _NERFCTL_DIR / "grant-allow.sh",
@@ -40,43 +33,3 @@ def install_nerfctl(output: Path) -> list[Path]:
         dest.chmod(0o755)
         written.append(dest)
     return written
-
-
-def install_nerf_report(output: Path, *, version: str) -> Path:
-    """Install the nerf-report script into *output*, stamping in *version*.
-
-    Returns the path written. Raises ValueError if the template is missing
-    its version placeholder, or if the placeholder somehow survives the
-    substitution (defense against a malformed template shipping a script
-    that misreports its own version).
-    """
-    if not _NERF_REPORT_SCRIPT.exists():
-        msg = f"nerf-report script template not found: {_NERF_REPORT_SCRIPT}"
-        raise FileNotFoundError(msg)
-    if not _NERF_REPORT_VERSION_RE.match(version):
-        msg = (
-            f"nerf-report version {version!r} contains characters outside "
-            f"the safe set [A-Za-z0-9._+-]; refusing to stamp it into a "
-            f"shell script and filename"
-        )
-        raise ValueError(msg)
-    output.mkdir(parents=True, exist_ok=True)
-    text = _NERF_REPORT_SCRIPT.read_text(encoding="utf-8")
-    if _NERF_REPORT_VERSION_PLACEHOLDER not in text:
-        msg = (
-            f"nerf-report script template at {_NERF_REPORT_SCRIPT} is "
-            f"missing the {_NERF_REPORT_VERSION_PLACEHOLDER!r} placeholder"
-        )
-        raise ValueError(msg)
-    text = text.replace(_NERF_REPORT_VERSION_PLACEHOLDER, version)
-    if _NERF_REPORT_VERSION_PLACEHOLDER in text:
-        msg = (
-            f"nerf-report version stamping incomplete: "
-            f"{_NERF_REPORT_VERSION_PLACEHOLDER!r} still present after "
-            f"substitution (version={version!r})"
-        )
-        raise ValueError(msg)
-    dest = output / "nerf-report"
-    dest.write_bytes(text.encode("utf-8"))
-    dest.chmod(0o755)
-    return dest

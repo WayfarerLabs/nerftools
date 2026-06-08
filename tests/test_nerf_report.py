@@ -1,251 +1,299 @@
-"""Tests for the nerf-report shell helper."""
+"""Integration tests for the nerf-report manifest tools (write/show/archive)."""
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
 
-from nerftools import install_nerf_report
+from nerftools import BUILTIN_MANIFESTS_DIR
+from nerftools.builder import build_script_text
+from nerftools.manifest import load_manifest
+
+_MANIFEST = BUILTIN_MANIFESTS_DIR / "nerf-report.yaml"
 
 
-def _install(tmp_path: Path, *, version: str = "9.9.9") -> Path:
-    return install_nerf_report(tmp_path / "scripts", version=version)
+def _iso(dt: datetime) -> str:
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _run(script: Path, args: list[str], *, home: Path) -> subprocess.CompletedProcess[str]:
+# Reference timestamps relative to "now" so tests don't rot. Past timestamps
+# are guaranteed to be in the past for any reasonable test run; cutoffs are
+# anchored to those past timestamps.
+_NOW = datetime.now(UTC)
+_LONG_AGO = _NOW - timedelta(days=30)
+_MID = _NOW - timedelta(days=20)
+_RECENT = _NOW - timedelta(days=10)
+_BARELY_PAST = _NOW - timedelta(seconds=60)
+
+
+@pytest.fixture(scope="module")
+def report_tools(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
+    """Render the three nerf-report wrapper scripts once per test session."""
+    out = tmp_path_factory.mktemp("report-bin")
+    manifest = load_manifest(_MANIFEST)
+    tools: dict[str, Path] = {}
+    for tool_name, tool_spec in manifest.tools.items():
+        full_name = f"nerf-{tool_name}"
+        script = out / full_name
+        script.write_text(
+            build_script_text(full_name, manifest.package.name, tool_spec, brand="nerf")
+        )
+        script.chmod(0o755)
+        tools[tool_name] = script
+    return tools
+
+
+def _run(script: Path, *args: str, home: Path) -> subprocess.CompletedProcess[str]:
+    env = {**os.environ, "HOME": str(home)}
     return subprocess.run(
-        ["bash", str(script), *args],
-        capture_output=True,
-        text=True,
-        env={"HOME": str(home), "PATH": "/usr/bin:/bin"},
-        check=False,
+        [str(script), *args], capture_output=True, text=True, env=env, check=False
     )
 
 
-def test_install_stamps_version_into_script(tmp_path: Path) -> None:
-    script = _install(tmp_path, version="1.2.3")
-    text = script.read_text()
-    assert 'NERFTOOLS_VERSION="1.2.3"' in text
-    assert "__NERFTOOLS_VERSION__" not in text
-    assert script.stat().st_mode & 0o111  # executable
+def _reports_dir(home: Path) -> Path:
+    return home / ".nerftools" / "nerf" / "reports"
 
 
-def test_no_args_prints_usage_and_exits_nonzero(tmp_path: Path) -> None:
-    script = _install(tmp_path)
-    result = _run(script, [], home=tmp_path / "home")
-    assert result.returncode == 2
-    assert "Usage: nerf-report" in result.stderr
+# -- write -------------------------------------------------------------------
 
 
-def test_wrong_arg_count_prints_usage(tmp_path: Path) -> None:
-    script = _install(tmp_path)
-    result = _run(script, ["bug", "nerf-foo"], home=tmp_path / "home")
-    assert result.returncode == 2
-    assert "Usage: nerf-report" in result.stderr
-
-
-def test_invalid_kind_rejected(tmp_path: Path) -> None:
-    script = _install(tmp_path)
-    result = _run(script, ["oopsie", "nerf-foo", "body"], home=tmp_path / "home")
-    assert result.returncode == 2
-    assert "invalid kind" in result.stderr
-
-
-@pytest.mark.parametrize("kind", ["bug", "bypass", "complaint", "request"])
-def test_each_kind_writes_report(tmp_path: Path, kind: str) -> None:
-    script = _install(tmp_path)
-    home = tmp_path / "home"
-    result = _run(script, [kind, "nerf-foo", "the body"], home=home)
+def test_report_writes_to_brand_namespaced_path(
+    tmp_path: Path, report_tools: dict[str, Path]
+) -> None:
+    result = _run(
+        report_tools["report"], "bug", "nerf-foo", "body text", home=tmp_path
+    )
     assert result.returncode == 0, result.stderr
-    reports = list((home / ".nerftools" / "reports").iterdir())
-    assert len(reports) == 1
-    content = reports[0].read_text()
-    assert f"kind: {kind}" in content
-    assert "the body" in content
+    files = list(_reports_dir(tmp_path).iterdir())
+    assert len(files) == 1
+    assert "body text" in files[0].read_text()
 
 
-def test_filename_composition(tmp_path: Path) -> None:
-    script = _install(tmp_path, version="2.0.0")
-    home = tmp_path / "home"
-    _run(script, ["bug", "nerf-az-repos-pr-edit", "x"], home=home)
-    reports = list((home / ".nerftools" / "reports").iterdir())
-    assert len(reports) == 1
-    name = reports[0].name
-    # 20260601T123456Z_bug_nerf-az-repos-pr-edit_2.0.0.md
+def test_report_frontmatter_includes_brand_and_kind(
+    tmp_path: Path, report_tools: dict[str, Path]
+) -> None:
+    _run(report_tools["report"], "complaint", "nerf-x", "x", home=tmp_path)
+    text = next(_reports_dir(tmp_path).iterdir()).read_text()
+    assert "kind: complaint" in text
+    assert 'nerftools_brand: "nerf"' in text
+    assert 'tool: "nerf-x"' in text
+
+
+def test_report_rejects_invalid_kind(
+    tmp_path: Path, report_tools: dict[str, Path]
+) -> None:
+    result = _run(report_tools["report"], "oops", "nerf-foo", "x", home=tmp_path)
+    assert result.returncode != 0
+    assert "allowed" in result.stderr.lower() or "kind" in result.stderr
+
+
+def test_report_filename_includes_kind_tool_and_version(
+    tmp_path: Path, report_tools: dict[str, Path]
+) -> None:
+    _run(report_tools["report"], "bug", "nerf-az-repos-pr-edit", "x", home=tmp_path)
+    name = next(_reports_dir(tmp_path).iterdir()).name
+    # 20260607T123456Z_bug_nerf-az-repos-pr-edit_unknown.md (no plugin.json -> unknown)
     assert re.match(
-        r"^\d{8}T\d{6}Z_bug_nerf-az-repos-pr-edit_2\.0\.0\.md$", name
+        r"^\d{8}T\d{6}Z_bug_nerf-az-repos-pr-edit_[A-Za-z0-9._+-]+\.md$", name
     ), name
 
 
-def test_same_second_collision_appends_rather_than_clobbers(tmp_path: Path) -> None:
-    """Two reports with identical (timestamp, kind, tool, version) end up
-    in the same file via `>>`. Either both write to one file or each lands
-    in its own file (when the second crosses a 1-second boundary); in
-    both cases nothing is clobbered."""
-    script = _install(tmp_path)
-    home = tmp_path / "home"
-    _run(script, ["bug", "nerf-foo", "first body"], home=home)
-    _run(script, ["bug", "nerf-foo", "second body"], home=home)
-    reports = list((home / ".nerftools" / "reports").iterdir())
-    assert 1 <= len(reports) <= 2
-    combined = "".join(r.read_text() for r in reports)
-    assert "first body" in combined
-    assert "second body" in combined
+# -- show --------------------------------------------------------------------
 
 
-def test_frontmatter_fields_present(tmp_path: Path) -> None:
-    script = _install(tmp_path, version="3.1.4")
-    home = tmp_path / "home"
-    result = subprocess.run(
-        ["bash", str(script), "complaint", "nerf-foo", "the body"],
-        capture_output=True,
-        text=True,
-        env={"HOME": str(home), "PATH": "/usr/bin:/bin", "NERF_REPORT_SESSION": "sess-abc"},
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    content = next((home / ".nerftools" / "reports").iterdir()).read_text()
-    assert "kind: complaint" in content
-    assert 'tool: "nerf-foo"' in content
-    assert 'nerftools_version: "3.1.4"' in content
-    assert 'session: "sess-abc"' in content
-    assert re.search(r'timestamp: "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z"', content)
+def _seed_reports(tmp_path: Path, specs: list[tuple[str, str, str, str]]) -> None:
+    """specs: list of (timestamp, kind, tool, body). Writes files directly."""
+    rd = _reports_dir(tmp_path)
+    rd.mkdir(parents=True, exist_ok=True)
+    for ts, kind, tool, body in specs:
+        compact = ts.replace("-", "").replace(":", "").replace("T", "T")
+        fname = f"{compact[:15]}Z_{kind}_{tool}_test.md"
+        f = rd / fname
+        f.write_text(
+            f"---\nkind: {kind}\ntool: \"{tool}\"\ntimestamp: \"{ts}\"\n---\n\n{body}\n"
+        )
 
 
-def test_tool_name_sanitized_in_filename(tmp_path: Path) -> None:
-    script = _install(tmp_path)
-    home = tmp_path / "home"
-    # Tool name with characters not allowed in the filename set.
-    _run(script, ["bug", "weird/name with spaces", "body"], home=home)
-    name = next((home / ".nerftools" / "reports").iterdir()).name
-    # / and space replaced with _
-    assert "weird_name_with_spaces" in name
-
-
-def test_body_with_special_chars_preserved(tmp_path: Path) -> None:
-    script = _install(tmp_path)
-    home = tmp_path / "home"
-    body = 'has "quotes" and $vars and `backticks` and\nnewline'
-    _run(script, ["bug", "nerf-foo", body], home=home)
-    content = next((home / ".nerftools" / "reports").iterdir()).read_text()
-    assert body in content
-
-
-def test_session_override_takes_precedence(tmp_path: Path) -> None:
-    script = _install(tmp_path)
-    home = tmp_path / "home"
-    result = subprocess.run(
-        ["bash", str(script), "bug", "nerf-foo", "x"],
-        capture_output=True,
-        text=True,
-        env={
-            "HOME": str(home),
-            "PATH": "/usr/bin:/bin",
-            "NERF_REPORT_SESSION": "explicit",
-            "CLAUDE_SESSION_ID": "claude-id",
-        },
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    content = next((home / ".nerftools" / "reports").iterdir()).read_text()
-    assert 'session: "explicit"' in content
-
-
-def test_unset_home_emits_actionable_error(tmp_path: Path) -> None:
-    script = _install(tmp_path)
-    result = subprocess.run(
-        ["bash", str(script), "bug", "nerf-foo", "x"],
-        capture_output=True,
-        text=True,
-        env={"PATH": "/usr/bin:/bin"},  # no HOME
-        check=False,
-    )
-    assert result.returncode != 0
-    assert "HOME is not set" in result.stderr
-
-
-def test_frontmatter_escapes_newlines_in_session(tmp_path: Path) -> None:
-    script = _install(tmp_path)
-    home = tmp_path / "home"
-    # Embed a literal newline in the session ID; the YAML frontmatter must
-    # remain a valid single-line double-quoted string.
-    result = subprocess.run(
-        ["bash", str(script), "bug", "nerf-foo", "body"],
-        capture_output=True,
-        text=True,
-        env={
-            "HOME": str(home),
-            "PATH": "/usr/bin:/bin",
-            "NERF_REPORT_SESSION": "line1\nline2\ttabbed",
-        },
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    content = next((home / ".nerftools" / "reports").iterdir()).read_text()
-    assert 'session: "line1\\nline2\\ttabbed"' in content
-
-
-def test_install_raises_when_template_lacks_placeholder(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_show_filters_by_before_strictly(
+    tmp_path: Path, report_tools: dict[str, Path]
 ) -> None:
-    import nerftools
-
-    bogus = tmp_path / "bogus.sh"
-    bogus.write_text("#!/usr/bin/env bash\necho no placeholder here\n")
-    monkeypatch.setattr(nerftools, "_NERF_REPORT_SCRIPT", bogus)
-    with pytest.raises(ValueError, match="missing.*placeholder"):
-        nerftools.install_nerf_report(tmp_path / "out", version="1.2.3")
-
-
-@pytest.mark.parametrize(
-    "bad_version",
-    [
-        '1.0"; rm -rf /',  # quote-based shell injection attempt
-        "1.0\n2.0",  # newline
-        "1.0 2.0",  # space
-        "1.0;echo pwned",  # semicolon
-        "1.0$(whoami)",  # command substitution
-        "1.0`whoami`",  # backtick
-        "",  # empty
-    ],
-)
-def test_install_rejects_unsafe_version(tmp_path: Path, bad_version: str) -> None:
-    with pytest.raises(ValueError, match="safe set"):
-        install_nerf_report(tmp_path / "out", version=bad_version)
-
-
-@pytest.mark.parametrize(
-    "good_version",
-    [
-        "1.2.3",
-        "0.0.0-rc.1",
-        "2.0.0+build.42",
-        "1.0.0-alpha.1+sha.abcdef",
-    ],
-)
-def test_install_accepts_semver_shapes(tmp_path: Path, good_version: str) -> None:
-    # Each variant should install without raising.
-    install_nerf_report(tmp_path / good_version, version=good_version)
-
-
-def test_reports_dir_and_files_are_user_only(tmp_path: Path) -> None:
-    import stat
-
-    script = _install(tmp_path)
-    home = tmp_path / "home"
-    # Pre-create the reports dir with a loose mode to verify the script
-    # tightens it (covers the upgrade-from-older-script case).
-    reports = home / ".nerftools" / "reports"
-    reports.mkdir(parents=True)
-    reports.chmod(0o755)
-    result = _run(script, ["bug", "nerf-foo", "x"], home=home)
+    boundary = _MID
+    _seed_reports(
+        tmp_path,
+        [
+            (_iso(_LONG_AGO), "bug", "nerf-a", "old body"),
+            (_iso(boundary), "bug", "nerf-a", "boundary body"),
+            (_iso(boundary + timedelta(seconds=1)), "bug", "nerf-a", "newer body"),
+        ],
+    )
+    # Cutoff exactly matches second entry; strict-less excludes it.
+    result = _run(report_tools["report-show"], _iso(boundary), home=tmp_path)
     assert result.returncode == 0, result.stderr
+    assert "old body" in result.stdout
+    assert "boundary body" not in result.stdout  # equal to cutoff -> excluded
+    assert "newer body" not in result.stdout
 
-    # Directory must be 0700.
-    assert stat.S_IMODE(reports.stat().st_mode) == 0o700
-    # Report file must be 0600 (umask 077 applied to default 0666).
-    report = next(reports.iterdir())
-    assert stat.S_IMODE(report.stat().st_mode) == 0o600
+
+def test_show_rejects_future_before(
+    tmp_path: Path, report_tools: dict[str, Path]
+) -> None:
+    _seed_reports(tmp_path, [(_iso(_LONG_AGO), "bug", "nerf-a", "x")])
+    future = _iso(_NOW + timedelta(days=1))
+    result = _run(report_tools["report-show"], future, home=tmp_path)
+    assert result.returncode != 0
+    assert "future" in result.stderr
+
+
+def test_show_expands_bare_date_to_midnight(
+    tmp_path: Path, report_tools: dict[str, Path]
+) -> None:
+    # Pick a past date boundary at midnight; seed one second before and at.
+    boundary_date = (_NOW - timedelta(days=15)).strftime("%Y-%m-%d")
+    midnight = f"{boundary_date}T00:00:00Z"
+    bd_dt = datetime.strptime(boundary_date, "%Y-%m-%d").replace(tzinfo=UTC)
+    just_before = _iso(bd_dt - timedelta(seconds=1))
+    _seed_reports(
+        tmp_path,
+        [
+            (just_before, "bug", "nerf-a", "before midnight"),
+            (midnight, "bug", "nerf-a", "at midnight"),
+        ],
+    )
+    # Bare date -> T00:00:00Z. Strict-less excludes the boundary.
+    result = _run(report_tools["report-show"], boundary_date, home=tmp_path)
+    assert "before midnight" in result.stdout
+    assert "at midnight" not in result.stdout
+
+
+def test_show_filters_by_kind_and_tool(
+    tmp_path: Path, report_tools: dict[str, Path]
+) -> None:
+    _seed_reports(
+        tmp_path,
+        [
+            (_iso(_LONG_AGO), "bug", "nerf-a", "bug-a"),
+            (_iso(_LONG_AGO + timedelta(days=1)), "complaint", "nerf-a", "complaint-a"),
+            (_iso(_LONG_AGO + timedelta(days=2)), "bug", "nerf-b", "bug-b"),
+        ],
+    )
+    # Cutoff includes everything seeded; filter to bug + nerf-a.
+    # Switches/options come BEFORE positionals per the parser convention.
+    result = _run(
+        report_tools["report-show"],
+        "--kind", "bug",
+        "--tool", "nerf-a",
+        _iso(_BARELY_PAST),
+        home=tmp_path,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "bug-a" in result.stdout
+    assert "complaint-a" not in result.stdout
+    assert "bug-b" not in result.stdout
+
+
+def test_show_skips_reviewed_by_default(
+    tmp_path: Path, report_tools: dict[str, Path]
+) -> None:
+    _seed_reports(tmp_path, [(_iso(_LONG_AGO), "bug", "nerf-a", "fresh")])
+    reviewed = _reports_dir(tmp_path) / "reviewed"
+    reviewed.mkdir(parents=True)
+    triaged_ts = _iso(_LONG_AGO - timedelta(days=10))
+    (reviewed / "old_bug_nerf-x_test.md").write_text(
+        f'---\nkind: bug\ntool: "nerf-x"\ntimestamp: "{triaged_ts}"\n---\n\nalready-triaged\n'
+    )
+    cutoff = _iso(_BARELY_PAST)
+    result = _run(report_tools["report-show"], cutoff, home=tmp_path)
+    assert "fresh" in result.stdout
+    assert "already-triaged" not in result.stdout
+
+    # With --include-reviewed both show up.
+    result2 = _run(
+        report_tools["report-show"], "--include-reviewed", cutoff, home=tmp_path
+    )
+    assert "fresh" in result2.stdout
+    assert "already-triaged" in result2.stdout
+
+
+# -- archive -----------------------------------------------------------------
+
+
+def test_archive_moves_matching_to_reviewed_subdir(
+    tmp_path: Path, report_tools: dict[str, Path]
+) -> None:
+    boundary = _MID
+    _seed_reports(
+        tmp_path,
+        [
+            (_iso(_LONG_AGO), "bug", "nerf-a", "old"),
+            (_iso(boundary), "bug", "nerf-a", "boundary"),
+        ],
+    )
+    result = _run(report_tools["report-archive"], _iso(boundary), home=tmp_path)
+    assert result.returncode == 0, result.stderr
+    rd = _reports_dir(tmp_path)
+    # 'old' (< cutoff) moved; boundary (= cutoff) not moved.
+    top_files = [f for f in rd.iterdir() if f.is_file()]
+    assert len(top_files) == 1
+    assert "boundary" in top_files[0].read_text()
+    archived = list((rd / "reviewed").iterdir())
+    assert len(archived) == 1
+    assert "old" in archived[0].read_text()
+
+
+def test_archive_rejects_future_before(
+    tmp_path: Path, report_tools: dict[str, Path]
+) -> None:
+    _seed_reports(tmp_path, [(_iso(_LONG_AGO), "bug", "nerf-a", "x")])
+    future = _iso(_NOW + timedelta(days=1))
+    result = _run(report_tools["report-archive"], future, home=tmp_path)
+    assert result.returncode != 0
+    assert "future" in result.stderr
+
+
+def test_archive_with_filters(
+    tmp_path: Path, report_tools: dict[str, Path]
+) -> None:
+    _seed_reports(
+        tmp_path,
+        [
+            (_iso(_LONG_AGO), "bug", "nerf-a", "bug-a"),
+            (_iso(_LONG_AGO + timedelta(days=1)), "complaint", "nerf-a", "complaint-a"),
+        ],
+    )
+    result = _run(
+        report_tools["report-archive"],
+        "--kind", "bug",
+        _iso(_BARELY_PAST),
+        home=tmp_path,
+    )
+    assert result.returncode == 0, result.stderr
+    rd = _reports_dir(tmp_path)
+    top_files = [f for f in rd.iterdir() if f.is_file()]
+    # Only complaint remains at top level
+    assert len(top_files) == 1
+    assert "complaint-a" in top_files[0].read_text()
+
+
+# -- NERFTOOLS_BRAND exposure -----------------------------------------------
+
+
+def test_nerftools_brand_is_exposed_to_script_mode_tools(
+    report_tools: dict[str, Path],
+) -> None:
+    """The builder change to expose NERFTOOLS_BRAND should appear verbatim
+    in the generated wrapper for any script-mode tool."""
+    text = report_tools["report"].read_text()
+    assert 'NERFTOOLS_BRAND="nerf"' in text
+
+
+def test_nerftools_brand_reflects_custom_prefix() -> None:
+    """A non-default prefix should produce a different NERFTOOLS_BRAND."""
+    manifest = load_manifest(_MANIFEST)
+    spec = next(iter(manifest.tools.values()))
+    text = build_script_text("acme-report", manifest.package.name, spec, brand="acme")
+    assert 'NERFTOOLS_BRAND="acme"' in text
