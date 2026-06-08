@@ -31,6 +31,7 @@ Each tool's usage line shows the full absolute path to call it. Use that path di
 - **nerf-gh**: GitHub CLI tools for pull requests, issues, and workflow runs
 - **nerf-git**: Git workflow tools for safe, scoped git operations
 - **nerf-kubectl**: kubectl tools for inspecting and operating on Kubernetes clusters
+- **nerf-report**: Structured feedback loop for nerf tools (file bugs/bypass reasons/complaints/requests)
 - **nerf-nx**: Nx workspace tools for building, testing, and inspecting projects
 - **nerf-pkgrun**: Package runner tools for cspell, markdownlint, and prettier at locked versions
 - **nerf-stdutils**: Safe wrappers for common Unix utilities

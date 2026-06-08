@@ -1,49 +1,79 @@
 ---
 name: nerf-report
-description: Report bugs, bypass reasons, complaints, or feature requests about nerf tools
-argument-hint: <kind> <tool> <body>
-allowed-tools: Bash
+description: "Structured feedback loop for nerf tools (file bugs/bypass reasons/complaints/requests)"
+targets: ["*"]
 ---
 
-Use this when you hit something worth telling the nerftools maintainer about:
-a bug, a guardrail you had to bypass (and why), a UX annoyance, or a feature
-you wish existed. Reports land in `~/.nerftools/reports/` as Markdown files;
-the maintainer triages them.
+# nerf-report
 
-Pick the right `<kind>`:
+These tools are available as scripts within this plugin. Call them using the absolute paths shown in each usage line.
 
-- `bug` -- the tool produced wrong behavior, rejected valid input, or
-  crashed
-- `bypass` -- you ran a command directly instead of via the nerf wrapper
-  that would normally cover it (any reason: wrapper too restrictive,
-  missing a flag, has a bug, doesn't fit this case, etc.). When the
-  PreToolUse Bash hint hook would have redirected your raw call, run
-  `nerf-report bypass` *first*, then append the resulting report
-  filename to the command as `# nerf:bypass <report-filename>` (replace
-  `nerf` with your configured brand if different).
-- `complaint` -- the tool works but the UX got in your way (cryptic error,
-  surprising default, missing flag forced a workaround)
-- `request` -- you'd like a new tool, option, or behavior
+These tools wrap the operator-facing feedback loop for nerf tools. Reports
+are durable Markdown files under `~/.nerftools/<brand>/reports/`.
 
-`<tool>` is the nerf tool you're reporting about (e.g. `nerf-az-repos-pr-edit`),
-or `nerftools` for meta-issues about the package itself.
+Three tools:
+- `<prefix>report` writes a new report. Use when you hit a bug, need to
+  bypass a guard (with reason), find UX friction, or want a feature.
+- `<prefix>report-show` concatenates matching reports for the operator (or
+  a triage subagent) to read. Requires a `<before>` cutoff timestamp.
+- `<prefix>report-archive` moves processed reports to a `reviewed/`
+  subdirectory so they don't show up next time. Same `<before>` cutoff.
 
-`<body>` is free-form prose. Quote it so the shell passes it through as a
-single argument.
+The `<before>` cutoff filters strictly: only reports with timestamp <
+`<before>` match. The cutoff itself must not be in the future. This forces
+intentional time-window selection and prevents in-flight reports (those
+just being written) from being accidentally pulled in.
 
-```bash
-${CLAUDE_PLUGIN_ROOT}/skills/nerf-report/scripts/nerf-report <kind> <tool> "<body>"
-```
+## nerf-report
 
-Examples:
+File a structured report about a nerf tool (bug / bypass reason / complaint / feature request). Writes a Markdown file with auto-captured frontmatter to `~/.nerftools/<brand>/reports/`.
 
-```bash
-${CLAUDE_PLUGIN_ROOT}/skills/nerf-report/scripts/nerf-report bypass nerf-az-repos-pr-edit "guard demanded --title|--description|--draft; I wanted to update reviewers only"
-${CLAUDE_PLUGIN_ROOT}/skills/nerf-report/scripts/nerf-report bug nerf-gh-pr-ready "rejected --undo on a draft PR even though gh pr ready --undo is documented"
-${CLAUDE_PLUGIN_ROOT}/skills/nerf-report/scripts/nerf-report complaint nerf-git-commit "Conventional Commits regex rejects multi-scope (gh,az); had to commit twice"
-${CLAUDE_PLUGIN_ROOT}/skills/nerf-report/scripts/nerf-report request nerf-az-repos-pr-comments "would like --since <timestamp> to filter recent comments"
-```
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-report/scripts/nerf-report <kind> <tool> <body>`
 
-The script auto-captures the timestamp, working directory, agent session
-ID, and nerftools version into the report's frontmatter -- you don't need
-to include those in the body.
+**Arguments:**
+
+- `<kind>` (required): Report kind. one of `bug`, `bypass`, `complaint`, `request`
+- `<tool>` (required): Tool the report is about (e.g. nerf-az-repos-pr-edit), or "nerftools" for the package itself
+- `<body>` (required): Free-form prose describing the issue/request. Quote it so it reaches the script as a single argument.
+
+---
+
+## nerf-report-show
+
+Concatenate matching reports under `~/.nerftools/<brand>/reports/` for operator/subagent triage. Reports are filtered to those with timestamp strictly less than `<before>`. By default, the `reviewed/` subdirectory is skipped (those have already been triaged).
+
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-report/scripts/nerf-report-show [--include-reviewed] [--kind <kind>] [--tool <tool>] <before>`
+
+**Switches:**
+
+- `--include-reviewed`: Also include reports that have already been moved to the `reviewed/` subdirectory
+
+**Options:**
+
+- `--kind` (optional): Only include reports of this kind. one of `bug`, `bypass`, `complaint`, `request`
+- `--tool` (optional): Only include reports whose `tool` frontmatter contains this substring
+
+**Arguments:**
+
+- `<before>` (required): ISO 8601 UTC cutoff; only reports with timestamp strictly < this match. Must not be in the future. Accepts `YYYY-MM-DD` (expands to `T00:00:00Z`) or `YYYY-MM-DDTHH:MM:SSZ`.. must match `^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)?$`
+
+---
+
+## nerf-report-archive
+
+Move matching reports to `~/.nerftools/<brand>/reports/reviewed/` so they don't show up in future `report-show` runs by default. Uses the same `<before>` semantics as `report-show` (strict less-than; not in future).
+
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-report/scripts/nerf-report-archive [--kind <kind>] [--tool <tool>] <before>`
+
+**Options:**
+
+- `--kind` (optional): Only archive reports of this kind. one of `bug`, `bypass`, `complaint`, `request`
+- `--tool` (optional): Only archive reports whose `tool` frontmatter contains this substring
+
+**Arguments:**
+
+- `<before>` (required): ISO 8601 UTC cutoff; only reports with timestamp strictly < this are archived. Must not be in the future.. must match `^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)?$`
+
+---
+
+_Hit a bug, complaint, bypass-worthy guardrail, or want a feature? Use the `nerf-report` skill._

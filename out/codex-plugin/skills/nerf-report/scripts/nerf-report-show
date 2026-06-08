@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+# nerf-report-show -- Concatenate matching reports under `~/.nerftools/<brand>/reports/` for operator/subagent triage. Reports are filtered to those with timestamp strictly less than `<before>`. By default, the `reviewed/` subdirectory is skipped (those have already been triaged).
+# Generated from nerf-report manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=none
+
+if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
+  echo "error: nerf-report-show requires bash 4+. Found bash ${BASH_VERSION:-unknown}" >&2
+  echo "  hint: on macOS, install a newer bash via 'brew install bash'" >&2
+  exit 1
+fi
+
+set -euo pipefail
+
+NERFTOOLS_BRAND="nerf"
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-report-show [--include-reviewed] [--kind <kind>] [--tool <tool>] <before>
+
+Switches:
+  --include-reviewed
+      Also include reports that have already been moved to the `reviewed/` subdirectory
+
+Options:
+  --kind <kind>
+      Only include reports of this kind
+      Allowed values: bug, bypass, complaint, request
+  --tool <tool>
+      Only include reports whose `tool` frontmatter contains this substring
+
+Arguments:
+  <before> (required)
+      ISO 8601 UTC cutoff; only reports with timestamp strictly < this match. Must not be in the future. Accepts `YYYY-MM-DD` (expands to `T00:00:00Z`) or `YYYY-MM-DDTHH:MM:SSZ`.
+      Must match: ^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)?$
+
+Concatenate matching reports under `~/.nerftools/<brand>/reports/` for operator/subagent triage. Reports are filtered to those with timestamp strictly less than `<before>`. By default, the `reviewed/` subdirectory is skipped (those have already been triaged).
+EOF
+  exit 1
+}
+
+INCLUDE_REVIEWED=""
+KIND=""
+_KIND_SET=""
+TOOL=""
+_TOOL_SET=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --include-reviewed) if [[ -n "${INCLUDE_REVIEWED}" ]]; then echo "error: --include-reviewed can only be specified once" >&2; exit 1; fi; INCLUDE_REVIEWED="true"; shift 1 ;;
+    --kind) if [[ -n "${_KIND_SET}" ]]; then echo "error: --kind can only be specified once" >&2; exit 1; fi; KIND="$2"; _KIND_SET=true; shift 2 ;;
+    --tool) if [[ -n "${_TOOL_SET}" ]]; then echo "error: --tool can only be specified once" >&2; exit 1; fi; TOOL="$2"; _TOOL_SET=true; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+_BEFORE_SET=""
+if [[ $# -gt 0 ]]; then
+  BEFORE="$1"
+  _BEFORE_SET=true
+  shift
+else
+  BEFORE=""
+fi
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-report-show: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+if [[ -n "${_KIND_SET}" ]] && [[ "${KIND}" != "bug" && "${KIND}" != "bypass" && "${KIND}" != "complaint" && "${KIND}" != "request" ]]; then
+  echo "error: nerf-report-show: option --kind is not an allowed value" >&2
+  echo "  value:   \"${KIND}\"" >&2
+  echo "  allowed: bug, bypass, complaint, request" >&2
+  echo "  hint: use one of the allowed values" >&2
+  exit 1
+fi
+
+if [[ -n "${_BEFORE_SET}" ]] && [[ "${BEFORE}" == -* ]]; then
+  echo "error: nerf-report-show: <before> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${BEFORE}" ]]; then
+  echo "error: nerf-report-show: missing required argument <before>" >&2
+  echo "  hint: provide a value for <before>" >&2
+  usage
+fi
+
+_NERF_PATTERN='^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)?$'
+if [[ -n "${_BEFORE_SET}" ]] && ! [[ "${BEFORE}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-report-show: argument <before> does not match required pattern" >&2
+  echo "  value:   \"${BEFORE}\"" >&2
+  echo "  pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)?$" >&2
+  echo "  hint: value must match ^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)?$" >&2
+  exit 1
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: nerf-report-show would run inline script"
+  exit 0
+fi
+
+: "${HOME:?nerf-report-show: HOME is not set}"
+
+REPORTS_DIR="${HOME}/.nerftools/${NERFTOOLS_BRAND}/reports"
+
+# Normalize and validate <before>. Accept ISO 8601 UTC date or datetime;
+# expand bare date to T00:00:00Z. Reject anything not in the future.
+_before="$BEFORE"
+if [[ "$_before" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+    _before="${_before}T00:00:00Z"
+fi
+if [[ ! "$_before" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]; then
+    echo "error: nerf-report-show: <before> must be ISO 8601 UTC (e.g. 2026-06-07 or 2026-06-07T12:00:00Z); got: ${BEFORE}" >&2
+    exit 1
+fi
+_now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+if [[ "$_before" > "$_now" ]]; then
+    echo "error: nerf-report-show: <before> ${_before} is in the future (now ${_now}); refusing" >&2
+    exit 1
+fi
+
+[[ -d "$REPORTS_DIR" ]] || { echo "(no reports directory at ${REPORTS_DIR})" >&2; exit 0; }
+
+_matched_any=0
+while IFS= read -r -d '' f; do
+    # Skip reviewed/ unless --include-reviewed. Switches expose the
+    # bare variable (empty when unset, "true" when set); options have
+    # _<NAME>_SET sentinels, but switches do not.
+    if [[ -z "${INCLUDE_REVIEWED:-}" && "$f" == */reviewed/* ]]; then continue; fi
+    # Extract frontmatter fields.
+    _ts=$(awk -F': ' '/^timestamp: /{gsub(/"/,"",$2); print $2; exit}' "$f")
+    _kind=$(awk -F': ' '/^kind: /{gsub(/"/,"",$2); print $2; exit}' "$f")
+    _tool=$(awk -F': ' '/^tool: /{gsub(/"/,"",$2); print $2; exit}' "$f")
+    [[ -z "$_ts" ]] && continue
+    # Strict less-than on timestamps (ISO 8601 UTC -> lex compare works).
+    [[ "$_ts" < "$_before" ]] || continue
+    # Kind filter.
+    if [[ -n "${_KIND_SET:-}" && "$_kind" != "$KIND" ]]; then continue; fi
+    # Tool filter (substring match, case-sensitive).
+    if [[ -n "${_TOOL_SET:-}" && "$_tool" != *"$TOOL"* ]]; then continue; fi
+    _matched_any=1
+    printf -- '=== %s ===\n' "$f"
+    cat "$f"
+    printf '\n\n'
+done < <(find "$REPORTS_DIR" -type f -name '*.md' -print0 2>/dev/null | sort -z)
+
+if (( _matched_any == 0 )); then
+    echo "(no reports matched)" >&2
+fi
