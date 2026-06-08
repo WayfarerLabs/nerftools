@@ -20,9 +20,13 @@ Three tools:
   subdirectory so they don't show up next time. Same `<before>` cutoff.
 
 The `<before>` cutoff filters strictly: only reports with timestamp <
-`<before>` match. The cutoff itself must not be in the future. This forces
-intentional time-window selection and prevents in-flight reports (those
-just being written) from being accidentally pulled in.
+`<before>` match. The cutoff must be a full ISO 8601 timestamp with an
+explicit timezone designator (`Z` for UTC, or `±HH:MM` offset) and must
+not be in the future. Bare dates and naive datetimes are intentionally
+rejected -- a timestamp without a timezone is too ambiguous (UTC?
+system local? both are plausible defaults), and a date-only cutoff
+leads to off-by-one confusion. Offsets are normalized to UTC for
+comparison via GNU `date -d` (or `gdate` on macOS via brew coreutils).
 
 ## nerf-report
 
@@ -55,7 +59,7 @@ Concatenate matching reports under `~/.nerftools/<brand>/reports/` for operator/
 
 **Arguments:**
 
-- `<before>` (required): ISO 8601 UTC cutoff; only reports with timestamp strictly < this match. Must not be in the future. Accepts `YYYY-MM-DD` (expands to `T00:00:00Z`) or `YYYY-MM-DDTHH:MM:SSZ`.. must match `^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)?$`
+- `<before>` (required): Full ISO 8601 cutoff with explicit timezone designator (Z for UTC, or ±HH:MM offset). Only reports with timestamp strictly < this match. Must not be in the future. Bare dates and naive datetimes are rejected -- pass `2026-05-23T00:00:00Z` or `2026-05-23T16:00:00-08:00`, not `2026-05-23`.. must match `^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z|[+-][0-9]{2}:[0-9]{2})$`
 
 ---
 
@@ -72,7 +76,7 @@ Move matching reports to `~/.nerftools/<brand>/reports/reviewed/` so they don't 
 
 **Arguments:**
 
-- `<before>` (required): ISO 8601 UTC cutoff; only reports with timestamp strictly < this are archived. Must not be in the future.. must match `^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)?$`
+- `<before>` (required): Full ISO 8601 cutoff with explicit timezone designator (Z for UTC, or ±HH:MM offset). Only reports with timestamp strictly < this are archived. Must not be in the future. Same format rules as `report-show`.. must match `^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z|[+-][0-9]{2}:[0-9]{2})$`
 
 ---
 

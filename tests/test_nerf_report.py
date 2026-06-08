@@ -149,24 +149,45 @@ def test_show_rejects_future_before(
     assert "future" in result.stderr
 
 
-def test_show_expands_bare_date_to_midnight(
+@pytest.mark.parametrize(
+    "bad_before",
+    [
+        "2026-05-23",  # bare date, no time/zone
+        "2026-05-23T12:00:00",  # naive datetime, no timezone designator
+        "yesterday",  # not even a valid format
+        "2026-05-23T12:00:00+0800",  # offset must be ±HH:MM, not ±HHMM
+    ],
+)
+def test_show_rejects_before_without_explicit_timezone(
+    tmp_path: Path, report_tools: dict[str, Path], bad_before: str
+) -> None:
+    result = _run(report_tools["report-show"], bad_before, home=tmp_path)
+    assert result.returncode != 0
+
+
+def test_show_normalizes_non_utc_offset_to_utc(
     tmp_path: Path, report_tools: dict[str, Path]
 ) -> None:
-    """Bare-date `<before>` expands to that date's `T00:00:00Z`."""
-    boundary_date = (_NOW - timedelta(days=15)).strftime("%Y-%m-%d")
-    bd_dt = datetime.strptime(boundary_date, "%Y-%m-%d").replace(tzinfo=UTC)
+    """An offset cutoff must be converted to UTC for comparison. The same
+    instant expressed with different offsets must filter identically."""
+    boundary = _MID  # some past instant
     _seed_reports(
         tmp_path,
         [
-            (_iso(bd_dt - timedelta(days=1)), "bug", "nerf-a", "day before"),
-            (f"{boundary_date}T00:00:00Z", "bug", "nerf-a", "at midnight"),
+            (_iso(boundary - timedelta(hours=1)), "bug", "nerf-a", "hour-before"),
+            (_iso(boundary + timedelta(hours=1)), "bug", "nerf-a", "hour-after"),
         ],
     )
-    # If bare date didn't expand to midnight, "at midnight" would be < cutoff
-    # and would show up. Strict-less semantics + correct expansion exclude it.
-    result = _run(report_tools["report-show"], boundary_date, home=tmp_path)
-    assert "day before" in result.stdout
-    assert "at midnight" not in result.stdout
+    # Express the boundary as "-08:00" -- the offset push the wallclock time
+    # 8 hours later, so the *instant* is the same as boundary. Strict-less
+    # excludes the boundary; hour-before matches, hour-after doesn't.
+    offset_cutoff = (
+        (boundary + timedelta(hours=-8)).strftime("%Y-%m-%dT%H:%M:%S") + "-08:00"
+    )
+    result = _run(report_tools["report-show"], offset_cutoff, home=tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert "hour-before" in result.stdout
+    assert "hour-after" not in result.stdout
 
 
 def test_show_filters_by_kind_and_tool(
