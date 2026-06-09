@@ -56,6 +56,7 @@ _PATTERNS=(
   $'(^|$|[^[:alnum:]_])gh(^|$|[^[:alnum:]_])	nerf-gh'
   $'(^|$|[^[:alnum:]_])git(^|$|[^[:alnum:]_])	nerf-git'
   $'(^|$|[^[:alnum:]_])kubectl(^|$|[^[:alnum:]_])	nerf-kubectl'
+  $'\\.nerftools/.*/reports(^|$|[^[:alnum:]_])	nerf-report'
   $'(^|$|[^[:alnum:]_])nx(^|$|[^[:alnum:]_])	nerf-nx'
   $'(^|$|[^[:alnum:]_])cspell(^|$|[^[:alnum:]_])	nerf-pkgrun'
   $'(^|$|[^[:alnum:]_])markdownlint(^|$|[^[:alnum:]_])	nerf-pkgrun'

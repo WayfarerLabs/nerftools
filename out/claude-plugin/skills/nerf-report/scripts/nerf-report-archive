@@ -102,6 +102,7 @@ if [[ "$_NERF_DRY_RUN" == "true" ]]; then
 fi
 
 : "${HOME:?nerf-report-archive: HOME is not set}"
+: "${NERFTOOLS_BRAND:?nerf-report-archive: NERFTOOLS_BRAND is unset; the builder should stamp this -- empty would silently archive from a different reports queue}"
 
 REPORTS_DIR="${HOME}/.nerftools/${NERFTOOLS_BRAND}/reports"
 ARCHIVE_DIR="${REPORTS_DIR}/reviewed"
@@ -141,11 +142,14 @@ mkdir -p "$ARCHIVE_DIR"
 
 _moved=0
 while IFS= read -r -d '' f; do
-    # Never re-archive what's already under reviewed/.
+    # Never re-archive what's already under reviewed/. (The
+    # -maxdepth 1 on find should prevent this anyway, but keep
+    # the guard in case the layout changes.)
     [[ "$f" == */reviewed/* ]] && continue
-    _ts=$(awk -F': ' '/^timestamp: /{gsub(/"/,"",$2); print $2; exit}' "$f")
-    _kind=$(awk -F': ' '/^kind: /{gsub(/"/,"",$2); print $2; exit}' "$f")
-    _tool=$(awk -F': ' '/^tool: /{gsub(/"/,"",$2); print $2; exit}' "$f")
+    # The substr() form is robust against values containing ": ".
+    _ts=$(awk '/^timestamp: /{gsub(/"/,"",$0); print substr($0, index($0,": ")+2); exit}' "$f")
+    _kind=$(awk '/^kind: /{gsub(/"/,"",$0); print substr($0, index($0,": ")+2); exit}' "$f")
+    _tool=$(awk '/^tool: /{gsub(/"/,"",$0); print substr($0, index($0,": ")+2); exit}' "$f")
     [[ -z "$_ts" ]] && continue
     [[ "$_ts" < "$_before" ]] || continue
     if [[ -n "${_KIND_SET:-}" && "$_kind" != "$KIND" ]]; then continue; fi

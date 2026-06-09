@@ -108,6 +108,7 @@ if [[ "$_NERF_DRY_RUN" == "true" ]]; then
 fi
 
 : "${HOME:?nerf-report-show: HOME is not set}"
+: "${NERFTOOLS_BRAND:?nerf-report-show: NERFTOOLS_BRAND is unset; the builder should stamp this -- empty would silently read from a different reports queue}"
 
 REPORTS_DIR="${HOME}/.nerftools/${NERFTOOLS_BRAND}/reports"
 
@@ -146,16 +147,20 @@ fi
 
 [[ -d "$REPORTS_DIR" ]] || { echo "(no reports directory at ${REPORTS_DIR})" >&2; exit 0; }
 
+# Switches expose the bare variable (empty when unset, "true"
+# when set); options have _<NAME>_SET sentinels, switches do not.
+# Bound find's depth based on whether reviewed/ is in scope --
+# cheaper than letting it recurse and filtering after.
+_maxdepth=1
+[[ -n "${INCLUDE_REVIEWED:-}" ]] && _maxdepth=2
+
 _matched_any=0
 while IFS= read -r -d '' f; do
-    # Skip reviewed/ unless --include-reviewed. Switches expose the
-    # bare variable (empty when unset, "true" when set); options have
-    # _<NAME>_SET sentinels, but switches do not.
-    if [[ -z "${INCLUDE_REVIEWED:-}" && "$f" == */reviewed/* ]]; then continue; fi
-    # Extract frontmatter fields.
-    _ts=$(awk -F': ' '/^timestamp: /{gsub(/"/,"",$2); print $2; exit}' "$f")
-    _kind=$(awk -F': ' '/^kind: /{gsub(/"/,"",$2); print $2; exit}' "$f")
-    _tool=$(awk -F': ' '/^tool: /{gsub(/"/,"",$2); print $2; exit}' "$f")
+    # Extract frontmatter fields. The substr() form is robust
+    # against values that themselves contain ": ".
+    _ts=$(awk '/^timestamp: /{gsub(/"/,"",$0); print substr($0, index($0,": ")+2); exit}' "$f")
+    _kind=$(awk '/^kind: /{gsub(/"/,"",$0); print substr($0, index($0,": ")+2); exit}' "$f")
+    _tool=$(awk '/^tool: /{gsub(/"/,"",$0); print substr($0, index($0,": ")+2); exit}' "$f")
     [[ -z "$_ts" ]] && continue
     # Strict less-than on timestamps (ISO 8601 UTC -> lex compare works).
     [[ "$_ts" < "$_before" ]] || continue
@@ -167,7 +172,7 @@ while IFS= read -r -d '' f; do
     printf -- '=== %s ===\n' "$f"
     cat "$f"
     printf '\n\n'
-done < <(find "$REPORTS_DIR" -type f -name '*.md' -print0 2>/dev/null | sort -z)
+done < <(find "$REPORTS_DIR" -maxdepth "$_maxdepth" -type f -name '*.md' -print0 2>/dev/null | sort -z)
 
 if (( _matched_any == 0 )); then
     echo "(no reports matched)" >&2

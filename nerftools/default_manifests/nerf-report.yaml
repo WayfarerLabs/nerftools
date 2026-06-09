@@ -24,7 +24,12 @@ package:
         system local? both are plausible defaults), and a date-only cutoff
         leads to off-by-one confusion. Offsets are normalized to UTC for
         comparison via GNU `date -d` (or `gdate` on macOS via brew coreutils).
-    bash_hints: []
+    bash_hints:
+        # Agents reaching for raw filesystem inspection of the reports queue
+        # should be redirected to `report-show` -- it handles filtering,
+        # archive-skip, and timezone-correct cutoffs that a raw `cat`/`ls`
+        # would miss.
+        - '\.nerftools/.*/reports\b'
 
 tools:
     report:
@@ -42,6 +47,7 @@ tools:
             write: workspace
         script: |
             : "${HOME:?nerf-report: HOME is not set; cannot determine reports directory}"
+            : "${NERFTOOLS_BRAND:?nerf-report: NERFTOOLS_BRAND is unset; the builder should stamp this -- empty would silently write to a different reports queue}"
 
             REPORTS_DIR="${HOME}/.nerftools/${NERFTOOLS_BRAND}/reports"
             umask 077
@@ -84,9 +90,13 @@ tools:
                 printf '%s' "$s"
             }
 
-            MARKER="${DEST}"
-            if [[ -e "$MARKER" && -L "$MARKER" ]]; then
-                echo "error: nerf-report: refusing to write through existing symlink at ${MARKER}" >&2
+            # Belt-and-suspenders: the dir is 0700 (set above) so an
+            # adversary couldn't plant a symlink, but if DEST somehow exists
+            # as a symlink (TOCTOU race, leftover from older umask, etc.)
+            # refuse to write through it rather than potentially clobbering
+            # whatever it points at.
+            if [[ -L "$DEST" ]]; then
+                echo "error: nerf-report: refusing to write through existing symlink at ${DEST}" >&2
                 exit 1
             fi
 
@@ -128,6 +138,7 @@ tools:
             write: none
         script: |
             : "${HOME:?nerf-report-show: HOME is not set}"
+            : "${NERFTOOLS_BRAND:?nerf-report-show: NERFTOOLS_BRAND is unset; the builder should stamp this -- empty would silently read from a different reports queue}"
 
             REPORTS_DIR="${HOME}/.nerftools/${NERFTOOLS_BRAND}/reports"
 
@@ -166,16 +177,20 @@ tools:
 
             [[ -d "$REPORTS_DIR" ]] || { echo "(no reports directory at ${REPORTS_DIR})" >&2; exit 0; }
 
+            # Switches expose the bare variable (empty when unset, "true"
+            # when set); options have _<NAME>_SET sentinels, switches do not.
+            # Bound find's depth based on whether reviewed/ is in scope --
+            # cheaper than letting it recurse and filtering after.
+            _maxdepth=1
+            [[ -n "${INCLUDE_REVIEWED:-}" ]] && _maxdepth=2
+
             _matched_any=0
             while IFS= read -r -d '' f; do
-                # Skip reviewed/ unless --include-reviewed. Switches expose the
-                # bare variable (empty when unset, "true" when set); options have
-                # _<NAME>_SET sentinels, but switches do not.
-                if [[ -z "${INCLUDE_REVIEWED:-}" && "$f" == */reviewed/* ]]; then continue; fi
-                # Extract frontmatter fields.
-                _ts=$(awk -F': ' '/^timestamp: /{gsub(/"/,"",$2); print $2; exit}' "$f")
-                _kind=$(awk -F': ' '/^kind: /{gsub(/"/,"",$2); print $2; exit}' "$f")
-                _tool=$(awk -F': ' '/^tool: /{gsub(/"/,"",$2); print $2; exit}' "$f")
+                # Extract frontmatter fields. The substr() form is robust
+                # against values that themselves contain ": ".
+                _ts=$(awk '/^timestamp: /{gsub(/"/,"",$0); print substr($0, index($0,": ")+2); exit}' "$f")
+                _kind=$(awk '/^kind: /{gsub(/"/,"",$0); print substr($0, index($0,": ")+2); exit}' "$f")
+                _tool=$(awk '/^tool: /{gsub(/"/,"",$0); print substr($0, index($0,": ")+2); exit}' "$f")
                 [[ -z "$_ts" ]] && continue
                 # Strict less-than on timestamps (ISO 8601 UTC -> lex compare works).
                 [[ "$_ts" < "$_before" ]] || continue
@@ -187,7 +202,7 @@ tools:
                 printf -- '=== %s ===\n' "$f"
                 cat "$f"
                 printf '\n\n'
-            done < <(find "$REPORTS_DIR" -type f -name '*.md' -print0 2>/dev/null | sort -z)
+            done < <(find "$REPORTS_DIR" -maxdepth "$_maxdepth" -type f -name '*.md' -print0 2>/dev/null | sort -z)
 
             if (( _matched_any == 0 )); then
                 echo "(no reports matched)" >&2
@@ -222,6 +237,7 @@ tools:
             write: workspace
         script: |
             : "${HOME:?nerf-report-archive: HOME is not set}"
+            : "${NERFTOOLS_BRAND:?nerf-report-archive: NERFTOOLS_BRAND is unset; the builder should stamp this -- empty would silently archive from a different reports queue}"
 
             REPORTS_DIR="${HOME}/.nerftools/${NERFTOOLS_BRAND}/reports"
             ARCHIVE_DIR="${REPORTS_DIR}/reviewed"
@@ -261,11 +277,14 @@ tools:
 
             _moved=0
             while IFS= read -r -d '' f; do
-                # Never re-archive what's already under reviewed/.
+                # Never re-archive what's already under reviewed/. (The
+                # -maxdepth 1 on find should prevent this anyway, but keep
+                # the guard in case the layout changes.)
                 [[ "$f" == */reviewed/* ]] && continue
-                _ts=$(awk -F': ' '/^timestamp: /{gsub(/"/,"",$2); print $2; exit}' "$f")
-                _kind=$(awk -F': ' '/^kind: /{gsub(/"/,"",$2); print $2; exit}' "$f")
-                _tool=$(awk -F': ' '/^tool: /{gsub(/"/,"",$2); print $2; exit}' "$f")
+                # The substr() form is robust against values containing ": ".
+                _ts=$(awk '/^timestamp: /{gsub(/"/,"",$0); print substr($0, index($0,": ")+2); exit}' "$f")
+                _kind=$(awk '/^kind: /{gsub(/"/,"",$0); print substr($0, index($0,": ")+2); exit}' "$f")
+                _tool=$(awk '/^tool: /{gsub(/"/,"",$0); print substr($0, index($0,": ")+2); exit}' "$f")
                 [[ -z "$_ts" ]] && continue
                 [[ "$_ts" < "$_before" ]] || continue
                 if [[ -n "${_KIND_SET:-}" && "$_kind" != "$KIND" ]]; then continue; fi

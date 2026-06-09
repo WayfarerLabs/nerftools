@@ -123,6 +123,7 @@ if [[ "$_NERF_DRY_RUN" == "true" ]]; then
 fi
 
 : "${HOME:?nerf-report: HOME is not set; cannot determine reports directory}"
+: "${NERFTOOLS_BRAND:?nerf-report: NERFTOOLS_BRAND is unset; the builder should stamp this -- empty would silently write to a different reports queue}"
 
 REPORTS_DIR="${HOME}/.nerftools/${NERFTOOLS_BRAND}/reports"
 umask 077
@@ -165,9 +166,13 @@ _yaml_escape() {
     printf '%s' "$s"
 }
 
-MARKER="${DEST}"
-if [[ -e "$MARKER" && -L "$MARKER" ]]; then
-    echo "error: nerf-report: refusing to write through existing symlink at ${MARKER}" >&2
+# Belt-and-suspenders: the dir is 0700 (set above) so an
+# adversary couldn't plant a symlink, but if DEST somehow exists
+# as a symlink (TOCTOU race, leftover from older umask, etc.)
+# refuse to write through it rather than potentially clobbering
+# whatever it points at.
+if [[ -L "$DEST" ]]; then
+    echo "error: nerf-report: refusing to write through existing symlink at ${DEST}" >&2
     exit 1
 fi
 
