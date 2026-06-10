@@ -3,7 +3,7 @@
 
 package:
     name: nerftools
-    version: 3.0.0 # x-release-please-version
+    version: 4.0.0 # x-release-please-version
     description: Scoped, safety-constrained CLI wrappers for AI agents
     author:
         name: WayfarerLabs
