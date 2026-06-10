@@ -48,12 +48,14 @@ def build_scripts(
         output_dir, target="bin", keep_existing=keep_existing, force=force, clean="files"
     )
 
+    brand = prefix.rstrip("-_") or "nerf"
+
     written: list[Path] = []
 
     for manifest in manifests:
         for tool_name, tool_spec in manifest.tools.items():
             full_name = prefix + tool_name
-            script = _build_script(full_name, manifest.package.name, tool_spec)
+            script = _build_script(full_name, manifest.package.name, tool_spec, brand=brand)
             out = output_dir / full_name
             out.write_bytes(script.encode("utf-8"))
             out.chmod(0o755)
@@ -64,15 +66,19 @@ def build_scripts(
     return written
 
 
-def build_script_text(tool_name: str, package_name: str, tool_spec: ToolSpec) -> str:
+def build_script_text(
+    tool_name: str, package_name: str, tool_spec: ToolSpec, *, brand: str = "nerf"
+) -> str:
     """Return the generated script text for a single tool (for testing)."""
-    return _build_script(tool_name, package_name, tool_spec)
+    return _build_script(tool_name, package_name, tool_spec, brand=brand)
 
 
 # -- Script generation ---------------------------------------------------------
 
 
-def _build_script(tool_name: str, package_name: str, tool_spec: ToolSpec) -> str:
+def _build_script(
+    tool_name: str, package_name: str, tool_spec: ToolSpec, *, brand: str = "nerf"
+) -> str:
     parts: list[str] = []
 
     parts.append("#!/usr/bin/env bash")
@@ -88,6 +94,11 @@ def _build_script(tool_name: str, package_name: str, tool_spec: ToolSpec) -> str
     parts.append("fi")
     parts.append("")
     parts.append("set -euo pipefail")
+    parts.append("")
+    # Expose the brand (derived from the wrapper prefix) so script-mode tools
+    # can build brand-namespaced paths/identifiers (e.g. ~/.nerftools/<brand>/...)
+    # without re-deriving from $0.
+    parts.append(f'NERFTOOLS_BRAND="{brand}"')
     parts.append("")
     parts.append('_NERF_DRY_RUN=""')
     parts.append("")

@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+# nerf-report-archive -- Move matching reports to `~/.nerftools/<brand>/reports/reviewed/` so they don't show up in future `report-show` runs by default. Uses the same `<before>` semantics as `report-show` (strict less-than; not in future).
+# Generated from nerf-report manifest. Do not edit directly.
+# nerf:threat:read=workspace
+# nerf:threat:write=workspace
+
+if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
+  echo "error: nerf-report-archive requires bash 4+. Found bash ${BASH_VERSION:-unknown}" >&2
+  echo "  hint: on macOS, install a newer bash via 'brew install bash'" >&2
+  exit 1
+fi
+
+set -euo pipefail
+
+NERFTOOLS_BRAND="nerf"
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-report-archive [--kind <kind>] [--tool <tool>] <before>
+
+Options:
+  --kind <kind>
+      Only archive reports of this kind
+      Allowed values: bug, bypass, complaint, request
+  --tool <tool>
+      Only archive reports whose `tool` frontmatter contains this substring
+
+Arguments:
+  <before> (required)
+      Full ISO 8601 cutoff with explicit timezone designator (Z for UTC, or ±HH:MM offset). Only reports with timestamp strictly < this are archived. Must not be in the future. Same format rules as `report-show`.
+      Must match: ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z|[+-][0-9]{2}:[0-9]{2})$
+
+Move matching reports to `~/.nerftools/<brand>/reports/reviewed/` so they don't show up in future `report-show` runs by default. Uses the same `<before>` semantics as `report-show` (strict less-than; not in future).
+EOF
+  exit 1
+}
+
+KIND=""
+_KIND_SET=""
+TOOL=""
+_TOOL_SET=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --kind) if [[ -n "${_KIND_SET}" ]]; then echo "error: --kind can only be specified once" >&2; exit 1; fi; KIND="$2"; _KIND_SET=true; shift 2 ;;
+    --tool) if [[ -n "${_TOOL_SET}" ]]; then echo "error: --tool can only be specified once" >&2; exit 1; fi; TOOL="$2"; _TOOL_SET=true; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+_BEFORE_SET=""
+if [[ $# -gt 0 ]]; then
+  BEFORE="$1"
+  _BEFORE_SET=true
+  shift
+else
+  BEFORE=""
+fi
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-report-archive: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+if [[ -n "${_KIND_SET}" ]] && [[ "${KIND}" != "bug" && "${KIND}" != "bypass" && "${KIND}" != "complaint" && "${KIND}" != "request" ]]; then
+  echo "error: nerf-report-archive: option --kind is not an allowed value" >&2
+  echo "  value:   \"${KIND}\"" >&2
+  echo "  allowed: bug, bypass, complaint, request" >&2
+  echo "  hint: use one of the allowed values" >&2
+  exit 1
+fi
+
+if [[ -n "${_BEFORE_SET}" ]] && [[ "${BEFORE}" == -* ]]; then
+  echo "error: nerf-report-archive: <before> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${BEFORE}" ]]; then
+  echo "error: nerf-report-archive: missing required argument <before>" >&2
+  echo "  hint: provide a value for <before>" >&2
+  usage
+fi
+
+_NERF_PATTERN='^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z|[+-][0-9]{2}:[0-9]{2})$'
+if [[ -n "${_BEFORE_SET}" ]] && ! [[ "${BEFORE}" =~ $_NERF_PATTERN ]]; then
+  echo "error: nerf-report-archive: argument <before> does not match required pattern" >&2
+  echo "  value:   \"${BEFORE}\"" >&2
+  echo "  pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z|[+-][0-9]{2}:[0-9]{2})$" >&2
+  echo "  hint: value must match ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z|[+-][0-9]{2}:[0-9]{2})$" >&2
+  exit 1
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  echo "dry-run: nerf-report-archive would run inline script"
+  exit 0
+fi
+
+: "${HOME:?nerf-report-archive: HOME is not set}"
+: "${NERFTOOLS_BRAND:?nerf-report-archive: NERFTOOLS_BRAND is unset; the builder should stamp this -- empty would silently archive from a different reports queue}"
+
+REPORTS_DIR="${HOME}/.nerftools/${NERFTOOLS_BRAND}/reports"
+ARCHIVE_DIR="${REPORTS_DIR}/reviewed"
+
+# See nerf-report-show for the <before> contract. Same semantics
+# here: full ISO 8601 with explicit timezone designator; offsets
+# normalized to UTC via GNU `date -d` / `gdate`.
+if [[ "$BEFORE" == *Z ]]; then
+    _before="$BEFORE"
+else
+    _dp=""
+    for _c in date gdate; do
+        command -v "$_c" > /dev/null 2>&1 || continue
+        if [[ "$("$_c" -u -d "2026-05-23T08:00:00-08:00" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null)" == "2026-05-23T16:00:00Z" ]]; then
+            _dp="$_c"; break
+        fi
+    done
+    if [[ -z "$_dp" ]]; then
+        echo "error: nerf-report-archive: <before> ${BEFORE} has a non-UTC offset, but no GNU-compatible 'date -d' is available to normalize it. Either pass a UTC timestamp ending in 'Z', or install GNU coreutils (provides 'gdate' on macOS via brew)." >&2
+        exit 1
+    fi
+    _before=$("$_dp" -u -d "$BEFORE" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null) || {
+        echo "error: nerf-report-archive: failed to parse <before> ${BEFORE} via ${_dp}" >&2
+        exit 1
+    }
+fi
+
+_now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+if [[ "$_before" > "$_now" ]]; then
+    echo "error: nerf-report-archive: <before> ${_before} is in the future (now ${_now}); refusing" >&2
+    exit 1
+fi
+
+[[ -d "$REPORTS_DIR" ]] || { echo "(no reports directory at ${REPORTS_DIR})" >&2; exit 0; }
+
+# Mirror the perms posture of nerf-report's REPORTS_DIR setup:
+# umask for the mkdir, then chmod the existing dir tighter in
+# case it was created by an older script with a looser umask.
+umask 077
+mkdir -p "$ARCHIVE_DIR"
+if ! chmod 0700 "$ARCHIVE_DIR"; then
+    echo "error: nerf-report-archive: could not restrict permissions on ${ARCHIVE_DIR}; refusing to archive" >&2
+    exit 1
+fi
+
+_moved=0
+while IFS= read -r -d '' f; do
+    # Never re-archive what's already under reviewed/. (The
+    # -maxdepth 1 on find should prevent this anyway, but keep
+    # the guard in case the layout changes.)
+    [[ "$f" == */reviewed/* ]] && continue
+    # The substr() form is robust against values containing ": ".
+    _ts=$(awk '/^timestamp: /{gsub(/"/,"",$0); print substr($0, index($0,": ")+2); exit}' "$f")
+    _kind=$(awk '/^kind: /{gsub(/"/,"",$0); print substr($0, index($0,": ")+2); exit}' "$f")
+    _tool=$(awk '/^tool: /{gsub(/"/,"",$0); print substr($0, index($0,": ")+2); exit}' "$f")
+    [[ -z "$_ts" ]] && continue
+    [[ "$_ts" < "$_before" ]] || continue
+    if [[ -n "${_KIND_SET:-}" && "$_kind" != "$KIND" ]]; then continue; fi
+    if [[ -n "${_TOOL_SET:-}" && "$_tool" != *"$TOOL"* ]]; then continue; fi
+    mv "$f" "${ARCHIVE_DIR}/$(basename "$f")"
+    _moved=$((_moved + 1))
+done < <(find "$REPORTS_DIR" -maxdepth 1 -type f -name '*.md' -print0 2>/dev/null)
+
+echo "archived ${_moved} report(s) to ${ARCHIVE_DIR}"

@@ -12,6 +12,8 @@ fi
 
 set -euo pipefail
 
+NERFTOOLS_BRAND="nerf"
+
 _NERF_DRY_RUN=""
 
 usage() {

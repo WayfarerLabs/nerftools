@@ -11,7 +11,7 @@ set -uo pipefail
 _PLUGIN_NAME="nerftools"
 _PREFIX="nerf-"
 
-_intro="The \`${_PLUGIN_NAME}\` plugin is installed. It provides safety-constrained wrappers for az, gh, git, kubectl, nx, and more. Prefer these wrappers over raw bash for commands they cover. Load the \`${_PLUGIN_NAME}\` skill for the full overview, or any \`${_PREFIX}<group>\` skill (e.g. \`nerf-az-account\`) for specific tools. A pre-bash redirect hook may prompt you to use a wrapper when one is available."
+_intro="The \`${_PLUGIN_NAME}\` plugin is installed. It provides safety-constrained wrappers for az, gh, git, kubectl, report, and more. Prefer these wrappers over raw bash for commands they cover. Load the \`${_PLUGIN_NAME}\` skill for the full overview, or any \`${_PREFIX}<group>\` skill (e.g. \`nerf-az-account\`) for specific tools. A pre-bash redirect hook may prompt you to use a wrapper when one is available."
 
 _msg="$_intro"
 
