@@ -633,6 +633,79 @@ def test_hook_skips_wrapper_calls_after_shell_prefix(tmp_path: Path) -> None:
     assert stdout == ""
 
 
+@pytest.mark.parametrize(
+    "command",
+    [
+        # timeout with numeric duration
+        "timeout 30 nerf-git status",
+        # timeout with unit-suffix duration
+        "timeout 5s nerf-git status",
+        # timeout with --foreground flag
+        "timeout --foreground 30 nerf-git status",
+        # nice with no arg
+        "nice nerf-git status",
+        # nice with -n N
+        "nice -n 10 nerf-git status",
+        # time
+        "time nerf-git status",
+        # env (explicit `env` literal) -- also exercises the existing VAR=val path
+        "env FOO=bar nerf-git status",
+        # ionice with -c N
+        "ionice -c 2 -n 7 nerf-git status",
+        # nested runners
+        "nice timeout 30 nerf-git status",
+        # absolute-path runner with absolute-path wrapper
+        "/usr/bin/timeout 30 /abs/path/skills/nerf-git/scripts/nerf-git-status",
+    ],
+)
+def test_hook_peeks_through_known_runners_to_wrapper(
+    tmp_path: Path, command: str
+) -> None:
+    """The hook should recognize that the actual command after a known
+    runner is a wrapper invocation, and skip the redirect."""
+    m = _manifest_with_hints(skill_group="git", hints=(r"\bgit\b",))
+    _build([m], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-pre-tool-use"
+    stdout, _ = _run_hook(
+        script, {"tool_name": "Bash", "tool_input": {"command": command}}
+    )
+    assert stdout == "", f"expected skip, got: {stdout}"
+
+
+def test_hook_does_not_peek_through_sudo(tmp_path: Path) -> None:
+    """sudo is a different security boundary; the bypass sentinel is the
+    right escape for sudo+wrapper. Hook should fire (redirect)."""
+    m = _manifest_with_hints(skill_group="git", hints=(r"\bgit\b",))
+    _build([m], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-pre-tool-use"
+    stdout, _ = _run_hook(
+        script,
+        {"tool_name": "Bash", "tool_input": {"command": "sudo nerf-git status"}},
+    )
+    # Sudo isn't in the runner allowlist; the redirect fires for `sudo` as
+    # the apparent command, but it doesn't match the wrapper prefix so the
+    # hint hook continues into pattern matching. `nerf-git status` contains
+    # `git`, which matches the bash_hint pattern -> deny.
+    reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "`nerf-git`" in reason
+
+
+def test_hook_runner_without_command_does_not_skip(tmp_path: Path) -> None:
+    """A bare runner with no follow-up command shouldn't accidentally skip."""
+    m = _manifest_with_hints(skill_group="git", hints=(r"\bgit\b",))
+    _build([m], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-pre-tool-use"
+    # `timeout 30 git status` -- runner peeks past `30` to `git`, which is
+    # NOT a wrapper, so it falls through to pattern matching. `git` matches
+    # the hint -> deny.
+    stdout, _ = _run_hook(
+        script,
+        {"tool_name": "Bash", "tool_input": {"command": "timeout 30 git status"}},
+    )
+    reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "`nerf-git`" in reason
+
+
 def test_hook_does_not_skip_on_arg_position_prefix(tmp_path: Path) -> None:
     """A token containing the prefix at arg position does NOT trigger the skip."""
     m = _manifest_with_hints(skill_group="git", hints=(r"\bgit\b",))

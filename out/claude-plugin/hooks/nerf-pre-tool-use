@@ -238,25 +238,50 @@ _check_bash_hint() {
     *) return 0 ;;
   esac
 
-  # Skip the redirect when the command is invoking a wrapper itself. We
-  # split on common shell separators (&&, ||, ;, |, &) into segments,
-  # skip any leading "VAR=val" env-var assignments in each segment, and
-  # check whether the first remaining token's basename starts with the
-  # wrapper prefix.
+  # Skip the redirect when the command is invoking a wrapper itself.
+  # Split on shell separators (&&, ||, ;, |, &) into segments; in each
+  # segment, peek past "VAR=val" env-var assignments AND past known
+  # command-delegating runners (timeout, nice, time, env, ionice, chrt)
+  # and their args, then check whether the actual command's basename
+  # starts with the wrapper prefix. `sudo` is intentionally NOT in the
+  # runner set -- it's a different security boundary, and agents who
+  # really need sudo+wrapper should use the bypass sentinel.
   if [[ -n "$_WRAPPER_PREFIX" ]]; then
     local _norm="${_cmd//&&/$'\n'}"
     _norm="${_norm//||/$'\n'}"
     _norm="${_norm//[|;&]/$'\n'}"
-    local _seg _toks _exec _t _base
+    local _seg _toks _exec _t _base _arg _i
     while IFS= read -r _seg; do
       _seg="${_seg#"${_seg%%[![:space:]]*}"}"
       [[ -z "$_seg" ]] && continue
       read -r -a _toks <<< "$_seg"
       _exec=""
-      for _t in "${_toks[@]:-}"; do
+      _i=0
+      while (( _i < ${#_toks[@]} )); do
+        _t="${_toks[$_i]}"
+        # VAR=val env-var prefix: skip.
         if [[ "$_t" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
-          continue
+          ((_i++)); continue
         fi
+        # Known command-delegating runner: peek past its args (flags,
+        # numeric durations, env-var pairs) to find the real command.
+        _base="${_t##*/}"
+        case "$_base" in
+          timeout|nice|time|env|ionice|chrt)
+            ((_i++))
+            while (( _i < ${#_toks[@]} )); do
+              _arg="${_toks[$_i]}"
+              if [[ "$_arg" =~ ^-{1,2}[A-Za-z] ]] \
+                 || [[ "$_arg" =~ ^[0-9] ]] \
+                 || [[ "$_arg" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+                ((_i++))
+              else
+                break
+              fi
+            done
+            continue
+            ;;
+        esac
         _exec="$_t"
         break
       done
