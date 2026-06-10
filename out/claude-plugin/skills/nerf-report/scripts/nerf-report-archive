@@ -138,7 +138,15 @@ fi
 
 [[ -d "$REPORTS_DIR" ]] || { echo "(no reports directory at ${REPORTS_DIR})" >&2; exit 0; }
 
+# Mirror the perms posture of nerf-report's REPORTS_DIR setup:
+# umask for the mkdir, then chmod the existing dir tighter in
+# case it was created by an older script with a looser umask.
+umask 077
 mkdir -p "$ARCHIVE_DIR"
+if ! chmod 0700 "$ARCHIVE_DIR"; then
+    echo "error: nerf-report-archive: could not restrict permissions on ${ARCHIVE_DIR}; refusing to archive" >&2
+    exit 1
+fi
 
 _moved=0
 while IFS= read -r -d '' f; do

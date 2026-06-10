@@ -190,6 +190,103 @@ def test_show_normalizes_non_utc_offset_to_utc(
     assert "hour-after" not in result.stdout
 
 
+def test_show_errors_clearly_when_offset_passed_but_no_gnu_date(
+    tmp_path: Path, report_tools: dict[str, Path]
+) -> None:
+    """A non-UTC offset requires GNU `date -d` (or `gdate`). When neither
+    works on the host (e.g. macOS without coreutils), the script must
+    error with a clear install hint rather than silently misinterpret."""
+    import contextlib
+    import subprocess
+
+    # Build a PATH with a fake `date` whose -d flag fails, no `gdate`,
+    # and everything else (jq, bash, find, sort, awk, ...) symlinked from
+    # the real system. UTC inputs would still work in this environment;
+    # an offset input is what triggers the GNU-date requirement.
+    fake_bin = tmp_path / "fake-bin"
+    fake_bin.mkdir()
+    fake_date = fake_bin / "date"
+    # Refuse -d (mimics BSD date); delegate everything else to real date.
+    fake_date.write_text(
+        "#!/bin/bash\n"
+        'for arg in "$@"; do case "$arg" in -d|-d=*) '
+        'echo "date: illegal option -- d" >&2; exit 1 ;; esac; done\n'
+        'exec /usr/bin/date "$@"\n'
+    )
+    fake_date.chmod(0o755)
+    import shutil
+
+    jq_path = shutil.which("jq")
+    if jq_path:
+        (fake_bin / "jq").symlink_to(jq_path)
+    (fake_bin / "bash").symlink_to("/bin/bash")
+    for src_dir in ["/usr/bin", "/bin"]:
+        for f in Path(src_dir).iterdir():
+            if f.name in ("date", "gdate") or (fake_bin / f.name).exists():
+                continue
+            with contextlib.suppress(OSError, FileExistsError):
+                (fake_bin / f.name).symlink_to(f)
+
+    offset_cutoff = _iso(_MID - timedelta(hours=8)).replace("Z", "") + "-08:00"
+    env = {"HOME": str(tmp_path), "PATH": str(fake_bin)}
+    result = subprocess.run(
+        [str(report_tools["report-show"]), offset_cutoff],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert "no GNU-compatible 'date -d'" in result.stderr
+    assert "brew install coreutils" in result.stderr or "GNU coreutils" in result.stderr
+
+
+def test_show_utc_input_works_without_gnu_date(
+    tmp_path: Path, report_tools: dict[str, Path]
+) -> None:
+    """Confirms the design tradeoff: UTC (Z-suffixed) inputs don't need
+    GNU `date -d`. Same fake-bin setup as above but the cutoff is UTC --
+    must succeed."""
+    import contextlib
+    import subprocess
+
+    _seed_reports(tmp_path, [(_iso(_LONG_AGO), "bug", "nerf-a", "old body")])
+
+    fake_bin = tmp_path / "fake-bin"
+    fake_bin.mkdir()
+    fake_date = fake_bin / "date"
+    fake_date.write_text(
+        "#!/bin/bash\n"
+        'for arg in "$@"; do case "$arg" in -d|-d=*) '
+        'echo "date: illegal option -- d" >&2; exit 1 ;; esac; done\n'
+        'exec /usr/bin/date "$@"\n'
+    )
+    fake_date.chmod(0o755)
+    import shutil
+
+    jq_path = shutil.which("jq")
+    if jq_path:
+        (fake_bin / "jq").symlink_to(jq_path)
+    (fake_bin / "bash").symlink_to("/bin/bash")
+    for src_dir in ["/usr/bin", "/bin"]:
+        for f in Path(src_dir).iterdir():
+            if f.name in ("date", "gdate") or (fake_bin / f.name).exists():
+                continue
+            with contextlib.suppress(OSError, FileExistsError):
+                (fake_bin / f.name).symlink_to(f)
+
+    env = {"HOME": str(tmp_path), "PATH": str(fake_bin)}
+    result = subprocess.run(
+        [str(report_tools["report-show"]), _iso(_BARELY_PAST)],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "old body" in result.stdout
+
+
 def test_show_filters_by_kind_and_tool(
     tmp_path: Path, report_tools: dict[str, Path]
 ) -> None:
