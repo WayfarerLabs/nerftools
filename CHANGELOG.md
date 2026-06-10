@@ -1,5 +1,23 @@
 # Changelog
 
+## [4.0.0](https://github.com/WayfarerLabs/nerftools/compare/v3.0.0...v4.0.0) (2026-06-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* reports now live at ~/.nerftools/<brand>/reports/ (e.g. ~/.nerftools/nerf/reports/ for the default brand). Existing reports at ~/.nerftools/reports/ are not migrated automatically; mv them to the new location if you want them visible to report-show/report-archive.
+
+### Features
+
+* migrate nerf-report to manifest, add show/archive, brand-namespace reports ([b940e81](https://github.com/WayfarerLabs/nerftools/commit/b940e81841d55abf892c8d503050e6b9f3720dcf))
+
+
+### Bug Fixes
+
+* **nerf-report:** address review (BRAND guard, find depth, awk robustness, bash_hint) ([bd3e336](https://github.com/WayfarerLabs/nerftools/commit/bd3e336084c57a2ed3857c182254cf0bbb4ac313))
+* **nerf-report:** chmod 0700 on archive dir; tighten bash_hint; cover no-GNU-date error path ([05e4d2c](https://github.com/WayfarerLabs/nerftools/commit/05e4d2cee4123be2885a3de91253b584f483d6ee))
+* **nerf-report:** require full ISO 8601 with explicit timezone in &lt;before&gt; ([f33198c](https://github.com/WayfarerLabs/nerftools/commit/f33198c8cdc97f5285d90c209577f82ac9144377))
+
 ## [3.0.0](https://github.com/WayfarerLabs/nerftools/compare/v2.2.0...v3.0.0) (2026-06-07)
 
 
