@@ -240,56 +240,47 @@ _check_bash_hint() {
 
   # Skip the redirect when the command is invoking a wrapper itself.
   # Split on shell separators (&&, ||, ;, |, &) into segments; in each
-  # segment, peek past "VAR=val" env-var assignments AND past known
-  # command-delegating runners (timeout, nice, time, env, ionice, chrt)
-  # and their args, then check whether the actual command's basename
-  # starts with the wrapper prefix. `sudo` is intentionally NOT in the
-  # runner set -- it's a different security boundary, and agents who
+  # segment, skip leading "VAR=val" env-var assignments, then check the
+  # leading command's basename. If it starts with the wrapper prefix,
+  # it's a wrapper call. If it's a known command-delegating runner
+  # (timeout, nice, time, env, ionice, chrt), scan the rest of the
+  # segment for any wrapper-prefixed basename -- intentionally lenient,
+  # we don't try to parse the runner's argv precisely. `sudo` is NOT in
+  # the runner set: it's a different security boundary, and agents who
   # really need sudo+wrapper should use the bypass sentinel.
+  #
+  # This detection is heuristic. Odd quoting, subshells, or runners not
+  # in the allowlist can trip false positives -- the hint message tells
+  # the agent that "I think this is wrong" is a valid bypass reason.
   if [[ -n "$_WRAPPER_PREFIX" ]]; then
     local _norm="${_cmd//&&/$'\n'}"
     _norm="${_norm//||/$'\n'}"
     _norm="${_norm//[|;&]/$'\n'}"
-    local _seg _toks _exec _t _base _arg _i
+    local _seg _toks _base _i
     while IFS= read -r _seg; do
       _seg="${_seg#"${_seg%%[![:space:]]*}"}"
       [[ -z "$_seg" ]] && continue
       read -r -a _toks <<< "$_seg"
-      _exec=""
       _i=0
-      while (( _i < ${#_toks[@]} )); do
-        _t="${_toks[$_i]}"
-        # VAR=val env-var prefix: skip.
-        if [[ "$_t" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
-          ((_i++)); continue
-        fi
-        # Known command-delegating runner: peek past its args (flags,
-        # numeric durations, env-var pairs) to find the real command.
-        _base="${_t##*/}"
-        case "$_base" in
-          timeout|nice|time|env|ionice|chrt)
-            ((_i++))
-            while (( _i < ${#_toks[@]} )); do
-              _arg="${_toks[$_i]}"
-              if [[ "$_arg" =~ ^-{1,2}[A-Za-z] ]] \
-                 || [[ "$_arg" =~ ^[0-9] ]] \
-                 || [[ "$_arg" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
-                ((_i++))
-              else
-                break
-              fi
-            done
-            continue
-            ;;
-        esac
-        _exec="$_t"
-        break
+      while (( _i < ${#_toks[@]} )) && [[ "${_toks[$_i]}" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; do
+        ((_i++))
       done
-      [[ -z "$_exec" ]] && continue
-      _base="${_exec##*/}"
+      (( _i >= ${#_toks[@]} )) && continue
+      _base="${_toks[$_i]##*/}"
       if [[ "$_base" == "$_WRAPPER_PREFIX"* ]]; then
         return 0
       fi
+      case "$_base" in
+        timeout|nice|time|env|ionice|chrt)
+          ((_i++))
+          while (( _i < ${#_toks[@]} )); do
+            if [[ "${_toks[$_i]##*/}" == "$_WRAPPER_PREFIX"* ]]; then
+              return 0
+            fi
+            ((_i++))
+          done
+          ;;
+      esac
     done <<< "$_norm"
   fi
 
@@ -323,8 +314,8 @@ _check_bash_hint() {
 
   local _msg="The following ${_BRAND} skill(s) may wrap this command: ${_list}.
 
-Use one if it covers what you need. To run the command directly anyway:
-1. File a 'bypass' report via the \`nerf-report\` skill explaining what you needed and why the listed wrapper(s) didn't fit.
+Use one if it covers what you need. The detection is heuristic and can be wrong on unusual command shapes -- if you think it is wrong, that is itself a valid bypass reason. To run the command directly anyway:
+1. File a \`nerf-report\` explaining what you needed (or why this hint looks like a false positive).
 2. Retry the command with the resulting report filename appended as \`# ${_BRAND}:bypass-bash-hint <report-filename>\`."
 
   emit_deny "$_msg"

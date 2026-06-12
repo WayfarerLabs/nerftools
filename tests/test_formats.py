@@ -642,16 +642,26 @@ def test_hook_skips_wrapper_calls_after_shell_prefix(tmp_path: Path) -> None:
         "timeout 5s nerf-git status",
         # timeout with --foreground flag
         "timeout --foreground 30 nerf-git status",
+        # timeout with -s SIGKILL (short flag with non-numeric value)
+        "timeout -s SIGKILL 30 nerf-git status",
         # nice with no arg
         "nice nerf-git status",
         # nice with -n N
         "nice -n 10 nerf-git status",
+        # nice with signed numeric (historical `nice -10` form)
+        "nice -10 nerf-git status",
+        # nice with POSIX end-of-options sentinel
+        "nice -- nerf-git status",
         # time
         "time nerf-git status",
         # env (explicit `env` literal) -- also exercises the existing VAR=val path
         "env FOO=bar nerf-git status",
+        # env with -u (unset variable, alpha value)
+        "env -u PATH nerf-git status",
         # ionice with -c N
         "ionice -c 2 -n 7 nerf-git status",
+        # ionice with alpha class value
+        "ionice -c idle nerf-git status",
         # nested runners
         "nice timeout 30 nerf-git status",
         # absolute-path runner with absolute-path wrapper
@@ -662,7 +672,11 @@ def test_hook_peeks_through_known_runners_to_wrapper(
     tmp_path: Path, command: str
 ) -> None:
     """The hook should recognize that the actual command after a known
-    runner is a wrapper invocation, and skip the redirect."""
+    runner is a wrapper invocation, and skip the redirect. The detection
+    is intentionally lenient -- when the leading token is a known runner,
+    any wrapper-prefixed basename later in the segment is treated as a
+    wrapper call, regardless of whether the intervening tokens look like
+    runner args or something else."""
     m = _manifest_with_hints(skill_group="git", hints=(r"\bgit\b",))
     _build([m], tmp_path, prefix="nerf-")
     script = tmp_path / "hooks" / "nerf-pre-tool-use"
@@ -691,13 +705,15 @@ def test_hook_does_not_peek_through_sudo(tmp_path: Path) -> None:
 
 
 def test_hook_runner_without_command_does_not_skip(tmp_path: Path) -> None:
-    """A bare runner with no follow-up command shouldn't accidentally skip."""
+    """A runner whose target is a raw binary (no wrapper-prefixed basename
+    anywhere in the segment) should NOT trigger the wrapper-skip; the
+    hook falls through to pattern matching."""
     m = _manifest_with_hints(skill_group="git", hints=(r"\bgit\b",))
     _build([m], tmp_path, prefix="nerf-")
     script = tmp_path / "hooks" / "nerf-pre-tool-use"
-    # `timeout 30 git status` -- runner peeks past `30` to `git`, which is
-    # NOT a wrapper, so it falls through to pattern matching. `git` matches
-    # the hint -> deny.
+    # `timeout 30 git status` -- runner is `timeout`, scan finds no
+    # `nerf-*` basename in the remaining tokens, falls through to
+    # pattern matching. `git` matches the hint -> deny.
     stdout, _ = _run_hook(
         script,
         {"tool_name": "Bash", "tool_input": {"command": "timeout 30 git status"}},
