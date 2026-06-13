@@ -687,8 +687,9 @@ def test_hook_peeks_through_known_runners_to_wrapper(
 
 
 def test_hook_does_not_peek_through_sudo(tmp_path: Path) -> None:
-    """sudo is a different security boundary; the bypass sentinel is the
-    right escape for sudo+wrapper. Hook should fire (redirect)."""
+    """sudo is not in the runner allowlist -- `sudo nerf-foo` is unusual
+    enough that we'd rather the agent acknowledge it via the bypass
+    sentinel. Hook should fire (redirect)."""
     m = _manifest_with_hints(skill_group="git", hints=(r"\bgit\b",))
     _build([m], tmp_path, prefix="nerf-")
     script = tmp_path / "hooks" / "nerf-pre-tool-use"
@@ -720,6 +721,38 @@ def test_hook_runner_without_command_does_not_skip(tmp_path: Path) -> None:
     )
     reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
     assert "`nerf-git`" in reason
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # Runner followed by raw command with a wrapper-prefixed decoy token.
+        "timeout 30 git status nerf-foo",
+        # Runner with non-wrapper exec target but a wrapper-prefixed value
+        # to one of the runner's options.
+        "env -u nerf-V git status",
+        # Wrapper-prefixed basename appearing in a path arg to a raw command
+        # invoked under a runner.
+        "nice git -C /tmp/nerf-stuff status",
+    ],
+)
+def test_hook_intentionally_skips_on_lenient_scan(
+    tmp_path: Path, command: str
+) -> None:
+    """The runner-scan is lenient by design -- any wrapper-prefixed
+    basename later in the segment short-circuits the nudge. This is
+    intentional: the hook is a UX nudge, not a security boundary, so
+    erring toward false negatives (missed nudges, command goes through
+    normal permission gating) is cheaper than false positives (nudge
+    fires on legitimate wrapper use). These cases pin that behavior so
+    a future refactor knows the direction is deliberate."""
+    m = _manifest_with_hints(skill_group="git", hints=(r"\bgit\b",))
+    _build([m], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-pre-tool-use"
+    stdout, _ = _run_hook(
+        script, {"tool_name": "Bash", "tool_input": {"command": command}}
+    )
+    assert stdout == "", f"expected skip, got: {stdout}"
 
 
 def test_hook_does_not_skip_on_arg_position_prefix(tmp_path: Path) -> None:

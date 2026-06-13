@@ -238,20 +238,27 @@ _check_bash_hint() {
     *) return 0 ;;
   esac
 
+  # This is a UX nudge toward the wrappers, not a security boundary.
+  # The actual security gate is the user's permission system; if this
+  # detection misses, the raw command still runs through normal
+  # permission-based execution. The tradeoff is asymmetric: false
+  # positives (firing on legitimate wrapper use) cause real friction;
+  # false negatives (missing a raw command) cost only the nudge. So
+  # the scan is intentionally lenient.
+  #
   # Skip the redirect when the command is invoking a wrapper itself.
   # Split on shell separators (&&, ||, ;, |, &) into segments; in each
   # segment, skip leading "VAR=val" env-var assignments, then check the
   # leading command's basename. If it starts with the wrapper prefix,
   # it's a wrapper call. If it's a known command-delegating runner
   # (timeout, nice, time, env, ionice, chrt), scan the rest of the
-  # segment for any wrapper-prefixed basename -- intentionally lenient,
-  # we don't try to parse the runner's argv precisely. `sudo` is NOT in
-  # the runner set: it's a different security boundary, and agents who
-  # really need sudo+wrapper should use the bypass sentinel.
-  #
-  # This detection is heuristic. Odd quoting, subshells, or runners not
-  # in the allowlist can trip false positives -- the hint message tells
-  # the agent that "I think this is wrong" is a valid bypass reason.
+  # segment for any wrapper-prefixed basename. The scan does NOT try
+  # to parse the runner's argv, so an agent can short-circuit the
+  # nudge by appending a `nerf-`-prefixed token -- that's fine, the
+  # underlying command still hits the permission layer. `sudo` is
+  # excluded from the runner allowlist because `sudo nerf-foo` is
+  # unusual enough that we'd rather the agent acknowledge it via the
+  # bypass sentinel.
   if [[ -n "$_WRAPPER_PREFIX" ]]; then
     local _norm="${_cmd//&&/$'\n'}"
     _norm="${_norm//||/$'\n'}"
