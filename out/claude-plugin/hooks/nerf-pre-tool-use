@@ -238,33 +238,56 @@ _check_bash_hint() {
     *) return 0 ;;
   esac
 
-  # Skip the redirect when the command is invoking a wrapper itself. We
-  # split on common shell separators (&&, ||, ;, |, &) into segments,
-  # skip any leading "VAR=val" env-var assignments in each segment, and
-  # check whether the first remaining token's basename starts with the
-  # wrapper prefix.
+  # This is a UX nudge toward the wrappers, not a security boundary.
+  # The actual security gate is the user's permission system; if this
+  # detection misses, the raw command still runs through normal
+  # permission-based execution. The tradeoff is asymmetric: false
+  # positives (firing on legitimate wrapper use) cause real friction;
+  # false negatives (missing a raw command) cost only the nudge. So
+  # the scan is intentionally lenient.
+  #
+  # Skip the redirect when the command is invoking a wrapper itself.
+  # Split on shell separators (&&, ||, ;, |, &) into segments; in each
+  # segment, skip leading "VAR=val" env-var assignments, then check the
+  # leading command's basename. If it starts with the wrapper prefix,
+  # it's a wrapper call. If it's a known command-delegating runner
+  # (timeout, nice, time, env, ionice, chrt), scan the rest of the
+  # segment for any wrapper-prefixed basename. The scan does NOT try
+  # to parse the runner's argv, so an agent can short-circuit the
+  # nudge by appending a `nerf-`-prefixed token -- that's fine, the
+  # underlying command still hits the permission layer. `sudo` is
+  # excluded from the runner allowlist because `sudo nerf-foo` is
+  # unusual enough that we'd rather the agent acknowledge it via the
+  # bypass sentinel.
   if [[ -n "$_WRAPPER_PREFIX" ]]; then
     local _norm="${_cmd//&&/$'\n'}"
     _norm="${_norm//||/$'\n'}"
     _norm="${_norm//[|;&]/$'\n'}"
-    local _seg _toks _exec _t _base
+    local _seg _toks _base _i
     while IFS= read -r _seg; do
       _seg="${_seg#"${_seg%%[![:space:]]*}"}"
       [[ -z "$_seg" ]] && continue
       read -r -a _toks <<< "$_seg"
-      _exec=""
-      for _t in "${_toks[@]:-}"; do
-        if [[ "$_t" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
-          continue
-        fi
-        _exec="$_t"
-        break
+      _i=0
+      while (( _i < ${#_toks[@]} )) && [[ "${_toks[$_i]}" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; do
+        ((_i++))
       done
-      [[ -z "$_exec" ]] && continue
-      _base="${_exec##*/}"
+      (( _i >= ${#_toks[@]} )) && continue
+      _base="${_toks[$_i]##*/}"
       if [[ "$_base" == "$_WRAPPER_PREFIX"* ]]; then
         return 0
       fi
+      case "$_base" in
+        timeout|nice|time|env|ionice|chrt)
+          ((_i++))
+          while (( _i < ${#_toks[@]} )); do
+            if [[ "${_toks[$_i]##*/}" == "$_WRAPPER_PREFIX"* ]]; then
+              return 0
+            fi
+            ((_i++))
+          done
+          ;;
+      esac
     done <<< "$_norm"
   fi
 
@@ -298,8 +321,8 @@ _check_bash_hint() {
 
   local _msg="The following ${_BRAND} skill(s) may wrap this command: ${_list}.
 
-Use one if it covers what you need. To run the command directly anyway:
-1. File a 'bypass' report via the \`nerf-report\` skill explaining what you needed and why the listed wrapper(s) didn't fit.
+Use one if it covers what you need. The detection is heuristic and can be wrong on unusual command shapes -- if you think it is wrong, that is itself a valid bypass reason. To run the command directly anyway:
+1. File a \`nerf-report\` explaining what you needed (or why this hint looks like a false positive).
 2. Retry the command with the resulting report filename appended as \`# ${_BRAND}:bypass-bash-hint <report-filename>\`."
 
   emit_deny "$_msg"
