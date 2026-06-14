@@ -81,14 +81,41 @@ Common wrong-mode signals:
   the _agent's_ policy boundary (e.g. "tool refuses if branch is main"), and integrity of
   intermediate results (e.g. "project resolved as `null`, can't proceed").
 
-### 4. Documented contract = enforced contract
+### 4. `requires:` covers the external binaries the tool actually invokes
+
+The `requires:` field is a list of binary names the wrapper checks for on PATH at run-time
+(`command -v`-style preflight, exit 127 with a clear message if any are missing). It exists so
+agents get a useful error instead of bare `exec: <binary>: not found`.
+
+- **Every tool that invokes external binaries must declare them** in `requires:`. Template and
+  passthrough mode: at minimum the first token of `command`. Script mode: every binary the script
+  shells out to that isn't a bash builtin.
+- **The list must be complete.** If a tool's main path runs `kubectl ... | jq`,
+  `requires: [kubectl, jq]` — not just `[kubectl]`. Reviewers should mentally walk the rendered
+  script and list every binary invocation; flag any missing from `requires:`.
+- **`requires:` REPLACES `which X` / `command -v X` guards.** A `guards: - command: [which, jq]`
+  entry alongside a `requires: [..., jq]` is redundant. Flag it for removal.
+- **Pre-hooks invoking binaries conditionally are a judgment call.** If `pre:` calls `git` only when
+  `-C` is set, declaring `git` would block the tool on machines without git even when the user never
+  sets `-C`. Prefer to leave it out and let the pre hook fail with its own error in that path. Flag
+  only if the pre-hook binary is needed by the main path too.
+- **`npm_pkgrun: true` template tools should NOT declare `requires:`.** Those wrappers pick a runner
+  (`bunx`/`pnpx`/`npx`) at runtime and have their own discovery logic. Declaring `requires: [bunx]`
+  (or similar) would defeat the runner-fallback.
+- **Binary names must look like real PATH lookups.** Validated at load to `[A-Za-z0-9_./+-]+`. Don't
+  try to put shell expressions, version specifiers, or any other syntax in here.
+- **A tool with no external binaries (rare; usually script-mode that only uses bash builtins like
+  `printf`, `read`, `[[`) should omit `requires:`.** `nerf-report` is the example in this repo — its
+  scripts handle their own probing (e.g., `date` vs `gdate`), so `requires:` is empty.
+
+### 5. Documented contract = enforced contract
 
 If a description says "must be assigned to you," "tag must already exist," "cannot be run from main"
 — there must be a `pre:` or `guards:` that enforces it. Either tighten the description or add the
 enforcement. We had a real bug where `mywi-show` advertised assignee enforcement but didn't enforce
 it.
 
-### 5. Workflow completeness
+### 6. Workflow completeness
 
 Some tools imply a multi-step workflow. If the wrapper covers step 1 but leaves the user with no
 nerftool way to do step 2, that's a gap.
@@ -98,7 +125,7 @@ nerftool way to do step 2, that's a gap.
 - A tool that fetches a log ID needs a sibling tool that consumes that log ID.
 - Anything that produces a "now do X next" instruction in its output should have a tool for X.
 
-### 6. Naming and convention adherence
+### 7. Naming and convention adherence
 
 - **Within a package**: do new tools follow the existing naming convention? E.g.
   `az-pipelines-run-show` establishes a `run-*` prefix for "operates on a single run" tools —
@@ -108,7 +135,7 @@ nerftool way to do step 2, that's a gap.
 - **Pattern consistency for like values**: if `git-rebase-unpushed` allows `~`/`^` in its `<target>`
   pattern, then `git-tag <ref>` should too — both mean "commit-ish."
 
-### 7. Security and escape hatches
+### 8. Security and escape hatches
 
 Look for ways a malicious or confused agent could escape the tool's intended scope.
 
@@ -129,7 +156,7 @@ Look for ways a malicious or confused agent could escape the tool's intended sco
   themselves don't have this limit, but exported environment does. Process substitution avoids both
   issues.
 
-### 8. Footguns
+### 9. Footguns
 
 Beyond outright security: rough edges that bite users.
 
@@ -148,7 +175,7 @@ Beyond outright security: rough edges that bite users.
   what happens if the detection fails? Empty string? `null`? Tool needs to either fail clearly or
   accept an explicit override.
 
-### 9. Bash hint coverage (package-level `bash_hints`)
+### 10. Bash hint coverage (package-level `bash_hints`)
 
 `bash_hints` is a list of regex patterns at the package level that drive a pre-bash redirect hook on
 plugin targets that support one: when an agent calls raw bash with a command matching any pattern,
@@ -179,7 +206,7 @@ position).
   different file), `bash_hints` is unioned across manifests. An extension may declare additional
   patterns covering its new surface (e.g. `\bgit lfs\b`) without restating the base patterns.
 
-### 10. Description, intro, and metadata hygiene
+### 11. Description, intro, and metadata hygiene
 
 - Descriptions should describe _what the wrapper does_, not the underlying tool's general docs. Be
   specific about constraints (e.g. "refuses on main").
@@ -189,7 +216,7 @@ position).
 - Argument and option `description:` fields should mention any non-obvious behavior (e.g. defaults,
   valid values, format expectations).
 
-### 11. Output formatting (script-mode tools)
+### 12. Output formatting (script-mode tools)
 
 - Errors go to stderr (`>&2`).
 - Each error message includes the tool name as a prefix so it's identifiable in agent output.
