@@ -67,6 +67,13 @@ if [[ $# -gt 0 ]]; then
   exit 1
 fi
 
+for _bin in az; do
+  if ! command -v "$_bin" >/dev/null 2>&1; then
+    echo "error: nerf-az-cosmosdb-show: required command '$_bin' is not installed or not on PATH" >&2
+    exit 127
+  fi
+done
+
 if [[ -z "${RESOURCE_GROUP}" ]]; then
   echo "error: nerf-az-cosmosdb-show: missing required option --resource-group" >&2
   echo "  hint: provide --resource-group <value>" >&2

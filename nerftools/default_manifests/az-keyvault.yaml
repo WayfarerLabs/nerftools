@@ -21,6 +21,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command:
                 - az
@@ -44,6 +45,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command:
                 - az
@@ -73,6 +75,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command:
                 - az
@@ -103,6 +106,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command:
                 - az
@@ -133,9 +137,7 @@ tools:
         threat:
             read: remote
             write: none
-        guards:
-            - command: [which, jq]
-              fail_message: "jq is required but not installed (e.g. apt-get install jq, brew install jq)."
+        requires: [az, jq]
         script: |
             ARGS=(az keyvault secret show --vault-name "${VAULT_NAME}" --name "${NAME}" --output json)
             if [[ -n "${SUBSCRIPTION}" ]]; then

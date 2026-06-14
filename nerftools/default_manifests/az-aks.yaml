@@ -21,6 +21,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command:
                 - az
@@ -44,6 +45,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command:
                 - az
@@ -75,6 +77,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command:
                 - az
@@ -107,6 +110,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command:
                 - az
@@ -145,6 +149,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command:
                 - az
@@ -174,6 +179,7 @@ tools:
         threat:
             read: remote
             write: machine
+        requires: [az]
         template:
             command:
                 - az
@@ -214,6 +220,7 @@ tools:
         threat:
             read: remote
             write: admin
+        requires: [az]
         template:
             command:
                 - az
@@ -255,6 +262,7 @@ tools:
         threat:
             read: remote
             write: admin
+        requires: [az]
         script: |
             # Shell-quote each token so argv boundaries survive the inner shell on the cluster.
             # Plain "${COMMAND[*]}" would join with space and lose quoting around tokens that

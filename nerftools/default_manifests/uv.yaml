@@ -18,6 +18,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [uv]
         template:
             command: [uv, run, pytest, "{{arguments.args}}"]
         arguments:
@@ -32,6 +33,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [uv]
         template:
             command: [uv, run, ruff, check, "{{arguments.args}}"]
         arguments:
@@ -46,6 +48,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [uv]
         template:
             command: [uv, run, ruff, check, --fix, "{{arguments.args}}"]
         arguments:
@@ -60,6 +63,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [uv]
         template:
             command: [uv, run, mypy, "{{arguments.args}}"]
         arguments:

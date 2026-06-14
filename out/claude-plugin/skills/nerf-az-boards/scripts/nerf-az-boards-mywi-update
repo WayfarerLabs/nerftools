@@ -76,6 +76,13 @@ if [[ $# -gt 0 ]]; then
   exit 1
 fi
 
+for _bin in az jq; do
+  if ! command -v "$_bin" >/dev/null 2>&1; then
+    echo "error: nerf-az-boards-mywi-update: required command '$_bin' is not installed or not on PATH" >&2
+    exit 127
+  fi
+done
+
 _nerf_check_path() {
   local _label=$1 _input=$2 _tests=$3
   local _cwd _canonical
@@ -178,7 +185,6 @@ if [[ -n "${_WI_ID_SET}" ]] && ! [[ "${WI_ID}" =~ $_NERF_PATTERN ]]; then
   exit 1
 fi
 
-which jq > /dev/null 2>&1 || { echo 'error: nerf-az-boards-mywi-update: jq is required but not installed (e.g. apt-get install jq, brew install jq).' >&2; exit 1; }
 ( [[ -n "${STATE}" || -n "${TITLE}" ]] ) || { echo 'error: nerf-az-boards-mywi-update: at least one of --state or --title is required' >&2; exit 1; }
 
 _nerf_pre() {

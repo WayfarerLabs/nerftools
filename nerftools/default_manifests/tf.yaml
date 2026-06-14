@@ -21,6 +21,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [terraform]
         template:
             command:
                 [
@@ -57,6 +58,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [terraform]
         template:
             command: [terraform, validate, "{{switches.json}}", "{{switches.no_tests}}"]
         switches:

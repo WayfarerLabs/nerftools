@@ -26,6 +26,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command:
                 - az
@@ -73,6 +74,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command:
                 - az
@@ -119,6 +121,7 @@ tools:
         threat:
             read: remote
             write: remote
+        requires: [az]
         template:
             command:
                 - az
@@ -176,6 +179,7 @@ tools:
         threat:
             read: remote
             write: remote
+        requires: [az]
         template:
             command:
                 - az
@@ -256,6 +260,7 @@ tools:
         threat:
             read: remote
             write: remote
+        requires: [az]
         template:
             command:
                 - az
@@ -339,6 +344,7 @@ tools:
         threat:
             read: remote
             write: remote
+        requires: [az]
         template:
             command:
                 - az
@@ -397,6 +403,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         pre: |
             if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
               _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
@@ -433,9 +440,7 @@ tools:
         threat:
             read: remote
             write: none
-        guards:
-            - command: [which, jq]
-              fail_message: "jq is required but not installed (e.g. apt-get install jq, brew install jq)."
+        requires: [az, jq]
         pre: |
             if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
               _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
@@ -497,9 +502,7 @@ tools:
         threat:
             read: remote
             write: remote
-        guards:
-            - command: [which, jq]
-              fail_message: "jq is required but not installed (e.g. apt-get install jq, brew install jq)."
+        requires: [az, jq]
         pre: |
             if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
               _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \
@@ -570,9 +573,8 @@ tools:
         threat:
             read: remote
             write: remote
+        requires: [az, jq]
         guards:
-            - command: [which, jq]
-              fail_message: "jq is required but not installed (e.g. apt-get install jq, brew install jq)."
             - script: |
                   [[ -n "${STATE}" || -n "${TITLE}" ]]
               fail_message: "at least one of --state or --title is required"
@@ -647,6 +649,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command:
                 - az

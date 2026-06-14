@@ -61,6 +61,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+for _bin in gh; do
+  if ! command -v "$_bin" >/dev/null 2>&1; then
+    echo "error: nerf-gh-run-list: required command '$_bin' is not installed or not on PATH" >&2
+    exit 127
+  fi
+done
+
 if [[ -n "${_STATUS_SET}" ]] && [[ "${STATUS}" != "queued" && "${STATUS}" != "in_progress" && "${STATUS}" != "completed" && "${STATUS}" != "waiting" && "${STATUS}" != "requested" && "${STATUS}" != "action_required" && "${STATUS}" != "cancelled" && "${STATUS}" != "failure" && "${STATUS}" != "neutral" && "${STATUS}" != "skipped" && "${STATUS}" != "stale" && "${STATUS}" != "startup_failure" && "${STATUS}" != "success" && "${STATUS}" != "timed_out" ]]; then
   echo "error: nerf-gh-run-list: option --status is not an allowed value" >&2
   echo "  value:   \"${STATUS}\"" >&2

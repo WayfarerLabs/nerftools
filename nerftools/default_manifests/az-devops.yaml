@@ -22,6 +22,7 @@ tools:
         threat:
             read: none
             write: machine
+        requires: [az]
         template:
             command:
                 - az

@@ -20,6 +20,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command:
                 - az
@@ -44,6 +45,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command:
                 - az
@@ -76,6 +78,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command:
                 - az

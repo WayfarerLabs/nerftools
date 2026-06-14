@@ -23,6 +23,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [kubectl]
         template:
             command: [kubectl, version, --output, json]
 
@@ -31,6 +32,7 @@ tools:
         threat:
             read: machine
             write: none
+        requires: [kubectl]
         template:
             command: [kubectl, config, get-contexts]
 
@@ -39,6 +41,7 @@ tools:
         threat:
             read: machine
             write: none
+        requires: [kubectl]
         template:
             command: [kubectl, config, current-context]
 
@@ -54,6 +57,7 @@ tools:
         threat:
             read: machine
             write: admin
+        requires: [kubectl]
         template:
             command: [kubectl, config, use-context, "{{arguments.context}}"]
         arguments:
@@ -67,6 +71,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [kubectl]
         template:
             command: [kubectl, cluster-info]
 
@@ -78,6 +83,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [kubectl]
         template:
             command:
                 - kubectl
@@ -138,9 +144,7 @@ tools:
         threat:
             read: remote
             write: none
-        guards:
-            - command: [which, jq]
-              fail_message: "jq is required but not installed (e.g. apt-get install jq, brew install jq)."
+        requires: [kubectl, jq]
         script: |
             ARGS=(kubectl get secrets)
             [[ -n "${NAME}" ]] && ARGS+=("${NAME}")
@@ -182,6 +186,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [kubectl]
         template:
             command:
                 - kubectl
@@ -216,6 +221,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [kubectl]
         template:
             command:
                 - kubectl
@@ -256,6 +262,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [kubectl]
         template:
             command:
                 - kubectl
@@ -285,6 +292,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [kubectl]
         template:
             command:
                 - kubectl
@@ -302,6 +310,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [kubectl]
         template:
             command:
                 - kubectl
@@ -320,6 +329,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [kubectl]
         template:
             command: [kubectl, api-versions]
 
@@ -328,6 +338,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [kubectl]
         template:
             command:
                 - kubectl
@@ -351,6 +362,7 @@ tools:
         threat:
             read: remote
             write: remote
+        requires: [kubectl]
         template:
             command:
                 - kubectl
@@ -393,9 +405,7 @@ tools:
         threat:
             read: remote
             write: remote
-        guards:
-            - command: [which, timeout]
-              fail_message: '"timeout" (from coreutils) is required but not found. Pre-installed on Linux and recent macOS.'
+        requires: [timeout, kubectl]
         template:
             command:
                 - timeout
@@ -431,6 +441,7 @@ tools:
         threat:
             read: remote
             write: remote
+        requires: [kubectl]
         template:
             command:
                 - kubectl

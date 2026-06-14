@@ -67,6 +67,13 @@ if [[ $# -gt 0 ]]; then
   exit 1
 fi
 
+for _bin in az; do
+  if ! command -v "$_bin" >/dev/null 2>&1; then
+    echo "error: nerf-az-keyvault-network-rule-list: required command '$_bin' is not installed or not on PATH" >&2
+    exit 127
+  fi
+done
+
 if [[ -n "${_VAULT_NAME_SET}" ]] && [[ "${VAULT_NAME}" == -* ]]; then
   echo "error: nerf-az-keyvault-network-rule-list: <vault_name> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2

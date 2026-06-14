@@ -18,6 +18,7 @@ tools:
         threat:
             read: machine
             write: none
+        requires: [find]
         passthrough:
             command: find
             deny: [-exec, -execdir, -ok, -okdir, -delete]
@@ -29,6 +30,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [find]
         passthrough:
             command: find
             deny: [-exec, -execdir, -ok, -okdir, -delete]
@@ -41,6 +43,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [grep]
         template:
             command:
                 - grep
@@ -99,6 +102,7 @@ tools:
         threat:
             read: machine
             write: none
+        requires: [grep]
         template:
             command:
                 - grep

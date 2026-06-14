@@ -24,6 +24,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         pre: |
             if [[ -z "${RESOURCE_GROUP}" && -z "${RESOURCE_ID}" ]]; then
               echo "error: must specify either --resource-group or --resource-id" >&2
@@ -84,6 +85,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command:
                 - az
@@ -133,6 +135,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command:
                 - az

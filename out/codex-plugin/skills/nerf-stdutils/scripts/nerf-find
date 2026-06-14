@@ -38,6 +38,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+for _bin in find; do
+  if ! command -v "$_bin" >/dev/null 2>&1; then
+    echo "error: nerf-find: required command '$_bin' is not installed or not on PATH" >&2
+    exit 127
+  fi
+done
+
 _NERF_DENY_PATTERNS=('-exec' '-execdir' '-ok' '-okdir' '-delete')
 
 for _tok in "$@"; do
