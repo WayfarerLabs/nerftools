@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# nerf-gh-pr-edit -- Edit an existing pull request's title, body, or base branch. Pass at least one of --title, --body, or --base; the wrapper refuses no-op calls. Replaces the listed fields wholesale (not patch-style) -- if you're updating the body, pass the full new body, not a diff. To change other fields (reviewers, labels, milestone) use the bypass sentinel.
+# Generated from gh manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=remote
+
+if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
+  echo "error: nerf-gh-pr-edit requires bash 4+. Found bash ${BASH_VERSION:-unknown}" >&2
+  echo "  hint: on macOS, install a newer bash via 'brew install bash'" >&2
+  exit 1
+fi
+
+set -euo pipefail
+
+NERFTOOLS_BRAND="nerf"
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-gh-pr-edit [--title|-t <title>] [--body|-b <body>] [--base|-B <base>] <pr>
+
+Options:
+  --title, -t <title>
+      New PR title (replaces the existing title)
+  --body, -b <body>
+      New PR body/description (replaces the existing body wholesale)
+  --base, -B <base>
+      New base branch
+
+Arguments:
+  <pr> (required)
+      PR number, URL, or branch name
+
+Maps to: gh pr edit <pr> <title> <body> <base>
+
+Edit an existing pull request's title, body, or base branch. Pass at least one of --title, --body, or --base; the wrapper refuses no-op calls. Replaces the listed fields wholesale (not patch-style) -- if you're updating the body, pass the full new body, not a diff. To change other fields (reviewers, labels, milestone) use the bypass sentinel.
+EOF
+  exit 1
+}
+
+TITLE=""
+_TITLE_SET=""
+BODY=""
+_BODY_SET=""
+BASE=""
+_BASE_SET=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --title|-t) if [[ -n "${_TITLE_SET}" ]]; then echo "error: --title can only be specified once" >&2; exit 1; fi; TITLE="$2"; _TITLE_SET=true; shift 2 ;;
+    --body|-b) if [[ -n "${_BODY_SET}" ]]; then echo "error: --body can only be specified once" >&2; exit 1; fi; BODY="$2"; _BODY_SET=true; shift 2 ;;
+    --base|-B) if [[ -n "${_BASE_SET}" ]]; then echo "error: --base can only be specified once" >&2; exit 1; fi; BASE="$2"; _BASE_SET=true; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+_PR_SET=""
+if [[ $# -gt 0 ]]; then
+  PR="$1"
+  _PR_SET=true
+  shift
+else
+  PR=""
+fi
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-gh-pr-edit: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+for _bin in gh; do
+  if ! command -v -- "$_bin" >/dev/null 2>&1; then
+    echo "error: nerf-gh-pr-edit: required command '$_bin' is not installed or not on PATH" >&2
+    exit 127
+  fi
+done
+
+if [[ -n "${_PR_SET}" ]] && [[ "${PR}" == -* ]]; then
+  echo "error: nerf-gh-pr-edit: <pr> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${PR}" ]]; then
+  echo "error: nerf-gh-pr-edit: missing required argument <pr>" >&2
+  echo "  hint: provide a value for <pr>" >&2
+  usage
+fi
+
+( [[ -n "${TITLE}" || -n "${BODY}" || -n "${BASE}" ]] ) || { echo 'error: nerf-gh-pr-edit: at least one of --title, --body, or --base is required' >&2; exit 1; }
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(gh pr edit "${PR}" ${_TITLE_SET:+"--title"} ${_TITLE_SET:+"$TITLE"} ${_BODY_SET:+"--body"} ${_BODY_SET:+"$BODY"} ${_BASE_SET:+"--base"} ${_BASE_SET:+"$BASE"})
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec gh pr edit "${PR}" ${_TITLE_SET:+"--title"} ${_TITLE_SET:+"$TITLE"} ${_BODY_SET:+"--body"} ${_BODY_SET:+"$BODY"} ${_BASE_SET:+"--base"} ${_BASE_SET:+"$BASE"}
