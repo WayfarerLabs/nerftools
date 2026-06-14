@@ -122,6 +122,10 @@ def _build_script(
         parts.append("")
         parts.append(_positional_parser(tool_name, tool_spec.arguments))
 
+    if tool_spec.requires:
+        parts.append("")
+        parts.append(_requires_check(tool_name, tool_spec.requires))
+
     if _has_path_tests(tool_spec):
         parts.append("")
         parts.append(_path_check_helper(tool_name))
@@ -680,6 +684,29 @@ def _env_exports(env: dict[str, str]) -> str:
     for k, v in env.items():
         lines.append(f"export {k}='{_shell_escape_sq(v)}'")
     return "\n".join(lines)
+
+
+# -- Requires preflight --------------------------------------------------------
+
+
+def _requires_check(tool_name: str, requires: tuple[str, ...]) -> str:
+    """Emit a `command -v` preflight that exits 127 if any required binary
+    is not on PATH. Returns an empty string when `requires` is empty.
+
+    `requires` items are validated at load time to `[A-Za-z0-9_./+-]+`, so
+    they need no shell escaping here.
+    """
+    if not requires:
+        return ""
+    bins = " ".join(requires)
+    return (
+        f"for _bin in {bins}; do\n"
+        '  if ! command -v "$_bin" >/dev/null 2>&1; then\n'
+        f"    echo \"error: {tool_name}: required command '$_bin' is not installed or not on PATH\" >&2\n"
+        "    exit 127\n"
+        "  fi\n"
+        "done"
+    )
 
 
 # -- Guard checks --------------------------------------------------------------

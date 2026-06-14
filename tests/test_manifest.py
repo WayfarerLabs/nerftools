@@ -707,6 +707,76 @@ def test_pre_hook_loaded(tmp_path: Path) -> None:
     assert m.tools["t"].pre == "echo setup"
 
 
+def test_requires_loaded(tmp_path: Path) -> None:
+    raw = _minimal_manifest(tools={
+        "t": {
+            "description": "A test tool.",
+            "threat": {"read": "none", "write": "none"},
+            "template": {"command": ["kubectl", "version"]},
+            "requires": ["kubectl", "jq"],
+        },
+    })
+    p = _write_manifest(tmp_path, raw)
+    m = load_manifest(p)
+    assert m.tools["t"].requires == ("kubectl", "jq")
+
+
+def test_requires_omitted_defaults_empty(tmp_path: Path) -> None:
+    raw = _minimal_manifest(tools={
+        "t": {
+            "description": "A test tool.",
+            "threat": {"read": "none", "write": "none"},
+            "template": {"command": ["echo"]},
+        },
+    })
+    p = _write_manifest(tmp_path, raw)
+    m = load_manifest(p)
+    assert m.tools["t"].requires == ()
+
+
+def test_requires_not_a_list_raises(tmp_path: Path) -> None:
+    raw = _minimal_manifest(tools={
+        "t": {
+            "description": "A test tool.",
+            "threat": {"read": "none", "write": "none"},
+            "template": {"command": ["echo"]},
+            "requires": "kubectl",
+        },
+    })
+    p = _write_manifest(tmp_path, raw)
+    with pytest.raises(ManifestError, match="requires.*must be a list"):
+        load_manifest(p)
+
+
+def test_requires_item_not_string_raises(tmp_path: Path) -> None:
+    raw = _minimal_manifest(tools={
+        "t": {
+            "description": "A test tool.",
+            "threat": {"read": "none", "write": "none"},
+            "template": {"command": ["echo"]},
+            "requires": ["kubectl", 42],
+        },
+    })
+    p = _write_manifest(tmp_path, raw)
+    with pytest.raises(ManifestError, match=r"requires\[1\].*must be a string"):
+        load_manifest(p)
+
+
+@pytest.mark.parametrize("bad", ["", "kube ctl", "kube;ctl", "kube&ctl", "$(kube)"])
+def test_requires_invalid_binary_name_raises(tmp_path: Path, bad: str) -> None:
+    raw = _minimal_manifest(tools={
+        "t": {
+            "description": "A test tool.",
+            "threat": {"read": "none", "write": "none"},
+            "template": {"command": ["echo"]},
+            "requires": [bad],
+        },
+    })
+    p = _write_manifest(tmp_path, raw)
+    with pytest.raises(ManifestError, match="invalid binary name"):
+        load_manifest(p)
+
+
 # -- Cross-reference validation ------------------------------------------------
 
 

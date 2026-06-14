@@ -236,6 +236,12 @@ class ToolSpec:
     guards: tuple[GuardSpec, ...] = field(default_factory=tuple)
     env: dict[str, str] = field(default_factory=dict)
 
+    # Required binaries: names that must resolve on PATH at run-time.
+    # Empty/omitted = no check; this is a convenience for the common case.
+    # Tools with more complex needs (e.g. npm_pkgrun runner selection) should
+    # leave this empty and handle the check themselves.
+    requires: tuple[str, ...] = field(default_factory=tuple)
+
     @property
     def mode(self) -> str:
         """Return the active execution mode name."""
@@ -391,6 +397,7 @@ def _load_tool(raw: dict[str, Any], path: Path, tool_name: str) -> ToolSpec:
     pre = str(raw["pre"]).strip() if "pre" in raw else None
     guards = _load_guards(raw, path, tool_name)
     env = _load_env(raw, path, tool_name)
+    requires = _load_requires(raw, path, tool_name)
 
     tool = ToolSpec(
         description=description,
@@ -404,6 +411,7 @@ def _load_tool(raw: dict[str, Any], path: Path, tool_name: str) -> ToolSpec:
         pre=pre,
         guards=guards,
         env=env,
+        requires=requires,
     )
 
     _validate_tool(tool, ctx)
@@ -682,6 +690,31 @@ def _load_env(raw: dict[str, Any], path: Path, tool_name: str) -> dict[str, str]
             )
         env[key] = str(v)
     return env
+
+
+def _load_requires(raw: dict[str, Any], path: Path, tool_name: str) -> tuple[str, ...]:
+    if "requires" not in raw:
+        return ()
+    ctx = f"{path}:tools.{tool_name}.requires"
+    requires_raw = raw["requires"]
+    if not isinstance(requires_raw, list):
+        raise ManifestError(f"{ctx}: must be a list, got {type(requires_raw).__name__}")
+    out: list[str] = []
+    for i, item in enumerate(requires_raw):
+        if not isinstance(item, str):
+            raise ManifestError(
+                f"{ctx}[{i}]: must be a string, got {type(item).__name__}"
+            )
+        # Binary names must look like real command-line tokens -- no whitespace,
+        # no shell metacharacters. command -v handles bare names and absolute
+        # paths; we accept both shapes.
+        if not item or not re.fullmatch(r"[A-Za-z0-9_./+-]+", item):
+            raise ManifestError(
+                f"{ctx}[{i}]: invalid binary name {item!r} "
+                "(must be non-empty and contain only [A-Za-z0-9_./+-])"
+            )
+        out.append(item)
+    return tuple(out)
 
 
 # -- Validation ----------------------------------------------------------------

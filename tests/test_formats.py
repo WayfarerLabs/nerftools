@@ -258,6 +258,111 @@ def test_claude_plugin_passthrough_skill(tmp_path: Path) -> None:
     assert "[tokens...]" in content
 
 
+# -- requires preflight --------------------------------------------------------
+
+
+def test_requires_empty_emits_no_check(tmp_path: Path) -> None:
+    tools = {"t": _template_tool(["echo", "hi"])}
+    _build([_manifest(skill_group="t", tools=tools)], tmp_path, prefix="nerf-")
+    script_text = (tmp_path / "skills" / "nerf-t" / "scripts" / "nerf-t").read_text()
+    assert "for _bin in" not in script_text
+    assert "command -v" not in script_text
+
+
+def test_requires_template_emits_check(tmp_path: Path) -> None:
+    tools = {
+        "t": _template_tool(
+            ["kubectl", "version"], requires=("kubectl",)
+        )
+    }
+    _build([_manifest(skill_group="t", tools=tools)], tmp_path, prefix="nerf-")
+    script_text = (tmp_path / "skills" / "nerf-t" / "scripts" / "nerf-t").read_text()
+    assert "for _bin in kubectl; do" in script_text
+    assert 'if ! command -v "$_bin" >/dev/null 2>&1; then' in script_text
+    assert (
+        "error: nerf-t: required command '$_bin' is not installed or not on PATH"
+        in script_text
+    )
+    assert "exit 127" in script_text
+
+
+def test_requires_multi_binary_emits_loop(tmp_path: Path) -> None:
+    tools = {
+        "t": _template_tool(
+            ["kubectl", "version"], requires=("kubectl", "jq")
+        )
+    }
+    _build([_manifest(skill_group="t", tools=tools)], tmp_path, prefix="nerf-")
+    script_text = (tmp_path / "skills" / "nerf-t" / "scripts" / "nerf-t").read_text()
+    assert "for _bin in kubectl jq; do" in script_text
+
+
+def test_requires_passthrough_emits_check(tmp_path: Path) -> None:
+    tool = ToolSpec(
+        description="Safe find.",
+        threat=_THREAT_NONE,
+        passthrough=PassthroughSpec(command="find", prefix=(".",)),
+        requires=("find",),
+    )
+    _build([_manifest(skill_group="find", tools={"safe-find": tool})], tmp_path, prefix="nerf-")
+    script_text = (
+        tmp_path / "skills" / "nerf-find" / "scripts" / "nerf-safe-find"
+    ).read_text()
+    assert "for _bin in find; do" in script_text
+
+
+def test_requires_script_emits_check(tmp_path: Path) -> None:
+    tool = ToolSpec(
+        description="A script-mode tool.",
+        threat=_THREAT_NONE,
+        script="exec terraform plan",
+        requires=("terraform",),
+    )
+    _build([_manifest(skill_group="tf", tools={"tf-plan": tool})], tmp_path, prefix="nerf-")
+    script_text = (
+        tmp_path / "skills" / "nerf-tf" / "scripts" / "nerf-tf-plan"
+    ).read_text()
+    assert "for _bin in terraform; do" in script_text
+
+
+def test_requires_missing_binary_exits_127(tmp_path: Path) -> None:
+    """End-to-end: a wrapper whose required binary isn't on PATH should
+    exit 127 with a helpful stderr message before doing any real work."""
+    import subprocess
+
+    tools = {
+        "t": _template_tool(
+            ["definitely-not-a-real-binary-xyz123"],
+            requires=("definitely-not-a-real-binary-xyz123",),
+        )
+    }
+    _build([_manifest(skill_group="t", tools=tools)], tmp_path, prefix="nerf-")
+    script = tmp_path / "skills" / "nerf-t" / "scripts" / "nerf-t"
+    # PATH must include /usr/bin and /bin so the script's `#!/usr/bin/env bash`
+    # shebang resolves; the absent binary is the wrapper's `requires` target.
+    result = subprocess.run(
+        [str(script)],
+        capture_output=True,
+        text=True,
+        check=False,
+        env={"PATH": "/usr/bin:/bin"},
+    )
+    assert result.returncode == 127
+    assert "required command" in result.stderr
+    assert "definitely-not-a-real-binary-xyz123" in result.stderr
+
+
+def test_requires_check_passes_when_binary_present(tmp_path: Path) -> None:
+    """When the required binary IS on PATH, the wrapper runs through."""
+    import subprocess
+
+    tools = {"t": _template_tool(["true"], requires=("true",))}
+    _build([_manifest(skill_group="t", tools=tools)], tmp_path, prefix="nerf-")
+    script = tmp_path / "skills" / "nerf-t" / "scripts" / "nerf-t"
+    result = subprocess.run([str(script)], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, f"stderr: {result.stderr}"
+
+
 # -- claude-plugin hint hook ---------------------------------------------------
 
 
