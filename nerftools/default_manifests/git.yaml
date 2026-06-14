@@ -27,6 +27,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command: [git, "{{options.directory}}", add, "{{arguments.files}}"]
         options:
@@ -51,6 +52,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         script: |
             if [ -n "${BODY:-}" ]; then
               exec git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} commit -m "${SUBJECT}" -m "${BODY}"
@@ -89,6 +91,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         script: |
             if [ -n "${BODY:-}" ]; then
               exec git ${DIRECTORY:+-C} ${DIRECTORY:+"${DIRECTORY}"} commit --amend -m "${SUBJECT}" -m "${BODY}"
@@ -133,6 +136,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command: [git, "{{options.directory}}", revert, --no-edit, "{{arguments.ref}}"]
         options:
@@ -152,6 +156,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command: [git, "{{options.directory}}", reset, --hard, HEAD~1]
         options:
@@ -176,6 +181,7 @@ tools:
         threat:
             read: remote
             write: workspace
+        requires: [git]
         template:
             command: [git, "{{options.directory}}", fetch, "{{arguments.remote}}", --tags]
         options:
@@ -201,6 +207,7 @@ tools:
             # the configured remote.
             read: remote
             write: none
+        requires: [git]
         template:
             command:
                 - git
@@ -236,6 +243,7 @@ tools:
         threat:
             read: remote
             write: workspace
+        requires: [git]
         template:
             command: [git, "{{options.directory}}", pull, "{{arguments.remote}}"]
         options:
@@ -256,6 +264,7 @@ tools:
         threat:
             read: workspace
             write: admin
+        requires: [git]
         template:
             command: [git, "{{options.directory}}", push, --follow-tags, "{{arguments.remote}}", main]
         options:
@@ -278,6 +287,7 @@ tools:
         threat:
             read: workspace
             write: remote
+        requires: [git]
         template:
             command:
                 - git
@@ -316,6 +326,7 @@ tools:
         threat:
             read: workspace
             write: remote
+        requires: [git]
         template:
             command: [git, "{{options.directory}}", push, "{{arguments.remote}}", "{{arguments.tag_name}}"]
         options:
@@ -343,6 +354,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [git]
         template:
             command:
                 - git
@@ -395,6 +407,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command:
                 [
@@ -431,6 +444,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [git]
         template:
             command: [git, "{{options.directory}}", status, --porcelain=v1]
         options:
@@ -448,6 +462,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [git]
         template:
             command:
                 - git
@@ -507,6 +522,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [git]
         template:
             command: [git, "{{options.directory}}", branch, --list, -vv]
         options:
@@ -522,6 +538,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [git]
         template:
             command: [git, "{{options.directory}}", branch, --remotes, -vv]
         options:
@@ -540,6 +557,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command: [git, "{{options.directory}}", switch, "{{arguments.name}}"]
         arguments:
@@ -564,6 +582,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command: [git, "{{options.directory}}", switch, -c, "{{arguments.name}}"]
         arguments:
@@ -589,6 +608,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command:
                 - git
@@ -619,6 +639,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command: [git, "{{options.directory}}", branch, --delete, "{{arguments.name}}"]
         arguments:
@@ -655,6 +676,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command: [git, "{{options.directory}}", rebase, "{{arguments.target}}"]
         arguments:
@@ -692,6 +714,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command: [git, "{{options.directory}}", rebase, --continue]
         options:
@@ -707,6 +730,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command: [git, "{{options.directory}}", rebase, --abort]
         options:
@@ -727,6 +751,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command:
                 - git
@@ -774,6 +799,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command:
                 - git
@@ -802,6 +828,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command:
                 - git
@@ -829,6 +856,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command:
                 - git
@@ -853,6 +881,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command:
                 - git
@@ -883,6 +912,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [git]
         template:
             command:
                 - git
@@ -908,6 +938,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [git]
         template:
             command:
                 - git
@@ -933,6 +964,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [git]
         template:
             command:
                 - git
@@ -951,6 +983,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [git]
         template:
             command:
                 - git
@@ -968,6 +1001,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [git]
         template:
             command:
                 - git
@@ -989,6 +1023,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command:
                 - git
@@ -1025,6 +1060,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command:
                 - git
@@ -1063,6 +1099,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command:
                 - git
@@ -1087,6 +1124,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command:
                 - git
@@ -1110,6 +1148,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [git]
         template:
             command:
                 - git
@@ -1127,6 +1166,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [git]
         template:
             command:
                 - git
@@ -1152,6 +1192,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [git]
         template:
             command:
                 - git

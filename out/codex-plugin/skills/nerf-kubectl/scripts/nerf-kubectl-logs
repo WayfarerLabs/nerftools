@@ -82,6 +82,13 @@ if [[ $# -gt 0 ]]; then
   exit 1
 fi
 
+for _bin in kubectl; do
+  if ! command -v -- "$_bin" >/dev/null 2>&1; then
+    echo "error: nerf-kubectl-logs: required command '$_bin' is not installed or not on PATH" >&2
+    exit 127
+  fi
+done
+
 _NERF_PATTERN='^[a-z0-9-]+$'
 if [[ -n "${_NAMESPACE_SET}" ]] && ! [[ "${NAMESPACE}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-kubectl-logs: option --namespace does not match required pattern" >&2

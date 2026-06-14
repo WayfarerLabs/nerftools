@@ -62,6 +62,13 @@ if [[ $# -gt 0 ]]; then
   exit 1
 fi
 
+for _bin in az; do
+  if ! command -v -- "$_bin" >/dev/null 2>&1; then
+    echo "error: nerf-az-role-assignment-by-id: required command '$_bin' is not installed or not on PATH" >&2
+    exit 127
+  fi
+done
+
 if [[ -n "${_ASSIGNMENT_ID_SET}" ]] && [[ "${ASSIGNMENT_ID}" == -* ]]; then
   echo "error: nerf-az-role-assignment-by-id: <assignment_id> cannot start with '-'" >&2
   echo "  hint: use -- before positional arguments if needed" >&2

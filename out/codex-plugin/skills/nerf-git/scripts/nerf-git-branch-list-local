@@ -44,6 +44,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+for _bin in git; do
+  if ! command -v -- "$_bin" >/dev/null 2>&1; then
+    echo "error: nerf-git-branch-list-local: required command '$_bin' is not installed or not on PATH" >&2
+    exit 127
+  fi
+done
+
 _nerf_check_path() {
   local _label=$1 _input=$2 _tests=$3
   local _cwd _canonical

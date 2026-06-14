@@ -18,6 +18,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [npx]
         template:
             command: [npx, nx, show, projects]
         guards:
@@ -29,6 +30,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [npx]
         template:
             command: [npx, nx, show, project, "{{arguments.project}}"]
         arguments:
@@ -45,6 +47,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [npx]
         template:
             command: [npx, nx, run, "{{arguments.target}}"]
         arguments:
@@ -61,6 +64,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [npx]
         template:
             command: [npx, nx, show, projects, --affected]
         guards:
@@ -72,6 +76,7 @@ tools:
         threat:
             read: workspace
             write: none
+        requires: [npx]
         template:
             command: [npx, nx, graph, --print-affected]
         guards:
@@ -83,6 +88,7 @@ tools:
         threat:
             read: workspace
             write: workspace
+        requires: [npx]
         template:
             command: [npx, nx, reset]
         guards:

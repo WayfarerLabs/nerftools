@@ -76,6 +76,13 @@ if [[ $# -gt 0 ]]; then
   exit 1
 fi
 
+for _bin in az jq; do
+  if ! command -v -- "$_bin" >/dev/null 2>&1; then
+    echo "error: nerf-az-boards-mywi-comment: required command '$_bin' is not installed or not on PATH" >&2
+    exit 127
+  fi
+done
+
 _nerf_check_path() {
   local _label=$1 _input=$2 _tests=$3
   local _cwd _canonical
@@ -189,8 +196,6 @@ if [[ -z "${COMMENT}" ]]; then
   echo "  hint: provide a value for <comment>" >&2
   usage
 fi
-
-which jq > /dev/null 2>&1 || { echo 'error: nerf-az-boards-mywi-comment: jq is required but not installed (e.g. apt-get install jq, brew install jq).' >&2; exit 1; }
 
 _nerf_pre() {
   if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then

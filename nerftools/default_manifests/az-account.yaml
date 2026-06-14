@@ -26,6 +26,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command: [az, account, show, --output, json]
 
@@ -34,6 +35,7 @@ tools:
         threat:
             read: remote
             write: none
+        requires: [az]
         template:
             command: [az, account, list, --output, json]
 
@@ -42,6 +44,7 @@ tools:
         threat:
             read: remote
             write: machine
+        requires: [az]
         template:
             command: [az, account, set, --subscription, "{{arguments.subscription}}"]
         arguments:

@@ -42,6 +42,13 @@ done
 
 ARGS=("$@")
 
+for _bin in uv; do
+  if ! command -v -- "$_bin" >/dev/null 2>&1; then
+    echo "error: nerf-uv-ruff-fix: required command '$_bin' is not installed or not on PATH" >&2
+    exit 127
+  fi
+done
+
 for _v in "${ARGS[@]}"; do
   if [[ "$_v" == "--nerf-dry-run" ]]; then
     echo "error: nerf-uv-ruff-fix: --nerf-dry-run inside the command tokens would be a no-op (it is a wrapper flag)" >&2

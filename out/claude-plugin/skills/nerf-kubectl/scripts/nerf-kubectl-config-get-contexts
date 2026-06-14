@@ -36,6 +36,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+for _bin in kubectl; do
+  if ! command -v -- "$_bin" >/dev/null 2>&1; then
+    echo "error: nerf-kubectl-config-get-contexts: required command '$_bin' is not installed or not on PATH" >&2
+    exit 127
+  fi
+done
+
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
   _NERF_DRY_CMD=(kubectl config get-contexts)
   printf 'dry-run:'

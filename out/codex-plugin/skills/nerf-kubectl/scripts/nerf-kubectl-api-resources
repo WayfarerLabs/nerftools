@@ -45,6 +45,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+for _bin in kubectl; do
+  if ! command -v -- "$_bin" >/dev/null 2>&1; then
+    echo "error: nerf-kubectl-api-resources: required command '$_bin' is not installed or not on PATH" >&2
+    exit 127
+  fi
+done
+
 _NERF_PATTERN='^[a-z0-9.-]*$'
 if [[ -n "${_API_GROUP_SET}" ]] && ! [[ "${API_GROUP}" =~ $_NERF_PATTERN ]]; then
   echo "error: nerf-kubectl-api-resources: option --api-group does not match required pattern" >&2
