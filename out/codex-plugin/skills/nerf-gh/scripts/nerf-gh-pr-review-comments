@@ -67,7 +67,7 @@ if [[ $# -gt 0 ]]; then
 fi
 
 for _bin in gh; do
-  if ! command -v "$_bin" >/dev/null 2>&1; then
+  if ! command -v -- "$_bin" >/dev/null 2>&1; then
     echo "error: nerf-gh-pr-review-comments: required command '$_bin' is not installed or not on PATH" >&2
     exit 127
   fi

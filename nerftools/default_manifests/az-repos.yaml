@@ -137,7 +137,7 @@ tools:
         threat:
             read: remote
             write: none
-        requires: [az]
+        requires: [az, git]
         pre: |
             if [[ -n "${_DIRECTORY_SET}" ]]; then _GIT_DIR="{{options.directory}}"; else _GIT_DIR="."; fi
             REMOTE_URL=$(git -C "${_GIT_DIR}" remote get-url origin 2>/dev/null || true)
@@ -206,7 +206,7 @@ tools:
         threat:
             read: remote
             write: remote
-        requires: [az]
+        requires: [az, git]
         template:
             command:
                 - az

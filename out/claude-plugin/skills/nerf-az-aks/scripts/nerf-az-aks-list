@@ -50,7 +50,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 for _bin in az; do
-  if ! command -v "$_bin" >/dev/null 2>&1; then
+  if ! command -v -- "$_bin" >/dev/null 2>&1; then
     echo "error: nerf-az-aks-list: required command '$_bin' is not installed or not on PATH" >&2
     exit 127
   fi

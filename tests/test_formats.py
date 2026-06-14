@@ -278,7 +278,7 @@ def test_requires_template_emits_check(tmp_path: Path) -> None:
     _build([_manifest(skill_group="t", tools=tools)], tmp_path, prefix="nerf-")
     script_text = (tmp_path / "skills" / "nerf-t" / "scripts" / "nerf-t").read_text()
     assert "for _bin in kubectl; do" in script_text
-    assert 'if ! command -v "$_bin" >/dev/null 2>&1; then' in script_text
+    assert 'if ! command -v -- "$_bin" >/dev/null 2>&1; then' in script_text
     assert (
         "error: nerf-t: required command '$_bin' is not installed or not on PATH"
         in script_text
@@ -361,6 +361,31 @@ def test_requires_check_passes_when_binary_present(tmp_path: Path) -> None:
     script = tmp_path / "skills" / "nerf-t" / "scripts" / "nerf-t"
     result = subprocess.run([str(script)], capture_output=True, text=True, check=False)
     assert result.returncode == 0, f"stderr: {result.stderr}"
+
+
+def test_requires_check_runs_even_under_dry_run(tmp_path: Path) -> None:
+    """Dry-run is a preview of what WOULD happen. If the binary isn't there
+    the real run would fail at exec, so the preview should fail the same
+    way -- requires check fires regardless of --nerf-dry-run."""
+    import subprocess
+
+    tools = {
+        "t": _template_tool(
+            ["definitely-not-a-real-binary-xyz123"],
+            requires=("definitely-not-a-real-binary-xyz123",),
+        )
+    }
+    _build([_manifest(skill_group="t", tools=tools)], tmp_path, prefix="nerf-")
+    script = tmp_path / "skills" / "nerf-t" / "scripts" / "nerf-t"
+    result = subprocess.run(
+        [str(script), "--nerf-dry-run"],
+        capture_output=True,
+        text=True,
+        check=False,
+        env={"PATH": "/usr/bin:/bin"},
+    )
+    assert result.returncode == 127
+    assert "required command" in result.stderr
 
 
 # -- claude-plugin hint hook ---------------------------------------------------

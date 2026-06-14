@@ -96,18 +96,32 @@ agents get a useful error instead of bare `exec: <binary>: not found`.
   script and list every binary invocation; flag any missing from `requires:`.
 - **`requires:` REPLACES `which X` / `command -v X` guards.** A `guards: - command: [which, jq]`
   entry alongside a `requires: [..., jq]` is redundant. Flag it for removal.
-- **Pre-hooks invoking binaries conditionally are a judgment call.** If `pre:` calls `git` only when
-  `-C` is set, declaring `git` would block the tool on machines without git even when the user never
-  sets `-C`. Prefer to leave it out and let the pre hook fail with its own error in that path. Flag
-  only if the pre-hook binary is needed by the main path too.
+- **Unconditional pre-hook usage must be declared.** If `pre:` calls a binary on every invocation
+  (e.g. always runs `git remote get-url` to resolve a project, regardless of which options are set),
+  that binary belongs in `requires:`. Watch for the trap: a `pre:` that opens with
+  `if [[ -n "$_DIRECTORY_SET" ]]; then _GIT_DIR=...; else _GIT_DIR="."; fi` and THEN calls
+  `git -C "$_GIT_DIR" ...` unconditionally is unconditional usage despite the leading `if`. Walk the
+  pre-hook control flow.
+- **Conditionally-invoked pre-hook binaries are a judgment call.** If `pre:` calls `git` only inside
+  `if [[ -n "${_DIRECTORY_SET}" ]]; then ... fi` (the git call itself is inside the conditional),
+  declaring `git` would block the tool on machines without git even when the user never sets `-C`.
+  Prefer to leave it out and let the pre hook fail with its own error in that path. Flag only if the
+  pre-hook binary is needed by the main path too.
+- **POSIX coreutils (`grep`, `sed`, `awk`, `tr`, `cut`, `find`, `xargs`, `sort`, `head`, `tail`,
+  `wc`) are conventionally omitted from `requires:` in this repo.** They're present on every
+  Unix-like host the wrappers target; declaring them adds noise without catching realistic failures.
+  Don't flag a script that uses these without declaring them.
 - **`npm_pkgrun: true` template tools should NOT declare `requires:`.** Those wrappers pick a runner
   (`bunx`/`pnpx`/`npx`) at runtime and have their own discovery logic. Declaring `requires: [bunx]`
   (or similar) would defeat the runner-fallback.
 - **Binary names must look like real PATH lookups.** Validated at load to `[A-Za-z0-9_./+-]+`. Don't
   try to put shell expressions, version specifiers, or any other syntax in here.
-- **A tool with no external binaries (rare; usually script-mode that only uses bash builtins like
-  `printf`, `read`, `[[`) should omit `requires:`.** `nerf-report` is the example in this repo — its
-  scripts handle their own probing (e.g., `date` vs `gdate`), so `requires:` is empty.
+- **A tool that does its own runtime discovery should omit `requires:`.** When a script probes for
+  one of several binaries (e.g., `date` vs `gdate`) or picks a runner from a fallback chain,
+  declaring any of them would defeat the discovery. `nerf-report` is the example in this repo — its
+  scripts probe for `date`/`gdate`, so `requires:` is empty even though they use plenty of externals
+  (`find`, `awk`, `chmod`, etc.).
+- **A tool with no external binaries at all (pure bash; very rare) also omits `requires:`.**
 
 ### 5. Documented contract = enforced contract
 

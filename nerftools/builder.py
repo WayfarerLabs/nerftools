@@ -699,9 +699,12 @@ def _requires_check(tool_name: str, requires: tuple[str, ...]) -> str:
     if not requires:
         return ""
     bins = " ".join(requires)
+    # `command -v --` is belt-and-suspenders: the loader's regex rejects a
+    # leading `-` in binary names, but the `--` stops `command -v` from
+    # treating any future relaxation of that regex as a flag.
     return (
         f"for _bin in {bins}; do\n"
-        '  if ! command -v "$_bin" >/dev/null 2>&1; then\n'
+        '  if ! command -v -- "$_bin" >/dev/null 2>&1; then\n'
         f"    echo \"error: {tool_name}: required command '$_bin' is not installed or not on PATH\" >&2\n"
         "    exit 127\n"
         "  fi\n"

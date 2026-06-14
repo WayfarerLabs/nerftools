@@ -43,7 +43,7 @@ done
 ARGS=("$@")
 
 for _bin in uv; do
-  if ! command -v "$_bin" >/dev/null 2>&1; then
+  if ! command -v -- "$_bin" >/dev/null 2>&1; then
     echo "error: nerf-uv-ruff-check: required command '$_bin' is not installed or not on PATH" >&2
     exit 127
   fi
