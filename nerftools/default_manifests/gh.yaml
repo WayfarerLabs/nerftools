@@ -298,6 +298,47 @@ tools:
                 flag: --reviewer
                 short: -r
 
+    gh-pr-edit:
+        description: >-
+            Edit an existing pull request's title, body, or base branch.
+            Replaces the listed fields wholesale (not patch-style) -- if
+            you're updating the body, pass the full new body, not a diff. To
+            change other fields (reviewers, labels, milestone) use the bypass
+            sentinel.
+        threat:
+            read: remote
+            write: remote
+        requires: [gh]
+        template:
+            command:
+                - gh
+                - pr
+                - edit
+                - "{{arguments.pr}}"
+                - "{{options.title}}"
+                - "{{options.body}}"
+                - "{{options.base}}"
+        arguments:
+            pr:
+                description: PR number, URL, or branch name
+                required: true
+        options:
+            title:
+                description: New PR title (replaces the existing title)
+                flag: --title
+                short: -t
+            body:
+                description: New PR body/description (replaces the existing body wholesale)
+                flag: --body
+                short: -b
+            base:
+                description: >-
+                    New base branch. Retargets which commits this PR is
+                    proposing -- the head branch is not modified, but
+                    in-flight reviews and CI runs may be reset.
+                flag: --base
+                short: -B
+
     gh-pr-ready:
         description: >-
             Mark a draft pull request as ready for review. Pass --undo to
@@ -457,6 +498,38 @@ tools:
                 description: User to assign
                 flag: --assignee
                 short: -a
+
+    gh-issue-edit:
+        description: >-
+            Edit an existing issue's title or body. Replaces the listed
+            fields wholesale (not patch-style) -- if you're updating the
+            body, pass the full new body. To change other fields (labels,
+            assignees, milestone) use the bypass sentinel.
+        threat:
+            read: remote
+            write: remote
+        requires: [gh]
+        template:
+            command:
+                - gh
+                - issue
+                - edit
+                - "{{arguments.issue}}"
+                - "{{options.title}}"
+                - "{{options.body}}"
+        arguments:
+            issue:
+                description: Issue number or URL
+                required: true
+        options:
+            title:
+                description: New issue title (replaces the existing title)
+                flag: --title
+                short: -t
+            body:
+                description: New issue body (replaces the existing body wholesale)
+                flag: --body
+                short: -b
 
     gh-issue-comment:
         description: Add a comment to an issue.

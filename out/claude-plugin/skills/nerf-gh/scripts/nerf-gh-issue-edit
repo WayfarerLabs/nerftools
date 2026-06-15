@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# nerf-gh-issue-edit -- Edit an existing issue's title or body. Replaces the listed fields wholesale (not patch-style) -- if you're updating the body, pass the full new body. To change other fields (labels, assignees, milestone) use the bypass sentinel.
+# Generated from gh manifest. Do not edit directly.
+# nerf:threat:read=remote
+# nerf:threat:write=remote
+
+if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
+  echo "error: nerf-gh-issue-edit requires bash 4+. Found bash ${BASH_VERSION:-unknown}" >&2
+  echo "  hint: on macOS, install a newer bash via 'brew install bash'" >&2
+  exit 1
+fi
+
+set -euo pipefail
+
+NERFTOOLS_BRAND="nerf"
+
+_NERF_DRY_RUN=""
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: nerf-gh-issue-edit [--title|-t <title>] [--body|-b <body>] <issue>
+
+Options:
+  --title, -t <title>
+      New issue title (replaces the existing title)
+  --body, -b <body>
+      New issue body (replaces the existing body wholesale)
+
+Arguments:
+  <issue> (required)
+      Issue number or URL
+
+Maps to: gh issue edit <issue> <title> <body>
+
+Edit an existing issue's title or body. Replaces the listed fields wholesale (not patch-style) -- if you're updating the body, pass the full new body. To change other fields (labels, assignees, milestone) use the bypass sentinel.
+EOF
+  exit 1
+}
+
+TITLE=""
+_TITLE_SET=""
+BODY=""
+_BODY_SET=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --title|-t) if [[ -n "${_TITLE_SET}" ]]; then echo "error: --title can only be specified once" >&2; exit 1; fi; TITLE="$2"; _TITLE_SET=true; shift 2 ;;
+    --body|-b) if [[ -n "${_BODY_SET}" ]]; then echo "error: --body can only be specified once" >&2; exit 1; fi; BODY="$2"; _BODY_SET=true; shift 2 ;;
+    --nerf-dry-run) _NERF_DRY_RUN="true"; shift 1 ;;
+    -h|--help) usage ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+_ISSUE_SET=""
+if [[ $# -gt 0 ]]; then
+  ISSUE="$1"
+  _ISSUE_SET=true
+  shift
+else
+  ISSUE=""
+fi
+if [[ $# -gt 0 ]]; then
+  echo "error: nerf-gh-issue-edit: unexpected extra arguments: $*" >&2
+  echo "  hint: switches and options must come before positional arguments" >&2
+  exit 1
+fi
+
+for _bin in gh; do
+  if ! command -v -- "$_bin" >/dev/null 2>&1; then
+    echo "error: nerf-gh-issue-edit: required command '$_bin' is not installed or not on PATH" >&2
+    exit 127
+  fi
+done
+
+if [[ -n "${_ISSUE_SET}" ]] && [[ "${ISSUE}" == -* ]]; then
+  echo "error: nerf-gh-issue-edit: <issue> cannot start with '-'" >&2
+  echo "  hint: use -- before positional arguments if needed" >&2
+  exit 1
+fi
+
+if [[ -z "${ISSUE}" ]]; then
+  echo "error: nerf-gh-issue-edit: missing required argument <issue>" >&2
+  echo "  hint: provide a value for <issue>" >&2
+  usage
+fi
+
+if [[ "$_NERF_DRY_RUN" == "true" ]]; then
+  _NERF_DRY_CMD=(gh issue edit "${ISSUE}" ${_TITLE_SET:+"--title"} ${_TITLE_SET:+"$TITLE"} ${_BODY_SET:+"--body"} ${_BODY_SET:+"$BODY"})
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
+  exit 0
+fi
+
+exec gh issue edit "${ISSUE}" ${_TITLE_SET:+"--title"} ${_TITLE_SET:+"$TITLE"} ${_BODY_SET:+"--body"} ${_BODY_SET:+"$BODY"}

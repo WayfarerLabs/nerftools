@@ -167,6 +167,25 @@ Create a pull request from the current branch. Pushes the branch if needed.
 
 ---
 
+## nerf-gh-pr-edit
+
+Edit an existing pull request's title, body, or base branch. Replaces the listed fields wholesale (not patch-style) -- if you're updating the body, pass the full new body, not a diff. To change other fields (reviewers, labels, milestone) use the bypass sentinel.
+
+**Usage:** `scripts/nerf-gh-pr-edit [--title|-t <title>] [--body|-b <body>] [--base|-B <base>] <pr>`
+**Maps to:** `gh pr edit <pr> <title> <body> <base>`
+
+**Options:**
+
+- `--title|-t` (optional): New PR title (replaces the existing title)
+- `--body|-b` (optional): New PR body/description (replaces the existing body wholesale)
+- `--base|-B` (optional): New base branch. Retargets which commits this PR is proposing -- the head branch is not modified, but in-flight reviews and CI runs may be reset.
+
+**Arguments:**
+
+- `<pr>` (required): PR number, URL, or branch name
+
+---
+
 ## nerf-gh-pr-ready
 
 Mark a draft pull request as ready for review. Pass --undo to convert a non-draft PR back to a draft. Does nothing (and reports success) if the PR is already in the requested state.
@@ -256,6 +275,24 @@ Create a new issue.
 **Arguments:**
 
 - `<title>` (required): Issue title
+
+---
+
+## nerf-gh-issue-edit
+
+Edit an existing issue's title or body. Replaces the listed fields wholesale (not patch-style) -- if you're updating the body, pass the full new body. To change other fields (labels, assignees, milestone) use the bypass sentinel.
+
+**Usage:** `scripts/nerf-gh-issue-edit [--title|-t <title>] [--body|-b <body>] <issue>`
+**Maps to:** `gh issue edit <issue> <title> <body>`
+
+**Options:**
+
+- `--title|-t` (optional): New issue title (replaces the existing title)
+- `--body|-b` (optional): New issue body (replaces the existing body wholesale)
+
+**Arguments:**
+
+- `<issue>` (required): Issue number or URL
 
 ---
 
