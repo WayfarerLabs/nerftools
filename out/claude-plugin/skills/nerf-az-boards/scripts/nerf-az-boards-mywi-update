@@ -185,8 +185,6 @@ if [[ -n "${_WI_ID_SET}" ]] && ! [[ "${WI_ID}" =~ $_NERF_PATTERN ]]; then
   exit 1
 fi
 
-( [[ -n "${STATE}" || -n "${TITLE}" ]] ) || { echo 'error: nerf-az-boards-mywi-update: at least one of --state or --title is required' >&2; exit 1; }
-
 _nerf_pre() {
   if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
     _URL=$(git -C "${DIRECTORY}" remote get-url origin 2>/dev/null) \

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-gh-issue-edit -- Edit an existing issue's title or body. Pass at least one of --title or --body; the wrapper refuses no-op calls. Replaces the listed fields wholesale (not patch-style) -- if you're updating the body, pass the full new body. To change other fields (labels, assignees, milestone) use the bypass sentinel.
+# nerf-gh-issue-edit -- Edit an existing issue's title or body. Replaces the listed fields wholesale (not patch-style) -- if you're updating the body, pass the full new body. To change other fields (labels, assignees, milestone) use the bypass sentinel.
 # Generated from gh manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=remote
@@ -32,7 +32,7 @@ Arguments:
 
 Maps to: gh issue edit <issue> <title> <body>
 
-Edit an existing issue's title or body. Pass at least one of --title or --body; the wrapper refuses no-op calls. Replaces the listed fields wholesale (not patch-style) -- if you're updating the body, pass the full new body. To change other fields (labels, assignees, milestone) use the bypass sentinel.
+Edit an existing issue's title or body. Replaces the listed fields wholesale (not patch-style) -- if you're updating the body, pass the full new body. To change other fields (labels, assignees, milestone) use the bypass sentinel.
 EOF
   exit 1
 }
@@ -85,8 +85,6 @@ if [[ -z "${ISSUE}" ]]; then
   echo "  hint: provide a value for <issue>" >&2
   usage
 fi
-
-( [[ -n "${TITLE}" || -n "${BODY}" ]] ) || { echo 'error: nerf-gh-issue-edit: at least one of --title or --body is required' >&2; exit 1; }
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
   _NERF_DRY_CMD=(gh issue edit "${ISSUE}" ${_TITLE_SET:+"--title"} ${_TITLE_SET:+"$TITLE"} ${_BODY_SET:+"--body"} ${_BODY_SET:+"$BODY"})

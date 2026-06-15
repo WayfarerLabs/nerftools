@@ -300,20 +300,15 @@ tools:
 
     gh-pr-edit:
         description: >-
-            Edit an existing pull request's title, body, or base branch. Pass
-            at least one of --title, --body, or --base; the wrapper refuses
-            no-op calls. Replaces the listed fields wholesale (not patch-style)
-            -- if you're updating the body, pass the full new body, not a
-            diff. To change other fields (reviewers, labels, milestone) use
-            the bypass sentinel.
+            Edit an existing pull request's title, body, or base branch.
+            Replaces the listed fields wholesale (not patch-style) -- if
+            you're updating the body, pass the full new body, not a diff. To
+            change other fields (reviewers, labels, milestone) use the bypass
+            sentinel.
         threat:
             read: remote
             write: remote
         requires: [gh]
-        guards:
-            - script: |
-                  [[ -n "${TITLE}" || -n "${BODY}" || -n "${BASE}" ]]
-              fail_message: "at least one of --title, --body, or --base is required"
         template:
             command:
                 - gh
@@ -337,7 +332,10 @@ tools:
                 flag: --body
                 short: -b
             base:
-                description: New base branch
+                description: >-
+                    New base branch. Retargets which commits this PR is
+                    proposing -- the head branch is not modified, but
+                    in-flight reviews and CI runs may be reset.
                 flag: --base
                 short: -B
 
@@ -503,19 +501,14 @@ tools:
 
     gh-issue-edit:
         description: >-
-            Edit an existing issue's title or body. Pass at least one of
-            --title or --body; the wrapper refuses no-op calls. Replaces the
-            listed fields wholesale (not patch-style) -- if you're updating
-            the body, pass the full new body. To change other fields (labels,
+            Edit an existing issue's title or body. Replaces the listed
+            fields wholesale (not patch-style) -- if you're updating the
+            body, pass the full new body. To change other fields (labels,
             assignees, milestone) use the bypass sentinel.
         threat:
             read: remote
             write: remote
         requires: [gh]
-        guards:
-            - script: |
-                  [[ -n "${TITLE}" || -n "${BODY}" ]]
-              fail_message: "at least one of --title or --body is required"
         template:
             command:
                 - gh

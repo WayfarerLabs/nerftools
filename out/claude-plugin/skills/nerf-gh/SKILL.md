@@ -169,7 +169,7 @@ Create a pull request from the current branch. Pushes the branch if needed.
 
 ## nerf-gh-pr-edit
 
-Edit an existing pull request's title, body, or base branch. Pass at least one of --title, --body, or --base; the wrapper refuses no-op calls. Replaces the listed fields wholesale (not patch-style) -- if you're updating the body, pass the full new body, not a diff. To change other fields (reviewers, labels, milestone) use the bypass sentinel.
+Edit an existing pull request's title, body, or base branch. Replaces the listed fields wholesale (not patch-style) -- if you're updating the body, pass the full new body, not a diff. To change other fields (reviewers, labels, milestone) use the bypass sentinel.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-gh/scripts/nerf-gh-pr-edit [--title|-t <title>] [--body|-b <body>] [--base|-B <base>] <pr>`
 **Maps to:** `gh pr edit <pr> <title> <body> <base>`
@@ -178,7 +178,7 @@ Edit an existing pull request's title, body, or base branch. Pass at least one o
 
 - `--title|-t` (optional): New PR title (replaces the existing title)
 - `--body|-b` (optional): New PR body/description (replaces the existing body wholesale)
-- `--base|-B` (optional): New base branch
+- `--base|-B` (optional): New base branch. Retargets which commits this PR is proposing -- the head branch is not modified, but in-flight reviews and CI runs may be reset.
 
 **Arguments:**
 
@@ -280,7 +280,7 @@ Create a new issue.
 
 ## nerf-gh-issue-edit
 
-Edit an existing issue's title or body. Pass at least one of --title or --body; the wrapper refuses no-op calls. Replaces the listed fields wholesale (not patch-style) -- if you're updating the body, pass the full new body. To change other fields (labels, assignees, milestone) use the bypass sentinel.
+Edit an existing issue's title or body. Replaces the listed fields wholesale (not patch-style) -- if you're updating the body, pass the full new body. To change other fields (labels, assignees, milestone) use the bypass sentinel.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-gh/scripts/nerf-gh-issue-edit [--title|-t <title>] [--body|-b <body>] <issue>`
 **Maps to:** `gh issue edit <issue> <title> <body>`

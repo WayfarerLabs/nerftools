@@ -574,10 +574,6 @@ tools:
             read: remote
             write: remote
         requires: [az, jq]
-        guards:
-            - script: |
-                  [[ -n "${STATE}" || -n "${TITLE}" ]]
-              fail_message: "at least one of --state or --title is required"
         pre: |
             if [[ -n "${_DIRECTORY_SET}" && -z "${_PROJECT_SET}" ]]; then
               _URL=$(git -C "{{options.directory}}" remote get-url origin 2>/dev/null) \

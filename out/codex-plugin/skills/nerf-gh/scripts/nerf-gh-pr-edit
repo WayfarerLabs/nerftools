@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nerf-gh-pr-edit -- Edit an existing pull request's title, body, or base branch. Pass at least one of --title, --body, or --base; the wrapper refuses no-op calls. Replaces the listed fields wholesale (not patch-style) -- if you're updating the body, pass the full new body, not a diff. To change other fields (reviewers, labels, milestone) use the bypass sentinel.
+# nerf-gh-pr-edit -- Edit an existing pull request's title, body, or base branch. Replaces the listed fields wholesale (not patch-style) -- if you're updating the body, pass the full new body, not a diff. To change other fields (reviewers, labels, milestone) use the bypass sentinel.
 # Generated from gh manifest. Do not edit directly.
 # nerf:threat:read=remote
 # nerf:threat:write=remote
@@ -26,7 +26,7 @@ Options:
   --body, -b <body>
       New PR body/description (replaces the existing body wholesale)
   --base, -B <base>
-      New base branch
+      New base branch. Retargets which commits this PR is proposing -- the head branch is not modified, but in-flight reviews and CI runs may be reset.
 
 Arguments:
   <pr> (required)
@@ -34,7 +34,7 @@ Arguments:
 
 Maps to: gh pr edit <pr> <title> <body> <base>
 
-Edit an existing pull request's title, body, or base branch. Pass at least one of --title, --body, or --base; the wrapper refuses no-op calls. Replaces the listed fields wholesale (not patch-style) -- if you're updating the body, pass the full new body, not a diff. To change other fields (reviewers, labels, milestone) use the bypass sentinel.
+Edit an existing pull request's title, body, or base branch. Replaces the listed fields wholesale (not patch-style) -- if you're updating the body, pass the full new body, not a diff. To change other fields (reviewers, labels, milestone) use the bypass sentinel.
 EOF
   exit 1
 }
@@ -90,8 +90,6 @@ if [[ -z "${PR}" ]]; then
   echo "  hint: provide a value for <pr>" >&2
   usage
 fi
-
-( [[ -n "${TITLE}" || -n "${BODY}" || -n "${BASE}" ]] ) || { echo 'error: nerf-gh-pr-edit: at least one of --title, --body, or --base is required' >&2; exit 1; }
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
   _NERF_DRY_CMD=(gh pr edit "${PR}" ${_TITLE_SET:+"--title"} ${_TITLE_SET:+"$TITLE"} ${_BODY_SET:+"--body"} ${_BODY_SET:+"$BODY"} ${_BASE_SET:+"--base"} ${_BASE_SET:+"$BASE"})
