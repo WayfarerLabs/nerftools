@@ -1,5 +1,29 @@
 # Changelog
 
+## [4.1.0](https://github.com/WayfarerLabs/nerftools/compare/v4.0.0...v4.1.0) (2026-06-15)
+
+
+### Features
+
+* **gh:** add gh-pr-edit and gh-issue-edit ([1a93f85](https://github.com/WayfarerLabs/nerftools/commit/1a93f8595962358fe721b4b50e3b2290e2dbc942))
+* **gh:** add gh-pr-edit and gh-issue-edit ([6ed122a](https://github.com/WayfarerLabs/nerftools/commit/6ed122ad3a617378b20258c0c23e02d74177e490))
+* **manifest:** add requires field for binary preflight checks ([6940d87](https://github.com/WayfarerLabs/nerftools/commit/6940d87c1a91f5608e6838e60c29bc8e4059046e))
+* **manifest:** add requires field for binary preflight checks ([32baf5a](https://github.com/WayfarerLabs/nerftools/commit/32baf5a4a16f6c1717f661915024b651803e3df2))
+
+
+### Bug Fixes
+
+* **hook:** peek past command runners (timeout, nice, time, etc.) to find wrapper invocations ([deece58](https://github.com/WayfarerLabs/nerftools/commit/deece58655b9751c9ae7176bb391b9301d3bef09))
+* **hook:** peek past timeout/nice/time/env/ionice/chrt to find wrapper invocations ([9da07f8](https://github.com/WayfarerLabs/nerftools/commit/9da07f85b5865513551aa538acdd505200c96ce7))
+* **manifests:** drop no-op guards; add --base warning to gh-pr-edit ([6fe4a0b](https://github.com/WayfarerLabs/nerftools/commit/6fe4a0b4d0972f2f6b14c7603229350aefa1b263))
+* **requires:** address review feedback ([23a0002](https://github.com/WayfarerLabs/nerftools/commit/23a000288a58e04bef429b9f5b41a5f531707ab0))
+
+
+### Documentation
+
+* **hook:** reframe wrapper-detection as UX nudge; pin lenient-scan cases ([3cdfe9c](https://github.com/WayfarerLabs/nerftools/commit/3cdfe9c2eb85c751125f0eb10f3e8d885125053f))
+* **reviewer:** teach manifest reviewer to enforce requires ([b000466](https://github.com/WayfarerLabs/nerftools/commit/b0004664d18b564b0d7a2503fde8663dfa7d341b))
+
 ## [4.0.0](https://github.com/WayfarerLabs/nerftools/compare/v3.0.0...v4.0.0) (2026-06-10)
 
 
