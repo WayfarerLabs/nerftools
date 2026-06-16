@@ -14,12 +14,17 @@ SCOPE=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerfctl-grant-list [--scope user|local]
+Usage: nerfctl-grant-list [--scope user|project|local]
 
-  --scope user|local  Show only this scope (default: show all scopes)
+  --scope user|project|local  Show only this scope (default: show all scopes)
 
 Lists all nerf-related entries from permissions.allow and permissions.deny.
 Shows all scopes unless a specific scope is requested.
+
+Scopes:
+  user     ~/.claude/settings.json
+  project  .claude/settings.json        (committed)
+  local    .claude/settings.local.json  (gitignored)
 
 Requires jq.
 EOF
@@ -85,12 +90,26 @@ _list_scope() {
 
 FOUND=0
 
+case "${SCOPE:-}" in
+  ""|user|project|local) ;;
+  *) echo "error: --scope must be 'user', 'project', or 'local' (got '$SCOPE')" >&2; exit 1 ;;
+esac
+
 if [[ -z "$SCOPE" || "$SCOPE" == "user" ]]; then
-  BEFORE=$FOUND
   output=$(_list_scope "user" "$HOME/.claude/settings.json")
   if [[ -n "$output" ]]; then
     echo "$output"
     FOUND=1
+  fi
+fi
+
+if [[ -z "$SCOPE" || "$SCOPE" == "project" ]]; then
+  if [[ -d ".claude" ]]; then
+    output=$(_list_scope "project" ".claude/settings.json")
+    if [[ -n "$output" ]]; then
+      echo "$output"
+      FOUND=1
+    fi
   fi
 fi
 

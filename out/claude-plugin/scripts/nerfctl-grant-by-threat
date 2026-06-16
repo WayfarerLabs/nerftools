@@ -10,7 +10,7 @@ if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
   exit 1
 fi
 
-SCOPE="user"
+SCOPE=""
 PLUGIN_ROOT=""
 READ_CEILING=""
 WRITE_CEILING=""
@@ -18,24 +18,34 @@ FILTER="*"
 OUTSIDE="deny"
 CREATE_SCOPE_DIR=0
 PRUNE_OLDER=0
+RESET_OTHER_SCOPES=0
 
 THREAT_ORDER="none workspace machine remote admin"
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerfctl-grant-by-threat --read <level> --write <level>
-       [--filter <glob>] [--outside deny|reset] [--scope user|local]
-       [--plugin-root <path>] [--create-scope-dir] [--prune-older]
+Usage: nerfctl-grant-by-threat <scope> --read <level> --write <level>
+       [--filter <glob>] [--outside deny|reset]
+       [--plugin-root <path>] [--create-scope-dir]
+       [--prune-older] [--reset-other-scopes]
 
+  <scope>                Settings scope: user, project, or local (required)
   --read <level>         Read ceiling (none|workspace|machine|remote|admin)
   --write <level>        Write ceiling (none|workspace|machine|remote|admin)
   --filter <glob>        Only affect tools matching this name pattern (default: *)
   --outside deny|reset   Action for tools outside the box (default: deny)
-  --scope user|local     Settings scope (default: user)
   --plugin-root <path>   Override plugin root (for testing; skips auto-detection)
-  --create-scope-dir     Create .claude/ if missing (local scope only; default: error)
+  --create-scope-dir     Create .claude/ if missing (project/local; default: error)
   --prune-older          Remove stale entries referencing older versions of this plugin
                          from the chosen scope's settings (in addition to the main op)
+  --reset-other-scopes   Remove matching entries from the two scopes that aren't <scope>,
+                         making <scope> the sole source of truth for these tools. Without
+                         this flag, conflicting entries in other scopes are warned about.
+
+Scopes:
+  user     ~/.claude/settings.json
+  project  .claude/settings.json        (committed)
+  local    .claude/settings.local.json  (gitignored)
 
 The version scan runs on every invocation when a version-aware sort is
 available (GNU `sort -V` or `gsort -V` from brew coreutils). If found: newer-
@@ -64,26 +74,47 @@ _require_jq() {
   fi
 }
 
+# See grant-allow.sh for scope helper docstrings. Duplicated inline across
+# the four write scripts per the project's standalone-script pattern.
+_scope_path() {
+  case "$1" in
+    user)    echo "$HOME/.claude/settings.json" ;;
+    project) echo ".claude/settings.json" ;;
+    local)   echo ".claude/settings.local.json" ;;
+    *) return 1 ;;
+  esac
+}
+
+_ensure_claude_dir() {
+  if [[ ! -d ".claude" ]]; then
+    if [[ -e ".claude" ]]; then
+      echo "error: .claude exists in the current directory but is not a directory; refusing to proceed" >&2
+      exit 1
+    fi
+    if [[ "$CREATE_SCOPE_DIR" == "1" ]]; then
+      mkdir -p ".claude"
+    else
+      echo "error: .claude/ not found in current directory" >&2
+      echo "  hint: pass --create-scope-dir to create it" >&2
+      exit 1
+    fi
+  fi
+}
+
 _resolve_settings() {
   case "$SCOPE" in
-    user)  echo "$HOME/.claude/settings.json" ;;
+    user)
+      echo "$HOME/.claude/settings.json"
+      ;;
+    project)
+      _ensure_claude_dir
+      echo ".claude/settings.json"
+      ;;
     local)
-      if [[ ! -d ".claude" ]]; then
-        if [[ -e ".claude" ]]; then
-          echo "error: .claude exists in the current directory but is not a directory; refusing to proceed" >&2
-          exit 1
-        fi
-        if [[ "$CREATE_SCOPE_DIR" == "1" ]]; then
-          mkdir -p ".claude"
-        else
-          echo "error: .claude/ not found in current directory" >&2
-          echo "  hint: pass --create-scope-dir to create it" >&2
-          exit 1
-        fi
-      fi
+      _ensure_claude_dir
       echo ".claude/settings.local.json"
       ;;
-    *) echo "error: unknown scope '$SCOPE' (use 'user' or 'local')" >&2; exit 1 ;;
+    *) echo "error: unknown scope '$SCOPE' (use 'user', 'project', or 'local')" >&2; exit 1 ;;
   esac
 }
 
@@ -180,6 +211,76 @@ _remove_stale_entries() {
   '
 }
 
+# See grant-allow.sh for _handle_other_scopes docstring. Duplicated inline
+# across the four write scripts; keep in sync.
+_handle_other_scopes() {
+  local -n _paths_ref="$1"
+  local current_scope="$SCOPE"
+  local other_scopes=()
+  case "$current_scope" in
+    user)    other_scopes=(project local) ;;
+    project) other_scopes=(user local) ;;
+    local)   other_scopes=(user project) ;;
+  esac
+
+  local entries_to_check=()
+  local _p
+  for _p in "${_paths_ref[@]}"; do
+    entries_to_check+=("Bash(${_p}:*)" "Bash(${_p})")
+  done
+  [[ ${#entries_to_check[@]} -eq 0 ]] && return 0
+  local entries_json
+  entries_json=$(printf '%s\n' "${entries_to_check[@]}" | jq -R '.' | jq -s '.')
+
+  local other_scope other_path warned_hint=0
+  for other_scope in "${other_scopes[@]}"; do
+    other_path=$(_scope_path "$other_scope") || continue
+    if [[ "$other_scope" != "user" && ! -d ".claude" ]]; then
+      continue
+    fi
+    [[ -f "$other_path" ]] || continue
+
+    local found
+    found=$(jq -r --argjson entries "$entries_json" '
+      [
+        (.permissions.allow // [] | map({list: "allow", entry: .})),
+        (.permissions.deny  // [] | map({list: "deny",  entry: .}))
+      ]
+      | flatten
+      | map(select(.entry as $e | $entries | index($e) != null))
+      | .[] | "\(.list)\t\(.entry)"
+    ' < "$other_path")
+    [[ -z "$found" ]] && continue
+
+    if [[ "$RESET_OTHER_SCOPES" == "1" ]]; then
+      local removed_entries_json
+      removed_entries_json=$(printf '%s' "$found" | awk -F$'\t' '{print $2}' \
+        | jq -R '.' | jq -s '.')
+      local updated_other
+      updated_other=$(jq --argjson stale "$removed_entries_json" '
+        .permissions //= {}
+        | .permissions.allow = ((.permissions.allow // []) - $stale)
+        | .permissions.deny  = ((.permissions.deny  // []) - $stale)
+      ' < "$other_path")
+      echo "$updated_other" > "$other_path"
+      while IFS=$'\t' read -r list entry; do
+        [[ -z "$list" ]] && continue
+        echo "  Reset from $other_scope ($list): $entry"
+      done <<< "$found"
+    else
+      while IFS=$'\t' read -r list entry; do
+        [[ -z "$list" ]] && continue
+        echo "warning: entry exists in '$other_scope' scope ($list): $entry" >&2
+      done <<< "$found"
+      warned_hint=1
+    fi
+  done
+
+  if (( warned_hint == 1 )); then
+    echo "  hint: pass --reset-other-scopes to remove conflicting entries elsewhere" >&2
+  fi
+}
+
 _ensure_settings_file() {
   local file="$1"
   local dir
@@ -256,21 +357,33 @@ _valid_threat() {
   return 1
 }
 
+POSITIONAL=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --read) READ_CEILING="$2"; shift 2 ;;
     --write) WRITE_CEILING="$2"; shift 2 ;;
     --filter) FILTER="$2"; shift 2 ;;
     --outside) OUTSIDE="$2"; shift 2 ;;
-    --scope) SCOPE="$2"; shift 2 ;;
     --plugin-root) PLUGIN_ROOT="$2"; shift 2 ;;
     --create-scope-dir) CREATE_SCOPE_DIR=1; shift ;;
     --prune-older) PRUNE_OLDER=1; shift ;;
+    --reset-other-scopes) RESET_OTHER_SCOPES=1; shift ;;
     -h|--help) usage ;;
     -*)  echo "error: unknown option: $1" >&2; usage ;;
-    *)   echo "error: unexpected argument: $1" >&2; usage ;;
+    *)   POSITIONAL+=("$1"); shift ;;
   esac
 done
+
+if [[ ${#POSITIONAL[@]} -ne 1 ]]; then
+  echo "error: expected <scope>, got ${#POSITIONAL[@]} positional argument(s)" >&2
+  usage
+fi
+SCOPE="${POSITIONAL[0]}"
+
+case "$SCOPE" in
+  user|project|local) ;;
+  *) echo "error: <scope> must be 'user', 'project', or 'local' (got '$SCOPE')" >&2; usage ;;
+esac
 
 if [[ -z "$READ_CEILING" ]]; then
   echo "error: --read is required" >&2; usage
@@ -341,6 +454,8 @@ SETTINGS="$(_resolve_settings)"
 _ensure_settings_file "$SETTINGS"
 
 UPDATED=$(cat "$SETTINGS")
+
+_handle_other_scopes TOOL_PATHS
 
 _scan_stale_versions "$UPDATED" "nerfctl-grant-by-threat"
 if (( STALE_COUNT > 0 )); then

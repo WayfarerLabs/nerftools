@@ -10,23 +10,33 @@ fi
 
 set -euo pipefail
 
-SCOPE="user"
+SCOPE=""
 PLUGIN_ROOT=""
 PATTERN=""
 CREATE_SCOPE_DIR=0
 PRUNE_OLDER=0
+RESET_OTHER_SCOPES=0
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerfctl-grant-allow <pattern> [--scope user|local] [--plugin-root <path>]
-                          [--create-scope-dir] [--prune-older]
+Usage: nerfctl-grant-allow <scope> <pattern>
+                          [--plugin-root <path>] [--create-scope-dir]
+                          [--prune-older] [--reset-other-scopes]
 
+  <scope>                Settings scope: user, project, or local (required)
   <pattern>              Tool name or glob pattern (e.g. nerf-git-commit or nerf-git-*)
-  --scope user|local     Settings scope (default: user)
   --plugin-root <path>   Override plugin root (for testing; skips auto-detection)
-  --create-scope-dir     Create .claude/ if missing (local scope only; default: error)
+  --create-scope-dir     Create .claude/ if missing (project/local; default: error)
   --prune-older          Remove stale entries referencing older versions of this plugin
                          from the chosen scope's settings (in addition to the main op)
+  --reset-other-scopes   Remove matching entries from the two scopes that aren't <scope>,
+                         making <scope> the sole source of truth for these tools. Without
+                         this flag, conflicting entries in other scopes are warned about.
+
+Scopes:
+  user     ~/.claude/settings.json
+  project  .claude/settings.json        (committed)
+  local    .claude/settings.local.json  (gitignored)
 
 The version scan runs on every invocation when a version-aware sort is
 available (GNU `sort -V` or `gsort -V` from brew coreutils). If found: newer-
@@ -55,28 +65,51 @@ _require_jq() {
   fi
 }
 
+# Map a scope name to its settings file path. Read-only -- does not create
+# anything. Returns nonzero on unknown scope.
+_scope_path() {
+  case "$1" in
+    user)    echo "$HOME/.claude/settings.json" ;;
+    project) echo ".claude/settings.json" ;;
+    local)   echo ".claude/settings.local.json" ;;
+    *) return 1 ;;
+  esac
+}
+
+# Ensure .claude/ exists in cwd (project + local scopes both live there).
+# Honors --create-scope-dir; errors if missing and flag not set.
+_ensure_claude_dir() {
+  if [[ ! -d ".claude" ]]; then
+    if [[ -e ".claude" ]]; then
+      # .claude exists but isn't a directory (file, symlink-to-file, etc.).
+      # mkdir would just fail with a generic error; surface a clearer one.
+      echo "error: .claude exists in the current directory but is not a directory; refusing to proceed" >&2
+      exit 1
+    fi
+    if [[ "$CREATE_SCOPE_DIR" == "1" ]]; then
+      mkdir -p ".claude"
+    else
+      echo "error: .claude/ not found in current directory" >&2
+      echo "  hint: pass --create-scope-dir to create it" >&2
+      exit 1
+    fi
+  fi
+}
+
 _resolve_settings() {
   case "$SCOPE" in
-    user)  echo "$HOME/.claude/settings.json" ;;
+    user)
+      echo "$HOME/.claude/settings.json"
+      ;;
+    project)
+      _ensure_claude_dir
+      echo ".claude/settings.json"
+      ;;
     local)
-      if [[ ! -d ".claude" ]]; then
-        if [[ -e ".claude" ]]; then
-          # .claude exists but isn't a directory (file, symlink-to-file, etc.).
-          # mkdir would just fail with a generic error; surface a clearer one.
-          echo "error: .claude exists in the current directory but is not a directory; refusing to proceed" >&2
-          exit 1
-        fi
-        if [[ "$CREATE_SCOPE_DIR" == "1" ]]; then
-          mkdir -p ".claude"
-        else
-          echo "error: .claude/ not found in current directory" >&2
-          echo "  hint: pass --create-scope-dir to create it" >&2
-          exit 1
-        fi
-      fi
+      _ensure_claude_dir
       echo ".claude/settings.local.json"
       ;;
-    *) echo "error: unknown scope '$SCOPE' (use 'user' or 'local')" >&2; exit 1 ;;
+    *) echo "error: unknown scope '$SCOPE' (use 'user', 'project', or 'local')" >&2; exit 1 ;;
   esac
 }
 
@@ -193,6 +226,85 @@ _remove_stale_entries() {
   '
 }
 
+# Walk the two scopes that aren't $SCOPE and look for any entry referencing
+# the tools we're about to touch (in either allow or deny). For each match:
+#   - if RESET_OTHER_SCOPES=1: remove the entry from that scope's settings
+#     file and print a "Reset from <scope> (<list>): <entry>" line.
+#   - otherwise: print a warning and a hint to use --reset-other-scopes.
+# Takes an array name as $1 (list of script paths being touched).
+_handle_other_scopes() {
+  local -n _paths_ref="$1"
+  local current_scope="$SCOPE"
+  local other_scopes=()
+  case "$current_scope" in
+    user)    other_scopes=(project local) ;;
+    project) other_scopes=(user local) ;;
+    local)   other_scopes=(user project) ;;
+  esac
+
+  # Build the set of canonical entry strings we want to look for. Each tool
+  # has both a current form (Bash(path:*)) and a legacy form (Bash(path)).
+  local entries_to_check=()
+  local _p
+  for _p in "${_paths_ref[@]}"; do
+    entries_to_check+=("Bash(${_p}:*)" "Bash(${_p})")
+  done
+  local entries_json
+  entries_json=$(printf '%s\n' "${entries_to_check[@]}" | jq -R '.' | jq -s '.')
+
+  local other_scope other_path warned_hint=0
+  for other_scope in "${other_scopes[@]}"; do
+    other_path=$(_scope_path "$other_scope") || continue
+    # project/local both require .claude/ in cwd. If .claude/ isn't here,
+    # there cannot be any entries for those scopes -- skip silently.
+    if [[ "$other_scope" != "user" && ! -d ".claude" ]]; then
+      continue
+    fi
+    [[ -f "$other_path" ]] || continue
+
+    # Find entries from our set that are present in this scope's allow/deny.
+    # Output one match per line: <list>\t<entry>
+    local found
+    found=$(jq -r --argjson entries "$entries_json" '
+      [
+        (.permissions.allow // [] | map({list: "allow", entry: .})),
+        (.permissions.deny  // [] | map({list: "deny",  entry: .}))
+      ]
+      | flatten
+      | map(select(.entry as $e | $entries | index($e) != null))
+      | .[] | "\(.list)\t\(.entry)"
+    ' < "$other_path")
+    [[ -z "$found" ]] && continue
+
+    if [[ "$RESET_OTHER_SCOPES" == "1" ]]; then
+      local removed_entries_json
+      removed_entries_json=$(printf '%s' "$found" | awk -F$'\t' '{print $2}' \
+        | jq -R '.' | jq -s '.')
+      local updated_other
+      updated_other=$(jq --argjson stale "$removed_entries_json" '
+        .permissions //= {}
+        | .permissions.allow = ((.permissions.allow // []) - $stale)
+        | .permissions.deny  = ((.permissions.deny  // []) - $stale)
+      ' < "$other_path")
+      echo "$updated_other" > "$other_path"
+      while IFS=$'\t' read -r list entry; do
+        [[ -z "$list" ]] && continue
+        echo "  Reset from $other_scope ($list): $entry"
+      done <<< "$found"
+    else
+      while IFS=$'\t' read -r list entry; do
+        [[ -z "$list" ]] && continue
+        echo "warning: entry exists in '$other_scope' scope ($list): $entry" >&2
+      done <<< "$found"
+      warned_hint=1
+    fi
+  done
+
+  if (( warned_hint == 1 )); then
+    echo "  hint: pass --reset-other-scopes to remove conflicting entries elsewhere" >&2
+  fi
+}
+
 _ensure_settings_file() {
   local file="$1"
   local dir
@@ -250,27 +362,30 @@ _resolve_plugin_root() {
   echo "$resolved"
 }
 
+POSITIONAL=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --scope) SCOPE="$2"; shift 2 ;;
     --plugin-root) PLUGIN_ROOT="$2"; shift 2 ;;
     --create-scope-dir) CREATE_SCOPE_DIR=1; shift ;;
     --prune-older) PRUNE_OLDER=1; shift ;;
+    --reset-other-scopes) RESET_OTHER_SCOPES=1; shift ;;
     -h|--help) usage ;;
     -*) echo "error: unknown option: $1" >&2; usage ;;
-    *)
-      if [[ -z "$PATTERN" ]]; then
-        PATTERN="$1"; shift
-      else
-        echo "error: unexpected argument: $1" >&2; usage
-      fi
-      ;;
+    *) POSITIONAL+=("$1"); shift ;;
   esac
 done
 
-if [[ -z "$PATTERN" ]]; then
-  echo "error: <pattern> is required" >&2; usage
+if [[ ${#POSITIONAL[@]} -ne 2 ]]; then
+  echo "error: expected <scope> <pattern>, got ${#POSITIONAL[@]} positional argument(s)" >&2
+  usage
 fi
+SCOPE="${POSITIONAL[0]}"
+PATTERN="${POSITIONAL[1]}"
+
+case "$SCOPE" in
+  user|project|local) ;;
+  *) echo "error: <scope> must be 'user', 'project', or 'local' (got '$SCOPE')" >&2; usage ;;
+esac
 
 _require_jq
 
@@ -289,6 +404,12 @@ SETTINGS="$(_resolve_settings)"
 _ensure_settings_file "$SETTINGS"
 
 UPDATED=$(cat "$SETTINGS")
+
+# Other-scope handling: scan the two non-current scopes for entries
+# referencing the tools we're about to touch. Either warn or reset depending
+# on --reset-other-scopes. Done before the current-scope op so the user sees
+# this output ahead of the main "Allowed N" summary.
+_handle_other_scopes MATCHES
 
 # Version scan: always-on; exits with error on newer entries, warns on older
 # entries (or prunes them with --prune-older). Limited to the chosen scope.
