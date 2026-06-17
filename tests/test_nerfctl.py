@@ -131,7 +131,7 @@ def _read(path: Path) -> dict:  # type: ignore[type-arg]
 def test_grant_adds_to_allow(tmp_path: Path) -> None:
     _user_settings(tmp_path)
     plugin = _mock_plugin(tmp_path, ["nerf-test-tool"])
-    result = _run(_GRANT, "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
+    result = _run(_GRANT, "user", "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
     assert result.returncode == 0
     data = _read(tmp_path / ".claude" / "settings.json")
     entries = data["permissions"]["allow"]
@@ -142,7 +142,7 @@ def test_grant_adds_to_allow(tmp_path: Path) -> None:
 def test_grant_glob_matches_multiple(tmp_path: Path) -> None:
     _user_settings(tmp_path)
     plugin = _mock_plugin(tmp_path, ["nerf-test-a", "nerf-test-b", "nerf-test-c"])
-    result = _run(_GRANT, "nerf-test-*", "--plugin-root", str(plugin), home=tmp_path)
+    result = _run(_GRANT, "user", "nerf-test-*", "--plugin-root", str(plugin), home=tmp_path)
     assert result.returncode == 0
     data = _read(tmp_path / ".claude" / "settings.json")
     assert len(data["permissions"]["allow"]) == 3
@@ -151,7 +151,7 @@ def test_grant_glob_matches_multiple(tmp_path: Path) -> None:
 def test_grant_no_matches_fails(tmp_path: Path) -> None:
     _user_settings(tmp_path)
     plugin = _mock_plugin(tmp_path, ["nerf-test-tool"])
-    result = _run(_GRANT, "nerf-nonexistent-*", "--plugin-root", str(plugin), home=tmp_path)
+    result = _run(_GRANT, "user", "nerf-nonexistent-*", "--plugin-root", str(plugin), home=tmp_path)
     assert result.returncode != 0
     assert "no tools matching" in result.stderr
 
@@ -159,8 +159,8 @@ def test_grant_no_matches_fails(tmp_path: Path) -> None:
 def test_grant_does_not_duplicate(tmp_path: Path) -> None:
     _user_settings(tmp_path)
     plugin = _mock_plugin(tmp_path, ["nerf-test-tool"])
-    _run(_GRANT, "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
-    _run(_GRANT, "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
+    _run(_GRANT, "user", "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
+    _run(_GRANT, "user", "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
     data = _read(tmp_path / ".claude" / "settings.json")
     assert len(data["permissions"]["allow"]) == 1
 
@@ -170,7 +170,7 @@ def test_grant_removes_from_deny(tmp_path: Path) -> None:
     script_path = str(plugin / "skills" / "nerf-test" / "scripts" / "nerf-test-tool")
     # Seed with stale (no :*) deny entry
     _user_settings(tmp_path, {"permissions": {"allow": [], "deny": [f"Bash({script_path})"]}})
-    _run(_GRANT, "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
+    _run(_GRANT, "user", "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
     data = _read(tmp_path / ".claude" / "settings.json")
     # New :* entry in allow, stale entry removed from deny
     assert f"Bash({script_path}:*)" in data["permissions"]["allow"]
@@ -179,18 +179,35 @@ def test_grant_removes_from_deny(tmp_path: Path) -> None:
     assert f"Bash({script_path}:*)" not in data["permissions"]["deny"]
 
 
-def test_grant_requires_args(tmp_path: Path) -> None:
+def test_grant_requires_scope_and_pattern(tmp_path: Path) -> None:
     result = _run(_GRANT, home=tmp_path)
     assert result.returncode != 0
-    assert "required" in result.stderr
+    assert "expected <scope> <pattern>" in result.stderr
+
+
+def test_grant_rejects_bad_scope(tmp_path: Path) -> None:
+    plugin = _mock_plugin(tmp_path, ["nerf-test-tool"])
+    result = _run(_GRANT, "bogus", "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
+    assert result.returncode != 0
+    assert "must be 'user', 'project', or 'local'" in result.stderr
 
 
 def test_grant_local_scope(tmp_path: Path) -> None:
     (tmp_path / ".claude").mkdir(parents=True)
     plugin = _mock_plugin(tmp_path, ["nerf-test-tool"])
-    result = _run(_GRANT, "nerf-test-tool", "--plugin-root", str(plugin), "--scope", "local", cwd=tmp_path)
+    result = _run(_GRANT, "local", "nerf-test-tool", "--plugin-root", str(plugin), cwd=tmp_path)
     assert result.returncode == 0
     assert (tmp_path / ".claude" / "settings.local.json").exists()
+
+
+def test_grant_project_scope(tmp_path: Path) -> None:
+    (tmp_path / ".claude").mkdir(parents=True)
+    plugin = _mock_plugin(tmp_path, ["nerf-test-tool"])
+    result = _run(_GRANT, "project", "nerf-test-tool", "--plugin-root", str(plugin), cwd=tmp_path)
+    assert result.returncode == 0, result.stderr
+    # Project scope writes to .claude/settings.json (committed), not .local.json
+    assert (tmp_path / ".claude" / "settings.json").exists()
+    assert not (tmp_path / ".claude" / "settings.local.json").exists()
 
 
 # -- deny ---------------------------------------------------------------------
@@ -199,7 +216,7 @@ def test_grant_local_scope(tmp_path: Path) -> None:
 def test_deny_adds_to_deny(tmp_path: Path) -> None:
     _user_settings(tmp_path)
     plugin = _mock_plugin(tmp_path, ["nerf-test-tool"])
-    result = _run(_DENY, "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
+    result = _run(_DENY, "user", "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
     assert result.returncode == 0
     data = _read(tmp_path / ".claude" / "settings.json")
     assert any("nerf-test-tool" in e for e in data["permissions"]["deny"])
@@ -210,7 +227,7 @@ def test_deny_removes_from_allow(tmp_path: Path) -> None:
     script_path = str(plugin / "skills" / "nerf-test" / "scripts" / "nerf-test-tool")
     # Seed with stale (no :*) allow entry
     _user_settings(tmp_path, {"permissions": {"allow": [f"Bash({script_path})"], "deny": []}})
-    _run(_DENY, "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
+    _run(_DENY, "user", "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
     data = _read(tmp_path / ".claude" / "settings.json")
     # Stale entry removed from allow, new :* entry in deny
     assert f"Bash({script_path})" not in data["permissions"]["allow"]
@@ -218,10 +235,10 @@ def test_deny_removes_from_allow(tmp_path: Path) -> None:
     assert f"Bash({script_path}:*)" in data["permissions"]["deny"]
 
 
-def test_deny_requires_args(tmp_path: Path) -> None:
+def test_deny_requires_scope_and_pattern(tmp_path: Path) -> None:
     result = _run(_DENY, home=tmp_path)
     assert result.returncode != 0
-    assert "required" in result.stderr
+    assert "expected <scope> <pattern>" in result.stderr
 
 
 # -- reset --------------------------------------------------------------------
@@ -239,7 +256,7 @@ def test_reset_removes_entries(tmp_path: Path) -> None:
             }
         },
     )
-    result = _run(_RESET, "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
+    result = _run(_RESET, "user", "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
     assert result.returncode == 0
     data = _read(tmp_path / ".claude" / "settings.json")
     assert f"Bash({script_path})" not in data["permissions"]["allow"]
@@ -249,14 +266,14 @@ def test_reset_removes_entries(tmp_path: Path) -> None:
 
 def test_reset_noop_when_file_missing(tmp_path: Path) -> None:
     plugin = _mock_plugin(tmp_path, ["nerf-test-tool"])
-    result = _run(_RESET, "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
+    result = _run(_RESET, "user", "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
     assert result.returncode == 0
 
 
-def test_reset_requires_args(tmp_path: Path) -> None:
+def test_reset_requires_scope_and_pattern(tmp_path: Path) -> None:
     result = _run(_RESET, home=tmp_path)
     assert result.returncode != 0
-    assert "required" in result.stderr
+    assert "expected <scope> <pattern>" in result.stderr
 
 
 # -- list ---------------------------------------------------------------------
@@ -297,8 +314,8 @@ def test_list_no_nerf_entries(tmp_path: Path) -> None:
 def test_grant_then_deny_moves_entry(tmp_path: Path) -> None:
     _user_settings(tmp_path)
     plugin = _mock_plugin(tmp_path, ["nerf-test-tool"])
-    _run(_GRANT, "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
-    _run(_DENY, "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
+    _run(_GRANT, "user", "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
+    _run(_DENY, "user", "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
     data = _read(tmp_path / ".claude" / "settings.json")
     assert not any("nerf-test-tool" in e for e in data["permissions"]["allow"])
     assert any("nerf-test-tool" in e for e in data["permissions"]["deny"])
@@ -307,8 +324,8 @@ def test_grant_then_deny_moves_entry(tmp_path: Path) -> None:
 def test_grant_then_reset_clears_entry(tmp_path: Path) -> None:
     _user_settings(tmp_path)
     plugin = _mock_plugin(tmp_path, ["nerf-test-tool"])
-    _run(_GRANT, "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
-    _run(_RESET, "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
+    _run(_GRANT, "user", "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
+    _run(_RESET, "user", "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path)
     data = _read(tmp_path / ".claude" / "settings.json")
     assert not any("nerf-test-tool" in e for e in data["permissions"]["allow"])
     assert not any("nerf-test-tool" in e for e in data["permissions"]["deny"])
@@ -329,6 +346,7 @@ def test_by_threat_allows_inside_denies_outside(tmp_path: Path) -> None:
     })
     result = _run(
         _BY_THREAT,
+        "user",
         "--read", "workspace", "--write", "workspace",
         "--plugin-root", str(plugin),
         home=tmp_path,
@@ -352,6 +370,7 @@ def test_by_threat_outside_reset(tmp_path: Path) -> None:
     _user_settings(tmp_path, {"permissions": {"allow": [f"Bash({script_path})"], "deny": []}})
     result = _run(
         _BY_THREAT,
+        "user",
         "--read", "workspace", "--write", "workspace",
         "--outside", "reset",
         "--plugin-root", str(plugin),
@@ -374,6 +393,7 @@ def test_by_threat_filter(tmp_path: Path) -> None:
     })
     result = _run(
         _BY_THREAT,
+        "user",
         "--read", "workspace", "--write", "workspace",
         "--filter", "nerf-git-*",
         "--plugin-root", str(plugin),
@@ -387,16 +407,32 @@ def test_by_threat_filter(tmp_path: Path) -> None:
     assert not any("nerf-az-list" in e for e in all_entries)
 
 
+def test_by_threat_requires_scope(tmp_path: Path) -> None:
+    plugin = _mock_plugin_with_threats(tmp_path, {"nerf-t": ("none", "none")})
+    # Missing scope positional -- errors before --read/--write checks fire.
+    result = _run(_BY_THREAT, "--read", "none", "--write", "none", "--plugin-root", str(plugin), home=tmp_path)
+    assert result.returncode != 0
+    assert "expected <scope>" in result.stderr
+
+
 def test_by_threat_requires_read_write(tmp_path: Path) -> None:
     plugin = _mock_plugin_with_threats(tmp_path, {"nerf-t": ("none", "none")})
-    result = _run(_BY_THREAT, "--plugin-root", str(plugin), home=tmp_path)
+    # Scope provided, but --read/--write still required.
+    result = _run(_BY_THREAT, "user", "--plugin-root", str(plugin), home=tmp_path)
     assert result.returncode != 0
     assert "--read is required" in result.stderr
 
 
 def test_by_threat_invalid_level(tmp_path: Path) -> None:
     plugin = _mock_plugin_with_threats(tmp_path, {"nerf-t": ("none", "none")})
-    result = _run(_BY_THREAT, "--read", "galaxy", "--write", "none", "--plugin-root", str(plugin), home=tmp_path)
+    result = _run(
+        _BY_THREAT,
+        "user",
+        "--read", "galaxy",
+        "--write", "none",
+        "--plugin-root", str(plugin),
+        home=tmp_path,
+    )
     assert result.returncode != 0
     assert "invalid read level" in result.stderr
 
@@ -409,6 +445,7 @@ def test_by_threat_annotations(tmp_path: Path) -> None:
     _user_settings(tmp_path, {"permissions": {"allow": [f"Bash({script_path})"], "deny": []}})
     result = _run(
         _BY_THREAT,
+        "user",
         "--read", "workspace", "--write", "workspace",
         "--plugin-root", str(plugin),
         home=tmp_path,
@@ -457,11 +494,13 @@ def _stale_entry(tmp_path: Path, version: str, tool: str = "nerf-test-tool") -> 
     return f"Bash({path}:*)"
 
 
-def _invoke_for(script: Path, plugin_root: Path, *extra: str) -> list[str]:
+def _invoke_for(script: Path, plugin_root: Path, scope: str, *extra: str) -> list[str]:
     """Build the right CLI args for each write script's normal happy-path
-    invocation (so we can exercise the scan in context)."""
+    invocation (so we can exercise the scan in context). Scope is the first
+    positional arg for all four write scripts."""
     if script == _BY_THREAT:
         return [
+            scope,
             "--read",
             "remote",
             "--write",
@@ -470,23 +509,71 @@ def _invoke_for(script: Path, plugin_root: Path, *extra: str) -> list[str]:
             str(plugin_root),
             *extra,
         ]
-    return ["nerf-test-tool", "--plugin-root", str(plugin_root), *extra]
+    return [scope, "nerf-test-tool", "--plugin-root", str(plugin_root), *extra]
 
 
 # -- create-scope-dir ---------------------------------------------------------
 
 
-@pytest.mark.parametrize("script", [_GRANT, _DENY, _RESET, _BY_THREAT])
+@pytest.mark.parametrize("script", [_GRANT, _DENY, _BY_THREAT])
 def test_local_scope_errors_when_claude_missing_without_flag(
     tmp_path: Path, script: Path
 ) -> None:
+    """grant-allow / grant-deny / grant-by-threat all write to the target
+    scope's settings file, so they require .claude/ for project/local
+    scopes. grant-reset is excluded -- it never creates target files and
+    treats a missing settings file as "nothing to reset" (see
+    test_reset_without_claude_dir_succeeds)."""
     plugin = _versioned_plugin(tmp_path, "2.0.0")
     # No .claude/ pre-created
-    result = _run(script, *_invoke_for(script, plugin, "--scope", "local"), cwd=tmp_path)
+    result = _run(script, *_invoke_for(script, plugin, "local"), cwd=tmp_path)
     assert result.returncode != 0
     assert ".claude/ not found" in result.stderr
     assert "--create-scope-dir" in result.stderr
     assert not (tmp_path / ".claude").exists()
+
+
+def test_reset_without_claude_dir_succeeds(tmp_path: Path) -> None:
+    """grant-reset never creates target files, so it doesn't require
+    .claude/ in cwd for project/local scopes. This unblocks the
+    --reset-other-scopes use case where the operator wants to wipe a
+    tool's entries everywhere from any cwd."""
+    plugin = _versioned_plugin(tmp_path, "2.0.0")
+    # No .claude/ pre-created
+    result = _run(_RESET, *_invoke_for(_RESET, plugin, "local"), cwd=tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert "no settings file" in result.stdout
+    # The directory wasn't created either (--create-scope-dir not passed).
+    assert not (tmp_path / ".claude").exists()
+
+
+def test_reset_other_scopes_works_without_claude_dir(tmp_path: Path) -> None:
+    """The motivating case for the previous test: even without .claude/
+    in cwd, --reset-other-scopes can still clean entries from the user
+    scope when invoking grant-reset for a project/local target."""
+    home_dir, work_dir = _split_dirs(tmp_path)
+    plugin = _mock_plugin(tmp_path, ["nerf-test-tool"])
+    script_path = str(plugin / "skills" / "nerf-test" / "scripts" / "nerf-test-tool")
+    entry = f"Bash({script_path}:*)"
+    # Seed user scope with the entry; work_dir has no .claude/.
+    _user_settings(home_dir, {"permissions": {"allow": [entry], "deny": []}})
+
+    result = _run(
+        _RESET,
+        "project",
+        "nerf-test-tool",
+        "--plugin-root",
+        str(plugin),
+        "--reset-other-scopes",
+        home=home_dir,
+        cwd=work_dir,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "Reset from user (allow):" in result.stdout
+    # user scope cleaned
+    assert entry not in _read(home_dir / ".claude" / "settings.json")["permissions"].get("allow", [])
+    # work_dir's .claude/ was NOT created
+    assert not (work_dir / ".claude").exists()
 
 
 @pytest.mark.parametrize("script", [_GRANT, _DENY, _RESET, _BY_THREAT])
@@ -500,7 +587,7 @@ def test_local_scope_errors_when_claude_is_not_a_directory(
     (tmp_path / ".claude").write_text("oops, this is a file")
     result = _run(
         script,
-        *_invoke_for(script, plugin, "--scope", "local", "--create-scope-dir"),
+        *_invoke_for(script, plugin, "local", "--create-scope-dir"),
         cwd=tmp_path,
     )
     assert result.returncode != 0
@@ -514,7 +601,7 @@ def test_create_scope_dir_creates_missing_claude(tmp_path: Path, script: Path) -
     plugin = _versioned_plugin(tmp_path, "2.0.0")
     result = _run(
         script,
-        *_invoke_for(script, plugin, "--scope", "local", "--create-scope-dir"),
+        *_invoke_for(script, plugin, "local", "--create-scope-dir"),
         cwd=tmp_path,
     )
     assert result.returncode == 0, result.stderr
@@ -556,7 +643,7 @@ def test_prune_older_errors_clearly_when_no_version_sort_available(tmp_path: Pat
 
     result = _run(
         _GRANT,
-        *_invoke_for(_GRANT, plugin, "--prune-older"),
+        *_invoke_for(_GRANT, plugin, "user", "--prune-older"),
         home=tmp_path,
         env_extra={"PATH": str(fake_bin)},
     )
@@ -592,7 +679,7 @@ def test_no_version_sort_without_prune_flag_warns_and_proceeds(tmp_path: Path) -
 
     result = _run(
         _GRANT,
-        *_invoke_for(_GRANT, plugin),  # no --prune-older
+        *_invoke_for(_GRANT, plugin, "user"),  # no --prune-older
         home=tmp_path,
         env_extra={"PATH": str(fake_bin)},
     )
@@ -615,7 +702,7 @@ def test_warns_on_older_without_prune_flag(tmp_path: Path, script: Path) -> None
     stale_1_9 = _stale_entry(tmp_path, "1.9.0-rc.1")
     _user_settings(tmp_path, {"permissions": {"allow": [stale_1_5, stale_1_9], "deny": []}})
 
-    result = _run(script, *_invoke_for(script, plugin), home=tmp_path)
+    result = _run(script, *_invoke_for(script, plugin, "user"), home=tmp_path)
     assert result.returncode == 0, result.stderr
     # Warning printed, count is right
     assert "2 permission entries reference older versions" in result.stderr
@@ -633,7 +720,7 @@ def test_prune_older_removes_stale_entries(tmp_path: Path, script: Path) -> None
     stale_1_9 = _stale_entry(tmp_path, "1.9.0-rc.1")
     _user_settings(tmp_path, {"permissions": {"allow": [stale_1_5], "deny": [stale_1_9]}})
 
-    result = _run(script, *_invoke_for(script, plugin, "--prune-older"), home=tmp_path)
+    result = _run(script, *_invoke_for(script, plugin, "user", "--prune-older"), home=tmp_path)
     assert result.returncode == 0, result.stderr
     assert "Pruned 2 stale entries from older plugin versions" in result.stdout
     data = _read(tmp_path / ".claude" / "settings.json")
@@ -648,7 +735,7 @@ def test_errors_on_newer_versions_without_modifying(tmp_path: Path, script: Path
     initial = {"permissions": {"allow": [newer], "deny": []}}
     _user_settings(tmp_path, initial)
 
-    result = _run(script, *_invoke_for(script, plugin, "--prune-older"), home=tmp_path)
+    result = _run(script, *_invoke_for(script, plugin, "user", "--prune-older"), home=tmp_path)
     assert result.returncode != 0
     assert "newer version" in result.stderr
     # Settings untouched
@@ -669,6 +756,7 @@ def test_prune_older_full_sweep_regardless_of_pattern(tmp_path: Path, script: Pa
     # Grant just one tool, but prune everything stale
     result = _run(
         script,
+        "user",
         "nerf-test-a",
         "--plugin-root",
         str(plugin),
@@ -688,11 +776,174 @@ def test_scan_ignores_entries_outside_plugin_prefix(tmp_path: Path) -> None:
     unrelated = "Bash(/some/other/plugin/scripts/whatever:*)"
     _user_settings(tmp_path, {"permissions": {"allow": [unrelated], "deny": []}})
 
-    result = _run(_GRANT, *_invoke_for(_GRANT, plugin, "--prune-older"), home=tmp_path)
+    result = _run(_GRANT, *_invoke_for(_GRANT, plugin, "user", "--prune-older"), home=tmp_path)
     assert result.returncode == 0, result.stderr
     # Unrelated entry untouched
     data = _read(tmp_path / ".claude" / "settings.json")
     assert unrelated in data["permissions"]["allow"]
+
+
+# -- --reset-other-scopes -----------------------------------------------------
+
+
+def _local_settings(tmp_path: Path, content: dict | None = None) -> Path:
+    """Write a local-scope settings file (under cwd's .claude/) in tmp_path."""
+    claude_dir = tmp_path / ".claude"
+    claude_dir.mkdir(parents=True, exist_ok=True)
+    f = claude_dir / "settings.local.json"
+    f.write_text(json.dumps(content or {}))
+    return f
+
+
+def _project_settings(tmp_path: Path, content: dict | None = None) -> Path:
+    """Write a project-scope (committed) settings file."""
+    claude_dir = tmp_path / ".claude"
+    claude_dir.mkdir(parents=True, exist_ok=True)
+    f = claude_dir / "settings.json"
+    f.write_text(json.dumps(content or {}))
+    return f
+
+
+def _split_dirs(tmp_path: Path) -> tuple[Path, Path]:
+    """Set up separate home/cwd subdirs so user and project scope settings
+    don't share a file path (they would if home == cwd == tmp_path)."""
+    home_dir = tmp_path / "home"
+    work_dir = tmp_path / "work"
+    home_dir.mkdir()
+    work_dir.mkdir()
+    return home_dir, work_dir
+
+
+def test_reset_other_scopes_warns_without_flag(tmp_path: Path) -> None:
+    """Default behavior: scan other scopes, warn about conflicts, proceed
+    with the main op without touching them."""
+    plugin = _mock_plugin(tmp_path, ["nerf-test-tool"])
+    script_path = str(plugin / "skills" / "nerf-test" / "scripts" / "nerf-test-tool")
+    entry = f"Bash({script_path}:*)"
+    # User scope denies the tool; we're about to allow it at local. With
+    # home == cwd == tmp_path, user and local files live at different paths
+    # under the same .claude/ dir, so they don't clash.
+    _user_settings(tmp_path, {"permissions": {"allow": [], "deny": [entry]}})
+
+    result = _run(
+        _GRANT, "local", "nerf-test-tool", "--plugin-root", str(plugin), home=tmp_path
+    )
+    assert result.returncode == 0, result.stderr
+    assert "entry exists in 'user' scope (deny)" in result.stderr
+    assert "--reset-other-scopes" in result.stderr
+    # User scope is untouched -- deny still present.
+    data = _read(tmp_path / ".claude" / "settings.json")
+    assert entry in data["permissions"]["deny"]
+    # Local scope has the new allow entry.
+    local = _read(tmp_path / ".claude" / "settings.local.json")
+    assert entry in local["permissions"]["allow"]
+
+
+def test_reset_other_scopes_removes_conflicts(tmp_path: Path) -> None:
+    """With --reset-other-scopes: entries in other scopes get removed and
+    each removal is printed."""
+    home_dir, work_dir = _split_dirs(tmp_path)
+    plugin = _mock_plugin(tmp_path, ["nerf-test-tool"])
+    script_path = str(plugin / "skills" / "nerf-test" / "scripts" / "nerf-test-tool")
+    entry = f"Bash({script_path}:*)"
+    # User scope (under home) denies the tool; project scope (under cwd)
+    # allows it. We're about to set the final state at local with
+    # --reset-other-scopes. home != cwd so the two .json files don't collide.
+    _user_settings(home_dir, {"permissions": {"allow": [], "deny": [entry]}})
+    _project_settings(work_dir, {"permissions": {"allow": [entry], "deny": []}})
+
+    result = _run(
+        _GRANT,
+        "local",
+        "nerf-test-tool",
+        "--plugin-root",
+        str(plugin),
+        "--reset-other-scopes",
+        home=home_dir,
+        cwd=work_dir,
+    )
+    assert result.returncode == 0, result.stderr
+    # Both reset lines printed
+    assert "Reset from user (deny):" in result.stdout
+    assert "Reset from project (allow):" in result.stdout
+    # User and project both cleaned out
+    user_data = _read(home_dir / ".claude" / "settings.json")
+    assert entry not in user_data["permissions"]["deny"]
+    project_data = _read(work_dir / ".claude" / "settings.json")
+    assert entry not in project_data["permissions"].get("allow", [])
+    # Local has the new entry
+    local_data = _read(work_dir / ".claude" / "settings.local.json")
+    assert entry in local_data["permissions"]["allow"]
+
+
+def test_reset_other_scopes_noop_when_no_other_entries(tmp_path: Path) -> None:
+    """No conflicts in other scopes -> no warning, no reset lines."""
+    plugin = _mock_plugin(tmp_path, ["nerf-test-tool"])
+    _user_settings(tmp_path, {"permissions": {"allow": [], "deny": []}})
+    result = _run(
+        _GRANT,
+        "user",
+        "nerf-test-tool",
+        "--plugin-root",
+        str(plugin),
+        "--reset-other-scopes",
+        home=tmp_path,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "Reset from" not in result.stdout
+    assert "entry exists in" not in result.stderr
+
+
+def test_reset_other_scopes_skips_missing_claude_dir(tmp_path: Path) -> None:
+    """When scope=user and there's no .claude/ in cwd, the project/local
+    scope scans should silently skip rather than error."""
+    plugin = _mock_plugin(tmp_path, ["nerf-test-tool"])
+    _user_settings(tmp_path, {"permissions": {"allow": [], "deny": []}})
+    # tmp_path has .claude/ (the user-scope dir), but cwd doesn't.
+    # Run from a sibling dir that has no .claude/.
+    other_dir = tmp_path / "other"
+    other_dir.mkdir()
+    result = _run(
+        _GRANT,
+        "user",
+        "nerf-test-tool",
+        "--plugin-root",
+        str(plugin),
+        "--reset-other-scopes",
+        home=tmp_path,
+        cwd=other_dir,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_reset_other_scopes_in_grant_reset_cleans_everywhere(tmp_path: Path) -> None:
+    """grant-reset with --reset-other-scopes should wipe the tool from
+    all three scopes."""
+    home_dir, work_dir = _split_dirs(tmp_path)
+    plugin = _mock_plugin(tmp_path, ["nerf-test-tool"])
+    script_path = str(plugin / "skills" / "nerf-test" / "scripts" / "nerf-test-tool")
+    entry = f"Bash({script_path}:*)"
+    _user_settings(home_dir, {"permissions": {"allow": [entry], "deny": []}})
+    _project_settings(work_dir, {"permissions": {"allow": [], "deny": [entry]}})
+    _local_settings(work_dir, {"permissions": {"allow": [entry], "deny": []}})
+
+    result = _run(
+        _RESET,
+        "local",
+        "nerf-test-tool",
+        "--plugin-root",
+        str(plugin),
+        "--reset-other-scopes",
+        home=home_dir,
+        cwd=work_dir,
+    )
+    assert result.returncode == 0, result.stderr
+    # User cleaned
+    assert entry not in _read(home_dir / ".claude" / "settings.json")["permissions"].get("allow", [])
+    # Project cleaned
+    assert entry not in _read(work_dir / ".claude" / "settings.json")["permissions"].get("deny", [])
+    # Local also cleaned (the main op)
+    assert entry not in _read(work_dir / ".claude" / "settings.local.json")["permissions"].get("allow", [])
 
 
 def test_scan_handles_non_bash_permission_entries(tmp_path: Path) -> None:
@@ -714,7 +965,7 @@ def test_scan_handles_non_bash_permission_entries(tmp_path: Path) -> None:
             }
         },
     )
-    result = _run(_GRANT, *_invoke_for(_GRANT, plugin, "--prune-older"), home=tmp_path)
+    result = _run(_GRANT, *_invoke_for(_GRANT, plugin, "user", "--prune-older"), home=tmp_path)
     assert result.returncode == 0, result.stderr
     assert "Pruned 1 stale entry" in result.stdout
     data = _read(tmp_path / ".claude" / "settings.json")

@@ -90,6 +90,12 @@ tool to a set of operations with a roughly-equivalent threat profile (as express
 threat model) so that permissions can be broadly granted (e.g. in tools like Claude Code) with
 confidence that the agent can't perform operations outside the declared threat profile.
 
+## Prerequisites
+
+The generated wrapper scripts and the `nerfctl-grant-*` tools require **bash 4+**. Modern Linux
+distros all satisfy this by default. On macOS, the default `/bin/bash` is 3.2; install a newer one
+via `brew install bash`.
+
 ## Quick start
 
 ```bash

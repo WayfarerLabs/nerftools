@@ -1,7 +1,7 @@
 ---
 name: nerfctl-grant-list
 description: List nerf tool permissions across all scopes
-argument-hint: [--scope user|local]
+argument-hint: [--scope user|project|local]
 disable-model-invocation: true
 allowed-tools: Bash
 ---

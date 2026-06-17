@@ -10,27 +10,30 @@ fi
 
 set -euo pipefail
 
+# Shared helpers (must come after set -euo and the bash version check).
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=_lib.sh
+source "${_SCRIPT_DIR}/_lib.sh"
+
 SCOPE=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: nerfctl-grant-list [--scope user|local]
+Usage: nerfctl-grant-list [--scope user|project|local]
 
-  --scope user|local  Show only this scope (default: show all scopes)
+  --scope user|project|local  Show only this scope (default: show all scopes)
 
 Lists all nerf-related entries from permissions.allow and permissions.deny.
 Shows all scopes unless a specific scope is requested.
 
+Scopes:
+  user     ~/.claude/settings.json
+  project  .claude/settings.json        (committed)
+  local    .claude/settings.local.json  (gitignored)
+
 Requires jq.
 EOF
   exit 1
-}
-
-_require_jq() {
-  if ! command -v jq > /dev/null 2>&1; then
-    echo "error: jq is required but not installed" >&2
-    exit 1
-  fi
 }
 
 while [[ $# -gt 0 ]]; do
@@ -41,6 +44,11 @@ while [[ $# -gt 0 ]]; do
     *) echo "error: unexpected argument: $1" >&2; usage ;;
   esac
 done
+
+case "${SCOPE:-}" in
+  ""|user|project|local) ;;
+  *) echo "error: --scope must be 'user', 'project', or 'local' (got '$SCOPE')" >&2; exit 1 ;;
+esac
 
 _require_jq
 
@@ -85,24 +93,28 @@ _list_scope() {
 
 FOUND=0
 
-if [[ -z "$SCOPE" || "$SCOPE" == "user" ]]; then
-  BEFORE=$FOUND
-  output=$(_list_scope "user" "$HOME/.claude/settings.json")
+_show_scope() {
+  local scope="$1"
+  local path
+  path=$(_scope_path "$scope") || return
+  # project/local both live under .claude/ in cwd; if .claude/ isn't here,
+  # those scopes can't have anything to list.
+  if [[ "$scope" != "user" && ! -d ".claude" ]]; then
+    return
+  fi
+  local output
+  output=$(_list_scope "$scope" "$path")
   if [[ -n "$output" ]]; then
     echo "$output"
     FOUND=1
   fi
-fi
+}
 
-if [[ -z "$SCOPE" || "$SCOPE" == "local" ]]; then
-  if [[ -d ".claude" ]]; then
-    output=$(_list_scope "local" ".claude/settings.local.json")
-    if [[ -n "$output" ]]; then
-      echo "$output"
-      FOUND=1
-    fi
+for s in user project local; do
+  if [[ -z "$SCOPE" || "$SCOPE" == "$s" ]]; then
+    _show_scope "$s"
   fi
-fi
+done
 
 if [[ "$FOUND" -eq 0 ]]; then
   if [[ -n "$SCOPE" ]]; then
