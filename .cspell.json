@@ -8,6 +8,7 @@
     "coreutils",
     "dataclass",
     "dataclasses",
+    "distros",
     "errexit",
     "esac",
     "execdir",
