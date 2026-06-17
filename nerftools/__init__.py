@@ -17,9 +17,15 @@ NERFCTL_SCRIPTS: dict[str, Path] = {
     "nerfctl-grant-list": _NERFCTL_DIR / "grant-list.sh",
 }
 
+# Shared library files sourced by the scripts at runtime. Deployed alongside
+# the scripts; not invokable on their own (no shebang, no command name).
+NERFCTL_LIBS: dict[str, Path] = {
+    "_lib.sh": _NERFCTL_DIR / "_lib.sh",
+}
+
 
 def install_nerfctl(output: Path) -> list[Path]:
-    """Copy nerfctl scripts into *output*. Returns paths written."""
+    """Copy nerfctl scripts and their shared libs into *output*. Returns paths written."""
     output.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
     for name, src in NERFCTL_SCRIPTS.items():
@@ -31,5 +37,14 @@ def install_nerfctl(output: Path) -> list[Path]:
         # write as raw UTF-8 bytes to guarantee Unix line endings.
         dest.write_bytes(src.read_text(encoding="utf-8").encode("utf-8"))
         dest.chmod(0o755)
+        written.append(dest)
+    for name, src in NERFCTL_LIBS.items():
+        if not src.exists():
+            msg = f"nerfctl lib not found: {src}"
+            raise FileNotFoundError(msg)
+        dest = output / name
+        dest.write_bytes(src.read_text(encoding="utf-8").encode("utf-8"))
+        # Libs are sourced, not executed -- 0644 is the right mode.
+        dest.chmod(0o644)
         written.append(dest)
     return written

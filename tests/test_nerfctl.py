@@ -515,10 +515,15 @@ def _invoke_for(script: Path, plugin_root: Path, scope: str, *extra: str) -> lis
 # -- create-scope-dir ---------------------------------------------------------
 
 
-@pytest.mark.parametrize("script", [_GRANT, _DENY, _RESET, _BY_THREAT])
+@pytest.mark.parametrize("script", [_GRANT, _DENY, _BY_THREAT])
 def test_local_scope_errors_when_claude_missing_without_flag(
     tmp_path: Path, script: Path
 ) -> None:
+    """grant-allow / grant-deny / grant-by-threat all write to the target
+    scope's settings file, so they require .claude/ for project/local
+    scopes. grant-reset is excluded -- it never creates target files and
+    treats a missing settings file as "nothing to reset" (see
+    test_reset_without_claude_dir_succeeds)."""
     plugin = _versioned_plugin(tmp_path, "2.0.0")
     # No .claude/ pre-created
     result = _run(script, *_invoke_for(script, plugin, "local"), cwd=tmp_path)
@@ -526,6 +531,49 @@ def test_local_scope_errors_when_claude_missing_without_flag(
     assert ".claude/ not found" in result.stderr
     assert "--create-scope-dir" in result.stderr
     assert not (tmp_path / ".claude").exists()
+
+
+def test_reset_without_claude_dir_succeeds(tmp_path: Path) -> None:
+    """grant-reset never creates target files, so it doesn't require
+    .claude/ in cwd for project/local scopes. This unblocks the
+    --reset-other-scopes use case where the operator wants to wipe a
+    tool's entries everywhere from any cwd."""
+    plugin = _versioned_plugin(tmp_path, "2.0.0")
+    # No .claude/ pre-created
+    result = _run(_RESET, *_invoke_for(_RESET, plugin, "local"), cwd=tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert "no settings file" in result.stdout
+    # The directory wasn't created either (--create-scope-dir not passed).
+    assert not (tmp_path / ".claude").exists()
+
+
+def test_reset_other_scopes_works_without_claude_dir(tmp_path: Path) -> None:
+    """The motivating case for the previous test: even without .claude/
+    in cwd, --reset-other-scopes can still clean entries from the user
+    scope when invoking grant-reset for a project/local target."""
+    home_dir, work_dir = _split_dirs(tmp_path)
+    plugin = _mock_plugin(tmp_path, ["nerf-test-tool"])
+    script_path = str(plugin / "skills" / "nerf-test" / "scripts" / "nerf-test-tool")
+    entry = f"Bash({script_path}:*)"
+    # Seed user scope with the entry; work_dir has no .claude/.
+    _user_settings(home_dir, {"permissions": {"allow": [entry], "deny": []}})
+
+    result = _run(
+        _RESET,
+        "project",
+        "nerf-test-tool",
+        "--plugin-root",
+        str(plugin),
+        "--reset-other-scopes",
+        home=home_dir,
+        cwd=work_dir,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "Reset from user (allow):" in result.stdout
+    # user scope cleaned
+    assert entry not in _read(home_dir / ".claude" / "settings.json")["permissions"].get("allow", [])
+    # work_dir's .claude/ was NOT created
+    assert not (work_dir / ".claude").exists()
 
 
 @pytest.mark.parametrize("script", [_GRANT, _DENY, _RESET, _BY_THREAT])
