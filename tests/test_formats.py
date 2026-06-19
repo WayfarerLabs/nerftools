@@ -15,6 +15,7 @@ from nerftools.manifest import (
     OptionSpec,
     PackageMeta,
     PassthroughSpec,
+    PathTest,
     TemplateSpec,
     ThreatLevel,
     ThreatSpec,
@@ -1022,6 +1023,295 @@ def test_hook_bypass_whitespace_only_reason_falls_through(tmp_path: Path) -> Non
     )
     reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
     assert "`nerf-git`" in reason
+
+
+# -- stdutils sed/awk line-range bash hints ----------------------------------
+#
+# The stdutils package's two bash_hints redirect agents from `sed -n 'N,Mp'`
+# and `awk 'NR>=N && NR<=M'` idioms to nerf-print-range. These tests pin the
+# regexes shipped in nerftools/default_manifests/stdutils.yaml.
+
+_SED_RANGE_HINT = r"\bsed +-n +['\"]?[0-9$,]+p\b"
+_AWK_NR_HINT = r"\bawk\b.*\bNR\b *[<>=]+ *[0-9]"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "sed -n '1,2p' /etc/passwd",
+        "sed -n '100,200p' file.txt",
+        "sed -n 5p file",
+        "sed -n '$p' file",
+        "sed -n '1,$p' file",
+        "sed  -n  '50,100p'  file",  # extra whitespace
+        "cat /etc/passwd | sed -n '1,5p'",  # piped from another command
+    ],
+)
+def test_sed_line_range_hint_matches(tmp_path: Path, command: str) -> None:
+    m = _manifest_with_hints(skill_group="stdutils", hints=(_SED_RANGE_HINT,))
+    _build([m], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-pre-tool-use"
+    stdout, _ = _run_hook(
+        script, {"tool_name": "Bash", "tool_input": {"command": command}}
+    )
+    assert stdout, f"expected hint redirect, got empty output for: {command}"
+    reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "`nerf-stdutils`" in reason
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "sed -n '/foo/p' file",  # regex-address print, not line-range
+        "sed 's/x/y/g' file",  # substitution, no -n
+        "sed -i 's/x/y/g' file",  # in-place edit
+        "sed -e '1d' file",  # delete, not print
+        "grep -n pattern file",  # unrelated tool
+        "cat file",  # unrelated
+        "command with sed in a comment",  # no -n
+    ],
+)
+def test_sed_line_range_hint_no_false_positive(tmp_path: Path, command: str) -> None:
+    m = _manifest_with_hints(skill_group="stdutils", hints=(_SED_RANGE_HINT,))
+    _build([m], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-pre-tool-use"
+    stdout, _ = _run_hook(
+        script, {"tool_name": "Bash", "tool_input": {"command": command}}
+    )
+    assert stdout == "", f"unexpected hint redirect for: {command}"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "awk 'NR>=1 && NR<=10' file",
+        "awk 'NR==42' file",
+        "awk 'NR <= 100' /var/log/syslog",
+        "awk 'NR > 50 && NR < 100' file",
+        "awk -F: 'NR == 1' /etc/passwd",
+        "cat file | awk 'NR>=10'",  # piped
+    ],
+)
+def test_awk_nr_hint_matches(tmp_path: Path, command: str) -> None:
+    m = _manifest_with_hints(skill_group="stdutils", hints=(_AWK_NR_HINT,))
+    _build([m], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-pre-tool-use"
+    stdout, _ = _run_hook(
+        script, {"tool_name": "Bash", "tool_input": {"command": command}}
+    )
+    assert stdout, f"expected hint redirect, got empty output for: {command}"
+    reason = json.loads(stdout)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "`nerf-stdutils`" in reason
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "awk '{print $1}' file",  # column extraction, no NR
+        "awk -F: '{print $1}' /etc/passwd",  # column extraction with field separator
+        "awk 'BEGIN { print \"hi\" }'",  # BEGIN block, no NR comparison
+        "awk '/regex/' file",  # regex pattern, no NR
+        "grep -n pattern file",  # unrelated tool
+        "echo NR",  # NR literal in unrelated command
+    ],
+)
+def test_awk_nr_hint_no_false_positive(tmp_path: Path, command: str) -> None:
+    m = _manifest_with_hints(skill_group="stdutils", hints=(_AWK_NR_HINT,))
+    _build([m], tmp_path, prefix="nerf-")
+    script = tmp_path / "hooks" / "nerf-pre-tool-use"
+    stdout, _ = _run_hook(
+        script, {"tool_name": "Bash", "tool_input": {"command": command}}
+    )
+    assert stdout == "", f"unexpected hint redirect for: {command}"
+
+
+# -- print-range tool integration --------------------------------------------
+
+
+def _print_range_tool() -> ToolSpec:
+    """Reconstruct the print-range ToolSpec to match stdutils.yaml. The
+    integration tests build a small synthetic plugin with this and
+    subprocess the rendered script."""
+    return ToolSpec(
+        description="Print a line range from a file or stdin.",
+        threat=ThreatSpec(read=ThreatLevel.MACHINE, write=ThreatLevel.NONE),
+        template=TemplateSpec(
+            command=(
+                "awk",
+                "NR>={{arguments.start}} && NR<={{arguments.end}}",
+                "{{arguments.file}}",
+            ),
+        ),
+        requires=("awk",),
+        arguments={
+            "start": ArgSpec(description="First line", required=True, pattern="^[1-9][0-9]*$"),
+            "end": ArgSpec(description="Last line", required=True, pattern="^[1-9][0-9]*$"),
+            "file": ArgSpec(description="File to read", required=False),
+        },
+    )
+
+
+def test_print_range_reads_from_file(tmp_path: Path) -> None:
+    """File mode: passes the file as a positional to awk."""
+    import subprocess
+
+    # Sample file lives outside the build dir so _build's outdir guard
+    # doesn't refuse to write into a non-empty tmp_path.
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    sample = data_dir / "sample.txt"
+    sample.write_text("\n".join(f"line{i}" for i in range(1, 11)) + "\n")
+
+    build_dir = tmp_path / "plugin"
+    tools = {"print-range": _print_range_tool()}
+    _build([_manifest(skill_group="stdutils", tools=tools)], build_dir, prefix="nerf-")
+    script = build_dir / "skills" / "nerf-stdutils" / "scripts" / "nerf-print-range"
+    result = subprocess.run(
+        [str(script), "3", "5", str(sample)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == "line3\nline4\nline5\n"
+
+
+def test_print_range_reads_from_stdin(tmp_path: Path) -> None:
+    """Stdin mode: omit the file arg, pipe content in. The _FILE_SET-gated
+    expansion `${_FILE_SET:+"$FILE"}` drops the empty arg so awk reads stdin."""
+    import subprocess
+
+    tools = {"print-range": _print_range_tool()}
+    _build([_manifest(skill_group="stdutils", tools=tools)], tmp_path, prefix="nerf-")
+    script = tmp_path / "skills" / "nerf-stdutils" / "scripts" / "nerf-print-range"
+    result = subprocess.run(
+        [str(script), "2", "3"],
+        input="a\nb\nc\nd\ne\n",
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == "b\nc\n"
+
+
+def test_print_range_rejects_non_positive_start(tmp_path: Path) -> None:
+    """The ^[1-9][0-9]*$ pattern rejects 0 and other non-positive-int inputs.
+    (Negative inputs like -1 are caught earlier by the dash-prefix guard.)"""
+    import subprocess
+
+    tools = {"print-range": _print_range_tool()}
+    _build([_manifest(skill_group="stdutils", tools=tools)], tmp_path, prefix="nerf-")
+    script = tmp_path / "skills" / "nerf-stdutils" / "scripts" / "nerf-print-range"
+    for bad_start in ("0", "1.5", "abc", "1;echo"):
+        result = subprocess.run(
+            [str(script), bad_start, "5"],
+            input="",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode != 0, f"expected rejection of start={bad_start!r}"
+        assert "does not match required pattern" in result.stderr
+
+
+def _print_range_cwd_tool() -> ToolSpec:
+    """print-range-cwd: file required, under_cwd path_test, workspace threat."""
+    return ToolSpec(
+        description="Print a line range from a workspace file.",
+        threat=ThreatSpec(read=ThreatLevel.WORKSPACE, write=ThreatLevel.NONE),
+        template=TemplateSpec(
+            command=(
+                "awk",
+                "NR>={{arguments.start}} && NR<={{arguments.end}}",
+                "{{arguments.file}}",
+            ),
+        ),
+        requires=("awk",),
+        arguments={
+            "start": ArgSpec(description="First line", required=True, pattern="^[1-9][0-9]*$"),
+            "end": ArgSpec(description="Last line", required=True, pattern="^[1-9][0-9]*$"),
+            "file": ArgSpec(
+                description="File to read",
+                required=True,
+                path_tests=(PathTest.UNDER_CWD,),
+            ),
+        },
+    )
+
+
+def test_print_range_cwd_reads_workspace_file(tmp_path: Path) -> None:
+    """File under cwd works."""
+    import subprocess
+
+    build_dir = tmp_path / "plugin"
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    sample = work_dir / "sample.txt"
+    sample.write_text("\n".join(f"line{i}" for i in range(1, 11)) + "\n")
+
+    tools = {"print-range-cwd": _print_range_cwd_tool()}
+    _build([_manifest(skill_group="stdutils", tools=tools)], build_dir, prefix="nerf-")
+    script = build_dir / "skills" / "nerf-stdutils" / "scripts" / "nerf-print-range-cwd"
+    # Run from work_dir so the file is under cwd.
+    result = subprocess.run(
+        [str(script), "3", "5", "sample.txt"],
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=work_dir,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == "line3\nline4\nline5\n"
+
+
+def test_print_range_cwd_rejects_outside_cwd(tmp_path: Path) -> None:
+    """File outside cwd is rejected by the under_cwd path_test."""
+    import subprocess
+
+    build_dir = tmp_path / "plugin"
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    # Sample lives outside work_dir.
+    outside = tmp_path / "outside.txt"
+    outside.write_text("line1\nline2\n")
+
+    tools = {"print-range-cwd": _print_range_cwd_tool()}
+    _build([_manifest(skill_group="stdutils", tools=tools)], build_dir, prefix="nerf-")
+    script = build_dir / "skills" / "nerf-stdutils" / "scripts" / "nerf-print-range-cwd"
+    result = subprocess.run(
+        [str(script), "1", "2", str(outside)],
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=work_dir,
+    )
+    assert result.returncode != 0
+    # Path-check error mentions the path or "not under" / "under cwd".
+    assert "cwd" in result.stderr.lower() or "outside" in result.stderr.lower()
+
+
+def test_print_range_cwd_requires_file(tmp_path: Path) -> None:
+    """Unlike print-range, file is required -- omitting it errors."""
+    import subprocess
+
+    build_dir = tmp_path / "plugin"
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+
+    tools = {"print-range-cwd": _print_range_cwd_tool()}
+    _build([_manifest(skill_group="stdutils", tools=tools)], build_dir, prefix="nerf-")
+    script = build_dir / "skills" / "nerf-stdutils" / "scripts" / "nerf-print-range-cwd"
+    result = subprocess.run(
+        [str(script), "1", "5"],
+        input="ignored\n",
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=work_dir,
+    )
+    assert result.returncode != 0
+    assert "file" in result.stderr.lower()
 
 
 # -- PreToolUse current-version check ---------------------------------------

@@ -8,7 +8,27 @@ package:
         These tools wrap standard Unix utilities with safety guardrails.
         Use find and find-cwd for file discovery without code execution
         capabilities. Use grep and grep-recursive-cwd for text search.
-        find-cwd and grep-recursive-cwd are pre-scoped to the current directory.
+        Use print-range to extract a numeric line range from a file or
+        stream. find-cwd, grep-recursive-cwd, and print-range-cwd are
+        pre-scoped to the current directory.
+
+        General-purpose sed and awk are intentionally NOT wrapped --
+        their full surface area (in-place edits, shell-out via the `e`
+        command, arbitrary file writes via `w`) makes them dangerous to
+        permission broadly. Only the line-range filtering idiom is
+        covered, via print-range. If you have a sed/awk need that
+        print-range and grep don't cover, file a `nerf-report` so a
+        tightly-scoped wrapper can be added.
+    bash_hints:
+        # sed -n with a line-address print: `sed -n '1,2p'`, `sed -n 5p`,
+        # `sed -n '$p'`. Requires the address to be entirely digits, commas,
+        # or `$` so that `/regex/p` and `s/foo/bar/` invocations don't fire.
+        - '\bsed +-n +[''"]?[0-9$,]+p\b'
+        # awk filtering on record number: `awk 'NR>=1 && NR<=10'`,
+        # `awk 'NR==42'`. The NR-followed-by-comparison-operator-followed-by-
+        # digit signature catches line-range filtering; column extraction
+        # and other awk uses don't match.
+        - '\bawk\b.*\bNR\b *[<>=]+ *[0-9]'
 
 tools:
     find:
@@ -160,3 +180,65 @@ tools:
                 description: Files or directories to search
                 required: true
                 variadic: true
+
+    print-range:
+        description: >-
+            Print a line range from a file or stdin. <start> and <end> are
+            1-indexed inclusive line numbers; both are required. With no
+            <file>, reads from stdin (so this works at the end of a
+            pipeline). For workspace-scoped reads, use print-range-cwd
+            instead. For "lines matching X" rather than a line range,
+            use grep.
+        threat:
+            # Mirrors grep: machine-readable paths via positional arg.
+            # Workspace-scoped reads have their own tool (print-range-cwd).
+            read: machine
+            write: none
+        requires: [awk]
+        template:
+            command:
+                - awk
+                - "NR>={{arguments.start}} && NR<={{arguments.end}}"
+                - "{{arguments.file}}"
+        arguments:
+            start:
+                description: First line number (1-indexed, inclusive)
+                required: true
+                pattern: "^[1-9][0-9]*$"
+            end:
+                description: Last line number (1-indexed, inclusive)
+                required: true
+                pattern: "^[1-9][0-9]*$"
+            file:
+                description: File to read (omit to read from stdin)
+                required: false
+
+    print-range-cwd:
+        description: >-
+            Print a line range from a workspace file. Like print-range, but
+            <file> is required and must resolve under the current directory
+            (workspace-scoped read). Use this when you specifically want to
+            read a file in the repo; use print-range for machine-scope reads
+            or for filtering a piped stream.
+        threat:
+            read: workspace
+            write: none
+        requires: [awk]
+        template:
+            command:
+                - awk
+                - "NR>={{arguments.start}} && NR<={{arguments.end}}"
+                - "{{arguments.file}}"
+        arguments:
+            start:
+                description: First line number (1-indexed, inclusive)
+                required: true
+                pattern: "^[1-9][0-9]*$"
+            end:
+                description: Last line number (1-indexed, inclusive)
+                required: true
+                pattern: "^[1-9][0-9]*$"
+            file:
+                description: File to read (must be under the current directory)
+                required: true
+                path_tests: [under_cwd]

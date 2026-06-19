@@ -11,7 +11,17 @@ These tools are available as scripts within this plugin. Call them using the abs
 These tools wrap standard Unix utilities with safety guardrails.
 Use find and find-cwd for file discovery without code execution
 capabilities. Use grep and grep-recursive-cwd for text search.
-find-cwd and grep-recursive-cwd are pre-scoped to the current directory.
+Use print-range to extract a numeric line range from a file or
+stream. find-cwd, grep-recursive-cwd, and print-range-cwd are
+pre-scoped to the current directory.
+
+General-purpose sed and awk are intentionally NOT wrapped --
+their full surface area (in-place edits, shell-out via the `e`
+command, arbitrary file writes via `w`) makes them dangerous to
+permission broadly. Only the line-range filtering idiom is
+covered, via print-range. If you have a sed/awk need that
+print-range and grep don't cover, file a `nerf-report` so a
+tightly-scoped wrapper can be added.
 
 ## nerf-find
 
@@ -86,6 +96,36 @@ Search for a pattern in files or directories. Supports recursive search via -r. 
 
 - `<pattern>` (required): Regular expression pattern to search for
 - `<paths...>` (required): Files or directories to search
+
+---
+
+## nerf-print-range
+
+Print a line range from a file or stdin. <start> and <end> are 1-indexed inclusive line numbers; both are required. With no <file>, reads from stdin (so this works at the end of a pipeline). For workspace-scoped reads, use print-range-cwd instead. For "lines matching X" rather than a line range, use grep.
+
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-stdutils/scripts/nerf-print-range <start> <end> [<file>]`
+**Maps to:** `awk NR>=<start> && NR<=<end> <file>`
+
+**Arguments:**
+
+- `<start>` (required): First line number (1-indexed, inclusive). must match `^[1-9][0-9]*$`
+- `<end>` (required): Last line number (1-indexed, inclusive). must match `^[1-9][0-9]*$`
+- `<file>` (optional): File to read (omit to read from stdin)
+
+---
+
+## nerf-print-range-cwd
+
+Print a line range from a workspace file. Like print-range, but <file> is required and must resolve under the current directory (workspace-scoped read). Use this when you specifically want to read a file in the repo; use print-range for machine-scope reads or for filtering a piped stream.
+
+**Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-stdutils/scripts/nerf-print-range-cwd <start> <end> <file>`
+**Maps to:** `awk NR>=<start> && NR<=<end> <file>`
+
+**Arguments:**
+
+- `<start>` (required): First line number (1-indexed, inclusive). must match `^[1-9][0-9]*$`
+- `<end>` (required): Last line number (1-indexed, inclusive). must match `^[1-9][0-9]*$`
+- `<file>` (required): File to read (must be under the current directory)
 
 ---
 
