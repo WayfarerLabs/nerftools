@@ -1031,8 +1031,8 @@ def test_hook_bypass_whitespace_only_reason_falls_through(tmp_path: Path) -> Non
 # and `awk 'NR>=N && NR<=M'` idioms to nerf-print-range. These tests pin the
 # regexes shipped in nerftools/default_manifests/stdutils.yaml.
 
-_SED_RANGE_HINT = r"\bsed +-n +['\"]?[0-9$,]+p\b"
-_AWK_NR_HINT = r"\bawk\b.*\bNR\b *[<>=]+ *[0-9]"
+_SED_RANGE_HINT = r"\bsed +(-n|--quiet) +['\"]?[0-9$,]+p\b"
+_AWK_NR_HINT = r"\bawk\b.*\bNR *[<>=!]+ *[0-9]"
 
 
 @pytest.mark.parametrize(
@@ -1045,6 +1045,8 @@ _AWK_NR_HINT = r"\bawk\b.*\bNR\b *[<>=]+ *[0-9]"
         "sed -n '1,$p' file",
         "sed  -n  '50,100p'  file",  # extra whitespace
         "cat /etc/passwd | sed -n '1,5p'",  # piped from another command
+        "sed --quiet '1,2p' file",  # long-form -n
+        "sed --quiet 5p file",
     ],
 )
 def test_sed_line_range_hint_matches(tmp_path: Path, command: str) -> None:
@@ -1090,6 +1092,9 @@ def test_sed_line_range_hint_no_false_positive(tmp_path: Path, command: str) -> 
         "awk 'NR > 50 && NR < 100' file",
         "awk -F: 'NR == 1' /etc/passwd",
         "cat file | awk 'NR>=10'",  # piped
+        "awk 'NR>5' file",  # single-char op, no spaces -- regression of #2
+        "awk 'NR<100' file",
+        "awk 'NR!=1' file",  # != operator
     ],
 )
 def test_awk_nr_hint_matches(tmp_path: Path, command: str) -> None:
@@ -1131,18 +1136,25 @@ def test_awk_nr_hint_no_false_positive(tmp_path: Path, command: str) -> None:
 def _print_range_tool() -> ToolSpec:
     """Reconstruct the print-range ToolSpec to match stdutils.yaml. The
     integration tests build a small synthetic plugin with this and
-    subprocess the rendered script."""
+    subprocess the rendered script.
+
+    sed (not awk) for the implementation: avoids awk's var=val
+    argv-parsing gotcha (filenames containing `=` work as expected),
+    and keeps the tool in template mode. The trailing `<end>q` quits
+    after the last in-range line so huge files aren't read past it.
+    """
     return ToolSpec(
         description="Print a line range from a file or stdin.",
         threat=ThreatSpec(read=ThreatLevel.MACHINE, write=ThreatLevel.NONE),
         template=TemplateSpec(
             command=(
-                "awk",
-                "NR>={{arguments.start}} && NR<={{arguments.end}}",
+                "sed",
+                "-n",
+                "{{arguments.start}},{{arguments.end}}p; {{arguments.end}}q",
                 "{{arguments.file}}",
             ),
         ),
-        requires=("awk",),
+        requires=("sed",),
         arguments={
             "start": ArgSpec(description="First line", required=True, pattern="^[1-9][0-9]*$"),
             "end": ArgSpec(description="Last line", required=True, pattern="^[1-9][0-9]*$"),
@@ -1216,18 +1228,22 @@ def test_print_range_rejects_non_positive_start(tmp_path: Path) -> None:
 
 
 def _print_range_cwd_tool() -> ToolSpec:
-    """print-range-cwd: file required, under_cwd path_test, workspace threat."""
+    """print-range-cwd: file required, under_cwd path_test, workspace threat.
+
+    Same sed implementation as _print_range_tool, template mode.
+    """
     return ToolSpec(
         description="Print a line range from a workspace file.",
         threat=ThreatSpec(read=ThreatLevel.WORKSPACE, write=ThreatLevel.NONE),
         template=TemplateSpec(
             command=(
-                "awk",
-                "NR>={{arguments.start}} && NR<={{arguments.end}}",
+                "sed",
+                "-n",
+                "{{arguments.start}},{{arguments.end}}p; {{arguments.end}}q",
                 "{{arguments.file}}",
             ),
         ),
-        requires=("awk",),
+        requires=("sed",),
         arguments={
             "start": ArgSpec(description="First line", required=True, pattern="^[1-9][0-9]*$"),
             "end": ArgSpec(description="Last line", required=True, pattern="^[1-9][0-9]*$"),
@@ -1289,6 +1305,64 @@ def test_print_range_cwd_rejects_outside_cwd(tmp_path: Path) -> None:
     assert result.returncode != 0
     # Path-check error mentions the path or "not under" / "under cwd".
     assert "cwd" in result.stderr.lower() or "outside" in result.stderr.lower()
+
+
+def test_print_range_handles_var_eq_val_filename(tmp_path: Path) -> None:
+    """Filenames containing `=` are a classic awk argv-parsing trap (awk
+    treats `foo=bar.txt` as a `foo=bar.txt` variable assignment rather
+    than opening it as a file). The current sed-based implementation
+    handles such filenames naturally; this test pins that end-to-end
+    behavior so a future implementation swap (back to awk, or anything
+    else with similar quirks) can't silently regress it."""
+    import subprocess
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    weird = data_dir / "foo=bar.txt"
+    weird.write_text("line1\nline2\nline3\n")
+
+    build_dir = tmp_path / "plugin"
+    tools = {"print-range": _print_range_tool()}
+    _build([_manifest(skill_group="stdutils", tools=tools)], build_dir, prefix="nerf-")
+    script = build_dir / "skills" / "nerf-stdutils" / "scripts" / "nerf-print-range"
+    result = subprocess.run(
+        [str(script), "2", "3", str(weird)],
+        input="",
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=5,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == "line2\nline3\n"
+
+
+def test_print_range_cwd_handles_var_eq_val_filename(tmp_path: Path) -> None:
+    """Same regression class as test_print_range_handles_var_eq_val_filename:
+    a filename containing `=` must be read as a file, not interpreted as
+    an argv-side variable assignment. Pins the cwd variant's behavior
+    against a future implementation swap."""
+    import subprocess
+
+    build_dir = tmp_path / "plugin"
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    weird = work_dir / "foo=bar.txt"
+    weird.write_text("line1\nline2\nline3\n")
+
+    tools = {"print-range-cwd": _print_range_cwd_tool()}
+    _build([_manifest(skill_group="stdutils", tools=tools)], build_dir, prefix="nerf-")
+    script = build_dir / "skills" / "nerf-stdutils" / "scripts" / "nerf-print-range-cwd"
+    result = subprocess.run(
+        [str(script), "1", "2", "foo=bar.txt"],
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=work_dir,
+        timeout=5,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == "line1\nline2\n"
 
 
 def test_print_range_cwd_requires_file(tmp_path: Path) -> None:

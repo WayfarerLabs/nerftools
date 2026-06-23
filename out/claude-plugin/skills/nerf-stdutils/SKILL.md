@@ -23,6 +23,13 @@ covered, via print-range. If you have a sed/awk need that
 print-range and grep don't cover, file a `nerf-report` so a
 tightly-scoped wrapper can be added.
 
+Note: the bash-hint redirect catches the most common forms
+(`sed -n 'N,Mp'`, `sed --quiet 'N,Mp'`, `awk 'NR>=N && NR<=M'`,
+`awk 'NR>N'`). Less common variants like `sed -nq '1,5p'` or
+`sed -n -e '1,5p'` may not trigger the redirect; nothing wrong
+with using them, but consider print-range / print-range-cwd
+first.
+
 ## nerf-find
 
 Search for files and directories. Exec-like actions are denied -- use this for discovery only, not for running commands on results.
@@ -104,7 +111,7 @@ Search for a pattern in files or directories. Supports recursive search via -r. 
 Print a line range from a file or stdin. <start> and <end> are 1-indexed inclusive line numbers; both are required. With no <file>, reads from stdin (so this works at the end of a pipeline). For workspace-scoped reads, use print-range-cwd instead. For "lines matching X" rather than a line range, use grep.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-stdutils/scripts/nerf-print-range <start> <end> [<file>]`
-**Maps to:** `awk NR>=<start> && NR<=<end> <file>`
+**Maps to:** `sed -n <start>,<end>p; <end>q <file>`
 
 **Arguments:**
 
@@ -119,7 +126,7 @@ Print a line range from a file or stdin. <start> and <end> are 1-indexed inclusi
 Print a line range from a workspace file. Like print-range, but <file> is required and must resolve under the current directory (workspace-scoped read). Use this when you specifically want to read a file in the repo; use print-range for machine-scope reads or for filtering a piped stream.
 
 **Usage:** `${CLAUDE_PLUGIN_ROOT}/skills/nerf-stdutils/scripts/nerf-print-range-cwd <start> <end> <file>`
-**Maps to:** `awk NR>=<start> && NR<=<end> <file>`
+**Maps to:** `sed -n <start>,<end>p; <end>q <file>`
 
 **Arguments:**
 

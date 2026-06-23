@@ -19,16 +19,26 @@ package:
         covered, via print-range. If you have a sed/awk need that
         print-range and grep don't cover, file a `nerf-report` so a
         tightly-scoped wrapper can be added.
+
+        Note: the bash-hint redirect catches the most common forms
+        (`sed -n 'N,Mp'`, `sed --quiet 'N,Mp'`, `awk 'NR>=N && NR<=M'`,
+        `awk 'NR>N'`). Less common variants like `sed -nq '1,5p'` or
+        `sed -n -e '1,5p'` may not trigger the redirect; nothing wrong
+        with using them, but consider print-range / print-range-cwd
+        first.
     bash_hints:
-        # sed -n with a line-address print: `sed -n '1,2p'`, `sed -n 5p`,
-        # `sed -n '$p'`. Requires the address to be entirely digits, commas,
-        # or `$` so that `/regex/p` and `s/foo/bar/` invocations don't fire.
-        - '\bsed +-n +[''"]?[0-9$,]+p\b'
-        # awk filtering on record number: `awk 'NR>=1 && NR<=10'`,
-        # `awk 'NR==42'`. The NR-followed-by-comparison-operator-followed-by-
+        # sed line-address print: `sed -n '1,2p'`, `sed -n 5p`,
+        # `sed -n '$p'`, plus the --quiet long-form. Address must be
+        # entirely digits, commas, or `$` so that `/regex/p` and
+        # `s/foo/bar/` invocations don't fire.
+        - '\bsed +(-n|--quiet) +[''"]?[0-9$,]+p\b'
+        # awk filtering on record number: `awk 'NR>=1'`, `awk 'NR==42'`,
+        # `awk 'NR>5'`. The NR-followed-by-comparison-operator-followed-by-
         # digit signature catches line-range filtering; column extraction
-        # and other awk uses don't match.
-        - '\bawk\b.*\bNR\b *[<>=]+ *[0-9]'
+        # and other awk uses don't match. No trailing \b after NR because
+        # the translated boundary consumes a char and would prevent
+        # matching single-char operators like `NR>5`.
+        - '\bawk\b.*\bNR *[<>=!]+ *[0-9]'
 
 tools:
     find:
@@ -194,11 +204,19 @@ tools:
             # Workspace-scoped reads have their own tool (print-range-cwd).
             read: machine
             write: none
-        requires: [awk]
+        requires: [sed]
         template:
+            # sed (not awk) for the implementation: avoids awk's var=val
+            # argv-parsing gotcha (a filename like `foo=bar.txt` would be
+            # treated as an assignment instead of a file), and keeps the
+            # tool in template mode. The trailing `Nq` quits after <end>
+            # so huge files aren't read past the requested range.
+            # <start> and <end> are validated to ^[1-9][0-9]*$, so the
+            # rendered sed program is pure digits -- no script injection.
             command:
-                - awk
-                - "NR>={{arguments.start}} && NR<={{arguments.end}}"
+                - sed
+                - -n
+                - "{{arguments.start}},{{arguments.end}}p; {{arguments.end}}q"
                 - "{{arguments.file}}"
         arguments:
             start:
@@ -223,11 +241,13 @@ tools:
         threat:
             read: workspace
             write: none
-        requires: [awk]
+        requires: [sed]
         template:
+            # Same implementation rationale as print-range above.
             command:
-                - awk
-                - "NR>={{arguments.start}} && NR<={{arguments.end}}"
+                - sed
+                - -n
+                - "{{arguments.start}},{{arguments.end}}p; {{arguments.end}}q"
                 - "{{arguments.file}}"
         arguments:
             start:
