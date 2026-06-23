@@ -169,6 +169,14 @@ constructs (lookaheads, named groups, etc.) will pass load-time validation but w
 runtime. Stick to ERE. As a convenience, `\b` boundaries are translated to portable POSIX ERE at
 generation time so manifests can keep using them.
 
+**Gotcha:** the translated `\b` is a _consuming_ group (`(^|$|[^[:alnum:]_])`), not a zero-width
+assertion. So a single-character operator immediately following `\b` may get swallowed by the
+boundary match and the rest of the regex won't match. For example, `\bNR\b *[<>=]+` will not match
+`NR>5` because the trailing `\b` consumes the `>`. Use a character class to delimit a token instead
+of relying on `\b` on its right edge — e.g. `\bNR *[<>=]+ *[0-9]` matches `NR>5` cleanly because
+`[<>=]+` requires the operator to be present, and a longer identifier like `NRX` would not match the
+operator class anyway.
+
 The bash-hint check is **opt-in at runtime**: even when generated and installed, the dispatcher's
 hint check is a silent no-op unless the brand-namespaced env var `<BRAND>_ENABLE_BASH_HINT_HOOK`
 (e.g. `NERF_ENABLE_BASH_HINT_HOOK` for the default `nerf-` prefix, `MY_TOOL_ENABLE_BASH_HINT_HOOK`
