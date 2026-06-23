@@ -1,5 +1,27 @@
 # Changelog
 
+## [4.2.0](https://github.com/WayfarerLabs/nerftools/compare/v4.1.0...v4.2.0) (2026-06-23)
+
+
+### Features
+
+* **nerfctl:** require scope positional; add project + reset-others ([cd7ad96](https://github.com/WayfarerLabs/nerftools/commit/cd7ad96a7d1704a0f8e928b9dd5564520e67d09d))
+* **nerfctl:** require scope positional; add project + reset-others ([edd3a6a](https://github.com/WayfarerLabs/nerftools/commit/edd3a6a9ece2053428e7abc52e24c385d0b647d7))
+* **stdutils:** add print-range tools and sed/awk line-range hints ([2ecd119](https://github.com/WayfarerLabs/nerftools/commit/2ecd11906805cc477495ff32e82d179e7ce54b3c))
+* **stdutils:** add print-range, print-range-cwd, sed/awk hints ([129bd2f](https://github.com/WayfarerLabs/nerftools/commit/129bd2f10f1085f0da223638f1a1bf0072b8a2a5))
+
+
+### Bug Fixes
+
+* **stdutils:** awk var=val handling, NR&gt;5 hint coverage, perf ([6c7b922](https://github.com/WayfarerLabs/nerftools/commit/6c7b92290412686db599c7981673eafeb1a56dd3))
+* **stdutils:** print-range reviewer follow-ups (sed impl, hint regex, doc note) ([54ce4ad](https://github.com/WayfarerLabs/nerftools/commit/54ce4ad1cdb66d412b408e0ac87548a4b5bff3a5))
+
+
+### Documentation
+
+* **readme:** document bash 4+ prerequisite and macOS brew workaround ([3bde73c](https://github.com/WayfarerLabs/nerftools/commit/3bde73c0926fb0b8a59e8d0a7830f215dc085767))
+* **test:** update var=val docstrings post-sed-pivot ([1e98f26](https://github.com/WayfarerLabs/nerftools/commit/1e98f269f37206828d2f9c6c2a79f83841837c74))
+
 ## [4.1.0](https://github.com/WayfarerLabs/nerftools/compare/v4.0.0...v4.1.0) (2026-06-15)
 
 
