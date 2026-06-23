@@ -1308,9 +1308,12 @@ def test_print_range_cwd_rejects_outside_cwd(tmp_path: Path) -> None:
 
 
 def test_print_range_handles_var_eq_val_filename(tmp_path: Path) -> None:
-    """Awk parses bare args like `foo=bar.txt` as variable assignments unless
-    `--` precedes them. Both tools must guard against this regression so a
-    filename containing `=` actually gets read."""
+    """Filenames containing `=` are a classic awk argv-parsing trap (awk
+    treats `foo=bar.txt` as a `foo=bar.txt` variable assignment rather
+    than opening it as a file). The current sed-based implementation
+    handles such filenames naturally; this test pins that end-to-end
+    behavior so a future implementation swap (back to awk, or anything
+    else with similar quirks) can't silently regress it."""
     import subprocess
 
     data_dir = tmp_path / "data"
@@ -1322,9 +1325,6 @@ def test_print_range_handles_var_eq_val_filename(tmp_path: Path) -> None:
     tools = {"print-range": _print_range_tool()}
     _build([_manifest(skill_group="stdutils", tools=tools)], build_dir, prefix="nerf-")
     script = build_dir / "skills" / "nerf-stdutils" / "scripts" / "nerf-print-range"
-    # If `--` weren't being injected, awk would parse `foo=bar.txt` as a
-    # variable assignment, fall through to stdin, and (with closed stdin)
-    # return empty output. With `--`, awk treats it as a filename.
     result = subprocess.run(
         [str(script), "2", "3", str(weird)],
         input="",
@@ -1338,8 +1338,10 @@ def test_print_range_handles_var_eq_val_filename(tmp_path: Path) -> None:
 
 
 def test_print_range_cwd_handles_var_eq_val_filename(tmp_path: Path) -> None:
-    """Same regression as test_print_range_handles_var_eq_val_filename
-    but exercises print-range-cwd's template-mode `--` injection."""
+    """Same regression class as test_print_range_handles_var_eq_val_filename:
+    a filename containing `=` must be read as a file, not interpreted as
+    an argv-side variable assignment. Pins the cwd variant's behavior
+    against a future implementation swap."""
     import subprocess
 
     build_dir = tmp_path / "plugin"
