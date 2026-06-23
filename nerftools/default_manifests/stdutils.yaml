@@ -204,19 +204,20 @@ tools:
             # Workspace-scoped reads have their own tool (print-range-cwd).
             read: machine
             write: none
-        requires: [awk]
-        # Script mode because the file gets redirected on stdin rather than
-        # passed as an argv operand. This sidesteps awk's classic var=val
-        # parsing for argv operands (so filenames like `foo=bar.txt` work)
-        # and is portable across awk implementations -- gawk's `--`
-        # end-of-options is not recognized by mawk or POSIX awk. The
-        # early-exit after <end> avoids reading the rest of huge files.
-        script: |
-            if [[ -n "${_FILE_SET}" ]]; then
-              exec awk "NR>=${START} && NR<=${END}; NR>${END} {exit}" <"${FILE}"
-            else
-              exec awk "NR>=${START} && NR<=${END}; NR>${END} {exit}"
-            fi
+        requires: [sed]
+        template:
+            # sed (not awk) for the implementation: avoids awk's var=val
+            # argv-parsing gotcha (a filename like `foo=bar.txt` would be
+            # treated as an assignment instead of a file), and keeps the
+            # tool in template mode. The trailing `Nq` quits after <end>
+            # so huge files aren't read past the requested range.
+            # <start> and <end> are validated to ^[1-9][0-9]*$, so the
+            # rendered sed program is pure digits -- no script injection.
+            command:
+                - sed
+                - -n
+                - "{{arguments.start}},{{arguments.end}}p; {{arguments.end}}q"
+                - "{{arguments.file}}"
         arguments:
             start:
                 description: First line number (1-indexed, inclusive)
@@ -240,12 +241,14 @@ tools:
         threat:
             read: workspace
             write: none
-        requires: [awk]
-        # Script mode for the same reason as print-range: stdin redirection
-        # rather than argv-file, so filenames like `foo=bar.txt` aren't
-        # mis-parsed as var=val by awk. Early-exit after <end>.
-        script: |
-            exec awk "NR>=${START} && NR<=${END}; NR>${END} {exit}" <"${FILE}"
+        requires: [sed]
+        template:
+            # Same implementation rationale as print-range above.
+            command:
+                - sed
+                - -n
+                - "{{arguments.start}},{{arguments.end}}p; {{arguments.end}}q"
+                - "{{arguments.file}}"
         arguments:
             start:
                 description: First line number (1-indexed, inclusive)

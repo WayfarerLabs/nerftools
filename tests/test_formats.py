@@ -1133,31 +1133,28 @@ def test_awk_nr_hint_no_false_positive(tmp_path: Path, command: str) -> None:
 # -- print-range tool integration --------------------------------------------
 
 
-_PRINT_RANGE_SCRIPT = """\
-if [[ -n "${_FILE_SET}" ]]; then
-  exec awk "NR>=${START} && NR<=${END}; NR>${END} {exit}" <"${FILE}"
-else
-  exec awk "NR>=${START} && NR<=${END}; NR>${END} {exit}"
-fi
-"""
-
-
 def _print_range_tool() -> ToolSpec:
     """Reconstruct the print-range ToolSpec to match stdutils.yaml. The
     integration tests build a small synthetic plugin with this and
     subprocess the rendered script.
 
-    Script mode (not template) because the file is redirected via stdin
-    rather than passed as awk argv — that sidesteps awk's var=val
-    parsing for filenames containing `=`, and works portably across
-    awk implementations (gawk's `--` end-of-options is not recognized
-    by mawk or POSIX awk).
+    sed (not awk) for the implementation: avoids awk's var=val
+    argv-parsing gotcha (filenames containing `=` work as expected),
+    and keeps the tool in template mode. The trailing `<end>q` quits
+    after the last in-range line so huge files aren't read past it.
     """
     return ToolSpec(
         description="Print a line range from a file or stdin.",
         threat=ThreatSpec(read=ThreatLevel.MACHINE, write=ThreatLevel.NONE),
-        script=_PRINT_RANGE_SCRIPT,
-        requires=("awk",),
+        template=TemplateSpec(
+            command=(
+                "sed",
+                "-n",
+                "{{arguments.start}},{{arguments.end}}p; {{arguments.end}}q",
+                "{{arguments.file}}",
+            ),
+        ),
+        requires=("sed",),
         arguments={
             "start": ArgSpec(description="First line", required=True, pattern="^[1-9][0-9]*$"),
             "end": ArgSpec(description="Last line", required=True, pattern="^[1-9][0-9]*$"),
@@ -1230,23 +1227,23 @@ def test_print_range_rejects_non_positive_start(tmp_path: Path) -> None:
         assert "does not match required pattern" in result.stderr
 
 
-_PRINT_RANGE_CWD_SCRIPT = """\
-exec awk "NR>=${START} && NR<=${END}; NR>${END} {exit}" <"${FILE}"
-"""
-
-
 def _print_range_cwd_tool() -> ToolSpec:
     """print-range-cwd: file required, under_cwd path_test, workspace threat.
 
-    Script mode for the same reason as _print_range_tool: stdin
-    redirection so awk doesn't mis-parse a filename like `foo=bar.txt`
-    as a var=val assignment.
+    Same sed implementation as _print_range_tool, template mode.
     """
     return ToolSpec(
         description="Print a line range from a workspace file.",
         threat=ThreatSpec(read=ThreatLevel.WORKSPACE, write=ThreatLevel.NONE),
-        script=_PRINT_RANGE_CWD_SCRIPT,
-        requires=("awk",),
+        template=TemplateSpec(
+            command=(
+                "sed",
+                "-n",
+                "{{arguments.start}},{{arguments.end}}p; {{arguments.end}}q",
+                "{{arguments.file}}",
+            ),
+        ),
+        requires=("sed",),
         arguments={
             "start": ArgSpec(description="First line", required=True, pattern="^[1-9][0-9]*$"),
             "end": ArgSpec(description="Last line", required=True, pattern="^[1-9][0-9]*$"),

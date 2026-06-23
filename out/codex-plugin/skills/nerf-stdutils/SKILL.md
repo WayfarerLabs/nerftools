@@ -111,6 +111,7 @@ Search for a pattern in files or directories. Supports recursive search via -r. 
 Print a line range from a file or stdin. <start> and <end> are 1-indexed inclusive line numbers; both are required. With no <file>, reads from stdin (so this works at the end of a pipeline). For workspace-scoped reads, use print-range-cwd instead. For "lines matching X" rather than a line range, use grep.
 
 **Usage:** `scripts/nerf-print-range <start> <end> [<file>]`
+**Maps to:** `sed -n <start>,<end>p; <end>q <file>`
 
 **Arguments:**
 
@@ -125,6 +126,7 @@ Print a line range from a file or stdin. <start> and <end> are 1-indexed inclusi
 Print a line range from a workspace file. Like print-range, but <file> is required and must resolve under the current directory (workspace-scoped read). Use this when you specifically want to read a file in the repo; use print-range for machine-scope reads or for filtering a piped stream.
 
 **Usage:** `scripts/nerf-print-range-cwd <start> <end> <file>`
+**Maps to:** `sed -n <start>,<end>p; <end>q <file>`
 
 **Arguments:**
 

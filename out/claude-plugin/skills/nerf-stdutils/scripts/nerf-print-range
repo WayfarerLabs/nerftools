@@ -30,6 +30,8 @@ Arguments:
   <file>
       File to read (omit to read from stdin)
 
+Maps to: sed -n <start>,<end>p; <end>q <file>
+
 Print a line range from a file or stdin. <start> and <end> are 1-indexed inclusive line numbers; both are required. With no <file>, reads from stdin (so this works at the end of a pipeline). For workspace-scoped reads, use print-range-cwd instead. For "lines matching X" rather than a line range, use grep.
 EOF
   exit 1
@@ -74,7 +76,7 @@ if [[ $# -gt 0 ]]; then
   exit 1
 fi
 
-for _bin in awk; do
+for _bin in sed; do
   if ! command -v -- "$_bin" >/dev/null 2>&1; then
     echo "error: nerf-print-range: required command '$_bin' is not installed or not on PATH" >&2
     exit 127
@@ -130,12 +132,11 @@ if [[ -n "${_FILE_SET}" ]] && [[ "${FILE}" == -* ]]; then
 fi
 
 if [[ "$_NERF_DRY_RUN" == "true" ]]; then
-  echo "dry-run: nerf-print-range would run inline script"
+  _NERF_DRY_CMD=(sed -n "${START},${END}p; ${END}q" ${_FILE_SET:+"$FILE"})
+  printf 'dry-run:'
+  for _a in "${_NERF_DRY_CMD[@]}"; do printf " %q" "$_a"; done
+  echo
   exit 0
 fi
 
-if [[ -n "${_FILE_SET}" ]]; then
-  exec awk "NR>=${START} && NR<=${END}; NR>${END} {exit}" <"${FILE}"
-else
-  exec awk "NR>=${START} && NR<=${END}; NR>${END} {exit}"
-fi
+exec sed -n "${START},${END}p; ${END}q" ${_FILE_SET:+"$FILE"}
